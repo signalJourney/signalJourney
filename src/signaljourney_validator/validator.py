@@ -1,8 +1,11 @@
 import json
 from pathlib import Path
-from typing import Any, Dict, Union, Optional
+from typing import Any, Dict, Union, Optional, List
 
 import jsonschema
+from jsonschema import Draft7Validator
+
+from .errors import ValidationErrorDetail
 
 # Type alias for JSON data
 JsonDict = Dict[str, Any]
@@ -11,7 +14,9 @@ DEFAULT_SCHEMA_PATH = Path(__file__).parent.parent.parent / "schema" / "signalJo
 
 class SignalJourneyValidationError(Exception):
     """Custom exception for validation errors."""
-    pass
+    def __init__(self, message: str, errors: Optional[List[ValidationErrorDetail]] = None):
+        super().__init__(message)
+        self.errors = errors or []
 
 class Validator:
     """
@@ -26,6 +31,7 @@ class Validator:
             schema: Path to the schema file, the schema dictionary, or None to use the default schema.
         """
         self._schema = self._load_schema(schema)
+        self._validator = Draft7Validator(self._schema)
 
     def _load_schema(self, schema_input: Optional[Union[Path, str, JsonDict]]) -> JsonDict:
         """Loads the JSON schema from a file or uses the provided dictionary."""
@@ -57,22 +63,28 @@ class Validator:
         else:
             raise TypeError("Schema must be a Path, string, dictionary, or None.")
 
-    def validate(self, data: Union[Path, str, JsonDict], raise_exceptions: bool = True) -> bool:
+    def validate(self, data: Union[Path, str, JsonDict], raise_exceptions: bool = True) -> Union[bool, List[ValidationErrorDetail]]:
         """
         Validates the given signalJourney data against the loaded schema.
 
         Args:
             data: Path to the JSON file, the JSON string, or a dictionary representing the data.
-            raise_exceptions: If True, raises jsonschema.ValidationError on failure.
-                               If False, returns False on failure.
+            raise_exceptions: If True, raises SignalJourneyValidationError on failure,
+                              containing detailed errors.
+                              If False, returns an empty list if valid, or a list
+                              of ValidationErrorDetail objects if invalid.
 
         Returns:
-            True if the data is valid, False otherwise (if raise_exceptions is False).
+            True if raise_exceptions is True and data is valid.
+            Empty list if raise_exceptions is False and data is valid.
+            List of ValidationErrorDetail objects if raise_exceptions is False and data is invalid.
 
         Raises:
-            jsonschema.ValidationError: If validation fails and raise_exceptions is True.
+            SignalJourneyValidationError: If validation fails and raise_exceptions is True.
+                                         The exception contains a list of detailed errors.
             FileNotFoundError: If data is a path and the file does not exist.
-            SignalJourneyValidationError: If data is a string and cannot be parsed as JSON.
+            SignalJourneyValidationError: If data is a string and cannot be parsed as JSON,
+                                         or if other loading/unexpected validation errors occur.
             TypeError: If data is not a Path, string, or dictionary.
         """
         instance: JsonDict
@@ -92,55 +104,108 @@ class Validator:
         else:
             raise TypeError("Data must be a Path, string, or dictionary.")
 
+        errors: List[ValidationErrorDetail] = []
         try:
-            jsonschema.validate(instance=instance, schema=self._schema)
-            return True
-        except jsonschema.ValidationError as e:
-            if raise_exceptions:
-                raise e
-            return False
+            for error in sorted(self._validator.iter_errors(instance), key=str):
+                error_path = list(error.path)
+                schema_error_path = list(error.schema_path)
+
+                nested_errors = []
+                if error.context:
+                     nested_errors = [
+                         ValidationErrorDetail(
+                             message=sub_error.message,
+                             path=list(sub_error.path),
+                             schema_path=list(sub_error.schema_path),
+                             validator=sub_error.validator,
+                             validator_value=sub_error.validator_value,
+                             instance_value=sub_error.instance
+                         ) for sub_error in error.context
+                     ]
+
+                errors.append(
+                    ValidationErrorDetail(
+                        message=error.message,
+                        path=error_path,
+                        schema_path=schema_error_path,
+                        validator=error.validator,
+                        validator_value=error.validator_value,
+                        instance_value=error.instance,
+                        context=nested_errors
+                    )
+                )
+
+            if errors:
+                if raise_exceptions:
+                    raise SignalJourneyValidationError("Validation failed.", errors=errors)
+                else:
+                    return errors
+            else:
+                if raise_exceptions:
+                     return True
+                else:
+                     return []
+
+        except jsonschema.SchemaError as e:
+             raise SignalJourneyValidationError(f"Invalid schema: {e}") from e
         except Exception as e:
-            # Catch other potential errors during validation
-            if raise_exceptions:
-                 raise SignalJourneyValidationError(f"An unexpected error occurred during validation: {e}") from e
-            return False
+            raise SignalJourneyValidationError(f"An unexpected error occurred during validation: {e}") from e
 
 # Example usage (optional, for quick testing)
 if __name__ == '__main__':
     # Assumes schema and example files are in the correct relative paths
-    # You might need to adjust paths depending on how you run this
     schema_file = Path(__file__).parent.parent.parent / "schema" / "signalJourney.schema.json"
-    example_file = Path(__file__).parent.parent.parent / "schema" / "examples" / "simple_pipeline.json"
+    # Use an invalid example for testing errors
+    invalid_example_dict = {
+        "sj_version": "0.1.0",
+        "schema_version": "invalid-version", # Invalid format
+        "description": 123, # Invalid type
+        # Missing required fields: pipelineInfo, processingSteps
+    }
+    valid_example_file = Path(__file__).parent.parent.parent / "schema" / "examples" / "simple_pipeline.json"
 
-    if schema_file.exists() and example_file.exists():
-        print(f"Using schema: {schema_file}")
-        print(f"Validating example: {example_file}")
+    if schema_file.exists():
+        print(f"Using schema: {schema_file}\n")
         try:
             validator = Validator(schema_file)
-            is_valid = validator.validate(example_file, raise_exceptions=False)
-            if is_valid:
-                print("Validation successful!")
-            else:
-                 print("Validation failed.")
-                 # Reraise with exception for details
-                 try:
-                     validator.validate(example_file, raise_exceptions=True)
-                 except jsonschema.ValidationError as e:
-                     print(f"Validation Error: {e.message}")
-                     print(f"Path: {list(e.path)}")
 
+            # --- Test valid example (raise_exceptions=False) ---
+            print(f"Validating valid example (no exceptions): {valid_example_file}")
+            validation_result_valid = validator.validate(valid_example_file, raise_exceptions=False)
+            if isinstance(validation_result_valid, list) and not validation_result_valid:
+                print("VALID example validation successful (returned empty list).\n")
+            else:
+                print(f"VALID example validation FAILED (unexpected result): {validation_result_valid}\n")
+
+            # --- Test invalid example (raise_exceptions=False) ---
+            print("Validating invalid example (no exceptions)...")
+            validation_result_invalid = validator.validate(invalid_example_dict, raise_exceptions=False)
+            if isinstance(validation_result_invalid, list) and validation_result_invalid:
+                print(f"INVALID example validation failed as expected. Found {len(validation_result_invalid)} errors:")
+                for err in validation_result_invalid:
+                    print(f"- {err}") # Use the __str__ method of ValidationErrorDetail
+                print("\n")
+            else:
+                print(f"INVALID example validation FAILED (unexpected result): {validation_result_invalid}\n")
+
+            # --- Test invalid example (raise_exceptions=True) ---
+            print("Validating invalid example (expecting exception)...")
+            try:
+                validator.validate(invalid_example_dict, raise_exceptions=True)
+                print("INVALID example validation FAILED (no exception raised)\n")
+            except SignalJourneyValidationError as e:
+                print(f"INVALID example validation failed as expected. Exception caught: {e}")
+                print(f"Contained {len(e.errors)} detailed errors:")
+                for err_detail in e.errors:
+                    print(f"- {err_detail}")
+                print("\n")
 
         except FileNotFoundError as e:
-            print(f"Error: {e}")
+            print(f"Setup Error: {e}")
         except SignalJourneyValidationError as e:
-            print(f"Error: {e}")
-        except jsonschema.ValidationError as e:
-             print(f"Validation Error: {e.message}")
-             print(f"Path: {list(e.path)}")
+            print(f"Setup or Validation Error: {e}")
         except Exception as e:
-            print(f"An unexpected error occurred: {e}")
+            print(f"An unexpected setup error occurred: {e}")
 
     else:
-        print("Could not find schema or example file for basic test.")
-        print(f"Schema path check: {schema_file} {'exists' if schema_file.exists() else 'does not exist'}")
-        print(f"Example path check: {example_file} {'exists' if example_file.exists() else 'does not exist'}") 
+        print("Could not find schema file for basic test.") 
