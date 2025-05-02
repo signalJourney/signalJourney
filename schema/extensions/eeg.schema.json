@@ -1,0 +1,10 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "EEG Namespace",
+  "description": "Namespace for EEG-specific properties.",
+  "type": "object",
+  "properties": {
+    
+  },
+  "additionalProperties": true
+} 
