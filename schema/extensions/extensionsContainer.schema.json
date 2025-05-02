@@ -1,0 +1,17 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Extensions Container",
+  "description": "Container for domain-specific extensions using reserved namespaces (e.g., 'eeg', 'nemar'). Adding custom fields under the appropriate namespace is allowed, but adding new top-level namespaces requires approval. See contribution guidelines.",
+  "type": "object",
+  "properties": {
+    "eeg": { 
+      "description": "Namespace for EEG-specific properties.",
+      "$ref": "eeg.schema.json" 
+    },
+    "nemar": { 
+      "description": "Namespace for NEMAR-specific properties (e.g., pipeline IDs).",
+      "$ref": "nemar.schema.json" 
+    }
+  },
+  "additionalProperties": true
+} 
