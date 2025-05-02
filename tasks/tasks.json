@@ -207,12 +207,12 @@
           "id": 3,
           "title": "Implement output formatting options and exit codes",
           "description": "Add various output format options including verbose mode, JSON output, and appropriate exit codes for scripting integration.",
-          "status": "pending",
+          "status": "done",
           "dependencies": [
             1,
             2
           ],
-          "details": "1) Implement a verbose flag that shows detailed validation information. 2) Create a JSON output option that formats results in machine-readable JSON. 3) Design a consistent output structure for both human-readable and JSON formats. 4) Implement appropriate exit codes (0 for success, non-zero for validation failures or errors). 5) Add color coding for terminal output (using a library like colorama) to highlight errors/warnings. 6) Ensure all output modes handle both single file and directory validation results appropriately."
+          "details": "1) Implement a verbose flag that shows detailed validation information. 2) Create a JSON output option that formats results in machine-readable JSON. 3) Design a consistent output structure for both human-readable and JSON formats. 4) Implement appropriate exit codes (0 for success, non-zero for validation failures or errors). 5) Add color coding for terminal output (using a library like colorama) to highlight errors/warnings. 6) Ensure all output modes handle both single file and directory validation results appropriately.\n\n<info added on 2025-05-02T01:45:30.135Z>\nFor the \"details\" section, I'll add:\n\n7) Implement the `--output-format` (`-o`) option with 'text' and 'json' choices, defaulting to 'text'. 8) Structure JSON output as a single object with 'status' field (overall pass/fail) and 'results' array containing per-file validation details. 9) Include detailed error information in JSON output with fields matching ValidationErrorDetail structure (line_number, error_type, message, suggestion). 10) Ensure color coding is only applied for terminal output and disabled for redirected output or when specified by --no-color flag. 11) For verbose text output, include validator name/version information and final summary statistics (files checked, passed, failed). 12) Suppress progress messages (directory scanning, skipped files) when using JSON output to ensure clean machine-readable output. 13) Return exit code 0 for successful validation, 1 for validation failures, and 2 for program errors (invalid arguments, file access issues).\n</info added on 2025-05-02T01:45:30.135Z>"
         },
         {
           "id": 4,
