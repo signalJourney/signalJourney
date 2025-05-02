@@ -72,8 +72,8 @@
     },
     "summaryMetrics": {
       "type": "object",
-      "description": "Optional section for summary statistics or overall quality metrics. To be defined in subtask 4.",
-      "properties": {} # Define structure later
+      "description": "Optional section for summary statistics or overall quality metrics applicable to the entire pipeline. Defined in #/definitions/qualityMetricsObject.",
+      "$ref": "#/definitions/qualityMetricsObject"
     },
     "extensions": {
       "type": "object",
@@ -139,23 +139,18 @@
           "type": "array",
           "description": "List of stepIds that must be completed before this step can execute.",
           "items": {"type": "string"}
+        },
+        "qualityMetrics": {
+          "description": "Optional object containing quality metrics specific to this step. Defined in #/definitions/qualityMetricsObject.",
+          "$ref": "#/definitions/qualityMetricsObject"
         }
       },
       "required": ["stepId", "name", "description", "software"]
     },
-    "summaryMetrics": {
+    "qualityMetricsObject": {
       "type": "object",
-      "description": "Placeholder definition for summary metrics. To be defined in subtask 4.",
-      "properties": {
-        "description": {"type": "string"},
-        "unit": {"type": "string"},
-        "dataType": {
-          "type": "string",
-          "description": "Optional JSON schema type hint for the value (e.g., 'number', 'string', 'boolean', 'array', 'object'). Aids validation.",
-          "enum": ["string", "number", "integer", "boolean", "array", "object", "null"]
-        }
-      },
-      "required": ["name", "value"]
+      "description": "A container for quality metrics. Keys are metric names (potentially namespaced, e.g., 'eeg:percentBadChannels'). Values can be simple types or objects containing fields like 'value', 'unit', 'threshold'.",
+      "additionalProperties": true // Allows any metric key-value pairs
     },
     "softwareDetails": {
       "type": "object",
