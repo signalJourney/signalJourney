@@ -1,0 +1,180 @@
+{
+  "sj_version": "0.1.0",
+  "schema_version": "0.1.0",
+  "description": "Example signalJourney file for an ICA decomposition pipeline using MNE-Python.",
+  "pipelineInfo": {
+    "name": "ICA Decomposition",
+    "description": "Applies ICA using FastICA, identifies EOG components, and removes them from the preprocessed data.",
+    "pipelineType": "ica",
+    "version": "1.0.0",
+    "executionDate": "2024-05-02T11:00:00Z"
+  },
+  "processingSteps": [
+    {
+      "stepId": "1",
+      "name": "Load Preprocessed Data",
+      "description": "Load the output from the basic preprocessing pipeline.",
+      "software": {
+        "name": "MNE-Python",
+        "version": "1.6.1",
+        "functionCall": "mne.io.read_raw_fif('sub-01_task-rest_desc-preproc_eeg.fif', preload=True)"
+      },
+      "parameters": {
+        "filename": "sub-01_task-rest_desc-preproc_eeg.fif",
+        "preload": true
+      },
+      "inputSources": [
+        {
+          "sourceType": "file",
+          "location": "./derivatives/signaljourney/sub-01/eeg/sub-01_task-rest_desc-preproc_eeg.fif",
+          "entityLabels": {
+            "sub": "01",
+            "task": "rest",
+            "desc": "preproc"
+          },
+          "pipelineSource": { 
+             "pipelineName": "Basic EEG Preprocessing",
+             "pipelineVersion": "1.0.0"
+           }
+        }
+      ],
+      "outputTargets": [
+        {
+          "targetType": "in-memory",
+          "format": "mne.io.Raw",
+          "description": "Loaded preprocessed data object."
+        }
+      ]
+    },
+    {
+      "stepId": "2",
+      "name": "Fit ICA",
+      "description": "Fit ICA (FastICA) to the EEG data.",
+      "dependsOn": ["1"],
+      "software": {
+        "name": "MNE-Python",
+        "version": "1.6.1",
+        "functionCall": "ica = mne.preprocessing.ICA(n_components=15, method='fastica', random_state=97, max_iter='auto'); ica.fit(raw, picks='eeg')"
+      },
+      "parameters": {
+        "n_components": 15,
+        "method": "fastica",
+        "random_state": 97,
+        "max_iter": "auto",
+        "fit_params": {
+           "picks": "eeg"
+         }
+      },
+      "inputSources": [
+        {
+          "sourceType": "previousStepOutput",
+          "stepId": "1",
+          "outputId": "Loaded preprocessed data object."
+        }
+      ],
+      "outputTargets": [
+        {
+          "targetType": "in-memory",
+          "format": "mne.preprocessing.ICA",
+          "description": "Fitted ICA object."
+        },
+        {
+           "targetType": "file",
+           "location": "./derivatives/signaljourney/sub-01/eeg/sub-01_task-rest_desc-ica_object.fif",
+           "format": "FIF",
+           "description": "Saved ICA object file."
+         }
+      ]
+    },
+    {
+      "stepId": "3",
+      "name": "Find EOG Components",
+      "description": "Identify ICA components correlated with EOG channel.",
+      "dependsOn": ["1", "2"],
+      "software": {
+        "name": "MNE-Python",
+        "version": "1.6.1",
+        "functionCall": "eog_indices, eog_scores = ica.find_bads_eog(raw, ch_name='EOG061')"
+      },
+      "parameters": {
+        "ch_name": "EOG061"
+      },
+      "inputSources": [
+        {
+          "sourceType": "previousStepOutput",
+          "stepId": "1",
+          "outputId": "Loaded preprocessed data object."
+        },
+         {
+          "sourceType": "previousStepOutput",
+          "stepId": "2",
+          "outputId": "Fitted ICA object."
+        }
+      ],
+      "outputTargets": [
+        {
+          "targetType": "variable",
+          "name": "eog_indices",
+          "description": "Indices of identified EOG components."
+        },
+        {
+          "targetType": "variable",
+          "name": "eog_scores",
+          "description": "Scores associated with EOG components."
+        }
+      ],
+       "qualityMetrics": {
+         "eogComponentsFound": [0, 3], 
+         "numEogComponentsFound": 2
+       }
+    },
+    {
+      "stepId": "4",
+      "name": "Apply ICA (Remove Components)",
+      "description": "Remove identified artifact components from the data.",
+      "dependsOn": ["1", "2", "3"],
+      "software": {
+        "name": "MNE-Python",
+        "version": "1.6.1",
+        "functionCall": "ica.exclude = eog_indices; ica.apply(raw)"
+      },
+      "parameters": {
+        "exclude": [0, 3] 
+      },
+      "inputSources": [
+        {
+          "sourceType": "previousStepOutput",
+          "stepId": "1",
+          "outputId": "Loaded preprocessed data object."
+        },
+        {
+          "sourceType": "previousStepOutput",
+          "stepId": "2",
+          "outputId": "Fitted ICA object."
+        },
+         {
+          "sourceType": "previousStepOutput",
+          "stepId": "3",
+          "outputId": "Indices of identified EOG components."
+        }
+      ],
+      "outputTargets": [
+        {
+          "targetType": "file",
+          "location": "./derivatives/signaljourney/sub-01/eeg/sub-01_task-rest_desc-cleaned_eeg.fif",
+          "format": "FIF",
+          "description": "ICA cleaned EEG data file."
+        }
+      ],
+       "qualityMetrics": {
+         "componentsRemoved": [0, 3],
+         "numComponentsRemoved": 2
+         
+       }
+    }
+  ],
+  "summaryMetrics": {
+    "numIcaComponents": 15,
+    "numArtifactComponentsRemoved": 2
+  }
+} 

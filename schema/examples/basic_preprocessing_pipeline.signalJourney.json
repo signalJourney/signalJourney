@@ -1,0 +1,179 @@
+{
+  "sj_version": "0.1.0",
+  "schema_version": "0.1.0",
+  "description": "Example signalJourney file for a basic EEG preprocessing pipeline.",
+  "pipelineInfo": {
+    "name": "Basic EEG Preprocessing",
+    "description": "Standard preprocessing steps including filtering, referencing, and bad channel interpolation using MNE-Python.",
+    "pipelineType": "preprocessing",
+    "version": "1.0.0",
+    "executionDate": "2024-05-02T10:00:00Z"
+  },
+  "processingSteps": [
+    {
+      "stepId": "1",
+      "name": "Load Raw Data",
+      "description": "Load raw FIF data file.",
+      "software": {
+        "name": "MNE-Python",
+        "version": "1.6.1",
+        "functionCall": "mne.io.read_raw_fif('sub-01_task-rest_raw.fif', preload=True)"
+      },
+      "parameters": {
+        "filename": "sub-01_task-rest_raw.fif",
+        "preload": true
+      },
+      "inputSources": [
+        {
+          "sourceType": "file",
+          "location": "../sourcedata/sub-01/eeg/sub-01_task-rest_raw.fif",
+          "entityLabels": {
+            "sub": "01",
+            "task": "rest"
+          }
+        }
+      ],
+      "outputTargets": [
+        {
+          "targetType": "in-memory",
+          "format": "mne.io.Raw",
+          "description": "Loaded raw data object."
+        }
+      ]
+    },
+    {
+      "stepId": "2",
+      "name": "Apply Band-pass Filter",
+      "description": "Apply a FIR band-pass filter (1-40 Hz).",
+      "dependsOn": ["1"],
+      "software": {
+        "name": "MNE-Python",
+        "version": "1.6.1",
+        "functionCall": "raw.filter(l_freq=1.0, h_freq=40.0, fir_design='firwin')"
+      },
+      "parameters": {
+        "l_freq": 1.0,
+        "h_freq": 40.0,
+        "method": "fir",
+        "fir_design": "firwin",
+        "phase": "zero"
+      },
+      "inputSources": [
+        {
+          "sourceType": "previousStepOutput",
+          "stepId": "1",
+          "outputId": "Loaded raw data object." 
+        }
+      ],
+       "outputTargets": [
+        {
+          "targetType": "in-memory",
+          "format": "mne.io.Raw",
+          "description": "Band-pass filtered data."
+        }
+      ]
+    },
+    {
+      "stepId": "3",
+      "name": "Apply Notch Filter",
+      "description": "Apply a notch filter at 60 Hz.",
+      "dependsOn": ["2"],
+      "software": {
+        "name": "MNE-Python",
+        "version": "1.6.1",
+        "functionCall": "raw.notch_filter(freqs=60, fir_design='firwin')"
+      },
+      "parameters": {
+        "freqs": [60],
+        "method": "fir",
+        "fir_design": "firwin"
+      },
+       "inputSources": [
+        {
+          "sourceType": "previousStepOutput",
+          "stepId": "2",
+          "outputId": "Band-pass filtered data." 
+        }
+      ],
+      "outputTargets": [
+        {
+          "targetType": "in-memory",
+          "format": "mne.io.Raw",
+          "description": "Notch filtered data."
+        }
+      ]
+    },
+    {
+      "stepId": "4",
+      "name": "Set Average Reference",
+      "description": "Apply an average reference to EEG channels.",
+      "dependsOn": ["3"],
+      "software": {
+        "name": "MNE-Python",
+        "version": "1.6.1",
+        "functionCall": "raw.set_eeg_reference('average', projection=True)"
+      },
+      "parameters": {
+        "ref_channels": "average",
+        "projection": true
+      },
+       "inputSources": [
+        {
+          "sourceType": "previousStepOutput",
+          "stepId": "3",
+          "outputId": "Notch filtered data."
+        }
+      ],
+      "outputTargets": [
+        {
+          "targetType": "in-memory",
+          "format": "mne.io.Raw",
+          "description": "Average referenced data."
+        }
+      ],
+      "qualityMetrics": {
+        "projectionAdded": true
+      }
+    },
+    {
+      "stepId": "5",
+      "name": "Interpolate Bad Channels",
+      "description": "Interpolate channels marked as bad.",
+      "dependsOn": ["4"],
+      "software": {
+        "name": "MNE-Python",
+        "version": "1.6.1",
+        "functionCall": "raw.interpolate_bads(reset_bads=True, mode='accurate')"
+      },
+      "parameters": {
+        "reset_bads": true,
+        "mode": "accurate",
+        "bad_channels_list": ["EEG 053", "EEG 021"] 
+      },
+       "inputSources": [
+        {
+          "sourceType": "previousStepOutput",
+          "stepId": "4",
+          "outputId": "Average referenced data." 
+        }
+      ],
+      "outputTargets": [
+         {
+          "targetType": "file",
+          "location": "./derivatives/signaljourney/sub-01/eeg/sub-01_task-rest_desc-preproc_eeg.fif",
+          "format": "FIF",
+          "description": "Preprocessed EEG data file."
+        }
+      ],
+      "qualityMetrics": {
+        "channelsInterpolated": ["EEG 053", "EEG 021"],
+        "numChannelsInterpolated": 2
+      }
+    }
+  ],
+  "summaryMetrics": {
+    "finalSamplingRateHz": 1000,
+    "totalChannels": 64,
+    "numBadChannelsDetected": 2
+  }
+} 
