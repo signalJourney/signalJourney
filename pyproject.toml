@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "signaljourney_validator"
 version = "0.1.0"
 authors = [
-  { name="Signal Journey Contributors", email="signaljourney.specification@gmail.com" }, # Updated placeholder
+  { name="Seyed Yahya Shirazi", email="shirazi@ieee.org" }
 ]
 description = "A Python library to validate signalJourney JSON files against the official specification schema."
 readme = "src/signaljourney_validator/README.md" # Point to the package README
@@ -49,12 +49,15 @@ suggestions = [
     "fuzzywuzzy>=0.18",
     "python-Levenshtein>=0.12"
 ]
+test = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+]
 
 [project.scripts]
 signaljourney-validate = "signaljourney_validator.cli:cli"
 
 [tool.setuptools]
-packages = find:
 package-dir = {"" = "src"}
 
 [tool.setuptools.packages.find]
