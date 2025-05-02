@@ -1,0 +1,265 @@
+{
+  "sj_version": "0.1.0",
+  "schema_version": "0.1.0",
+  "description": "Example signalJourney file for a source localization pipeline using MNE-Python (dSPM).",
+  "pipelineInfo": {
+    "name": "Source Localization (dSPM)",
+    "description": "Performs source localization on evoked data using dSPM inverse solution with a BEM head model.",
+    "pipelineType": "source-localization",
+    "version": "1.0.0",
+    "executionDate": "2024-05-02T13:00:00Z"
+  },
+  "processingSteps": [
+    {
+      "stepId": "1",
+      "name": "Load Evoked Data",
+      "description": "Load evoked data (e.g., averaged epochs after cleaning).",
+      "software": {
+        "name": "MNE-Python",
+        "version": "1.6.1",
+        "functionCall": "mne.read_evokeds('sub-01_task-rest_desc-cleaned_ave.fif')"
+      },
+      "parameters": {
+        "filename": "sub-01_task-rest_desc-cleaned_ave.fif"
+      },
+      "inputSources": [
+        {
+          "sourceType": "file",
+          "location": "./derivatives/signaljourney/sub-01/eeg/sub-01_task-rest_desc-cleaned_ave.fif",
+          "entityLabels": {
+            "sub": "01",
+            "task": "rest",
+            "desc": "cleaned",
+            "suffix": "ave"
+          },
+          "pipelineSource": { 
+             "pipelineName": "Epoching & Averaging", 
+             "pipelineVersion": "1.0.0"
+           }
+        }
+      ],
+      "outputTargets": [
+        {
+          "targetType": "in-memory",
+          "format": "list[mne.Evoked]",
+          "description": "List containing loaded Evoked object(s)."
+        }
+      ]
+    },
+     {
+      "stepId": "2",
+      "name": "Setup Source Space",
+      "description": "Set up the source space using fsaverage subject.",
+      "software": {
+        "name": "MNE-Python",
+        "version": "1.6.1",
+        "functionCall": "src = mne.setup_source_space(subject='fsaverage', spacing='oct6', subjects_dir=subjects_dir, add_dist=False)"
+      },
+      "parameters": {
+        "subject": "fsaverage",
+        "spacing": "oct6",
+        "subjects_dir_env_var": "SUBJECTS_DIR", 
+        "add_dist": false
+      },
+      "inputSources": [
+        {
+          "sourceType": "resource",
+          "location": "fsaverage MRI data (via MNE dataset fetcher)"
+        }
+      ],
+      "outputTargets": [
+        {
+          "targetType": "in-memory",
+          "format": "mne.SourceSpaces",
+          "description": "Computed source spaces object."
+        }
+      ]
+    },
+    {
+      "stepId": "3",
+      "name": "Compute BEM Solution",
+      "description": "Compute the Boundary Element Model (BEM) solution.",
+      "dependsOn": [], 
+      "software": {
+        "name": "MNE-Python",
+        "version": "1.6.1",
+        "functionCall": "model = mne.make_bem_model(...); bem_sol = mne.make_bem_solution(model)"
+      },
+      "parameters": {
+        "subject": "fsaverage",
+        "ico": 4,
+        "conductivity": [0.3],
+         "subjects_dir_env_var": "SUBJECTS_DIR"
+      },
+      "inputSources": [
+        {
+          "sourceType": "resource",
+          "location": "fsaverage BEM surfaces (via MNE dataset fetcher or watershed alg)"
+        }
+      ],
+      "outputTargets": [
+        {
+          "targetType": "in-memory", 
+          "format": "dict",
+          "description": "Computed BEM solution."
+        }
+      ]
+    },
+    {
+      "stepId": "4",
+      "name": "Make Forward Solution",
+      "description": "Compute the forward solution (leadfield matrix).",
+      "dependsOn": ["1", "2", "3"],
+      "software": {
+        "name": "MNE-Python",
+        "version": "1.6.1",
+        "functionCall": "fwd = mne.make_forward_solution(evoked.info, trans='fsaverage', src=src, bem=bem_sol, meg=False, eeg=True, mindist=5.0)"
+      },
+      "parameters": {
+        "trans": "fsaverage", 
+        "meg": false,
+        "eeg": true,
+        "mindist": 5.0
+      },
+      "inputSources": [
+         {
+          "sourceType": "previousStepOutput",
+          "stepId": "1",
+          "outputId": "List containing loaded Evoked object(s)."
+        },
+        {
+          "sourceType": "previousStepOutput",
+          "stepId": "2",
+          "outputId": "Computed source spaces object."
+        },
+        {
+          "sourceType": "previousStepOutput",
+          "stepId": "3",
+          "outputId": "Computed BEM solution."
+        }
+      ],
+      "outputTargets": [
+        {
+          "targetType": "in-memory",
+          "format": "mne.Forward",
+          "description": "Computed forward solution object."
+        }
+      ]
+    },
+    {
+      "stepId": "5",
+      "name": "Compute Covariance Matrix",
+      "description": "Compute the noise covariance matrix from baseline period of epochs.",
+      "dependsOn": [], 
+      "software": {
+        "name": "MNE-Python",
+        "version": "1.6.1",
+        "functionCall": "cov = mne.compute_covariance(epochs, tmax=0., method=['shrunk', 'empirical'])"
+      },
+      "parameters": {
+         "tmin": null, 
+         "tmax": 0.0,
+         "method": ["shrunk", "empirical"]
+      },
+      "inputSources": [
+        {
+          "sourceType": "file",
+          "location": "./derivatives/signaljourney/sub-01/eeg/sub-01_task-rest_desc-cleaned_epo.fif",
+          "description": "Epochs file used for covariance estimation."
+        }
+      ],
+       "outputTargets": [
+        {
+          "targetType": "in-memory",
+          "format": "mne.Covariance",
+          "description": "Computed noise covariance object."
+        }
+      ]
+    },
+     {
+      "stepId": "6",
+      "name": "Make Inverse Operator",
+      "description": "Compute the inverse operator.",
+      "dependsOn": ["1", "4", "5"],
+      "software": {
+        "name": "MNE-Python",
+        "version": "1.6.1",
+        "functionCall": "inverse_operator = make_inverse_operator(evoked.info, fwd, cov, loose=0.2, depth=0.8)"
+      },
+      "parameters": {
+        "loose": 0.2,
+        "depth": 0.8
+      },
+      "inputSources": [
+         {
+          "sourceType": "previousStepOutput",
+          "stepId": "1",
+          "outputId": "List containing loaded Evoked object(s)."
+        },
+         {
+          "sourceType": "previousStepOutput",
+          "stepId": "4",
+          "outputId": "Computed forward solution object."
+        },
+        {
+          "sourceType": "previousStepOutput",
+          "stepId": "5",
+          "outputId": "Computed noise covariance object."
+        }
+      ],
+       "outputTargets": [
+        {
+          "targetType": "in-memory",
+          "format": "mne.minimum_norm.InverseOperator",
+          "description": "Computed inverse operator object."
+        }
+      ]
+    },
+     {
+      "stepId": "7",
+      "name": "Apply Inverse Solution (dSPM)",
+      "description": "Apply the dSPM inverse solution to the evoked data.",
+      "dependsOn": ["1", "6"],
+      "software": {
+        "name": "MNE-Python",
+        "version": "1.6.1",
+        "functionCall": "stc = apply_inverse(evoked, inverse_operator, lambda2=1.0 / 3.0 ** 2, method='dSPM', pick_ori=None)"
+      },
+      "parameters": {
+        "lambda2_snr": 3.0,
+        "method": "dSPM",
+        "pick_ori": null
+      },
+      "inputSources": [
+         {
+          "sourceType": "previousStepOutput",
+          "stepId": "1",
+          "outputId": "List containing loaded Evoked object(s)."
+        },
+        {
+          "sourceType": "previousStepOutput",
+          "stepId": "6",
+          "outputId": "Computed inverse operator object."
+        }
+      ],
+      "outputTargets": [
+        {
+          "targetType": "file",
+          "location": "./derivatives/signaljourney/sub-01/eeg/sub-01_task-rest_desc-dSPM_stc.h5",
+          "format": "HDF5", 
+          "description": "Source estimate (STC) file."
+        }
+      ],
+      "qualityMetrics": {
+        "inverseMethod": "dSPM",
+        "snrEstimate": 3.0
+      }
+    }
+  ],
+  "summaryMetrics": {
+    "analysisType": "Source Localization",
+    "inverseMethod": "dSPM",
+    "headModel": "BEM",
+    "sourceSpace": "fsaverage (oct6)"
+  }
+} 
