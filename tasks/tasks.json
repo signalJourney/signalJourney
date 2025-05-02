@@ -243,7 +243,7 @@
       "id": 4,
       "title": "Create Sample signalJourney Files for Common Processing Pipelines",
       "description": "Develop a set of example signalJourney JSON files that represent common biosignal processing workflows.",
-      "status": "pending",
+      "status": "in-progress",
       "dependencies": [
         1
       ],
@@ -255,7 +255,7 @@
           "id": 1,
           "title": "Research and document common parameters for biosignal processing pipelines",
           "description": "Research and document typical parameters, function calls, and quality metrics used in the five required processing pipelines across EEGLAB, MNE-Python, and Fieldtrip.",
-          "status": "pending",
+          "status": "in-progress",
           "dependencies": [],
           "details": "For each of the five required pipelines (basic preprocessing, ICA decomposition, time-frequency analysis, source localization, and connectivity analysis), document: 1) Common function names in each toolbox, 2) Typical parameter ranges and default values, 3) Standard quality metrics used to evaluate results, 4) Typical processing sequence. Create a structured document organizing this information by pipeline type and toolbox for reference when creating the actual JSON files."
         },

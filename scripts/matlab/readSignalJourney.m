@@ -1,51 +1,36 @@
-function data = readSignalJourney(filename)
-%READSIGNALJOURNEY Reads a signalJourney JSON file into a MATLAB structure.
-%
-%   data = READSIGNALJOURNEY(filename) reads the JSON file specified by
-%   filename and returns its contents as a MATLAB structure.
-%
-%   Args:
-%       filename (string): The path to the signalJourney JSON file.
-%
-%   Returns:
-%       struct: A MATLAB structure representing the JSON data.
-%
-%   Raises:
-%       error: If the file does not exist, cannot be read, or contains
-%              invalid JSON.
+function journeyData = readSignalJourney(filename)
+%READSIGNALJOURNEY Reads and parses a signalJourney JSON file
+%   journeyData = READSIGNALJOURNEY(filename) reads the specified JSON file
+%   and returns a structured MATLAB object containing the parsed data.
+%   Handles basic file reading and JSON decoding errors.
 
     arguments
-        filename (1,:) char {mustBeFile} % Use function argument validation
+        filename (1,:) char {mustBeFile}
     end
 
     try
-        % Read the entire file content as a string
-        jsonString = fileread(filename);
+        % Read the file content
+        fileContent = fileread(filename);
     catch ME
-        error('readSignalJourney:FileReadError', ...
-              'Could not read file: %s. Reason: %s', filename, ME.message);
+        error('readSignalJourney:fileReadError', ...
+              'Failed to read file "%s": %s', filename, ME.message);
     end
 
     try
-        % Decode the JSON string into a MATLAB structure
-        data = jsondecode(jsonString);
+        % Parse JSON content using MATLAB's built-in decoder
+        journeyData = jsondecode(fileContent);
     catch ME
-        % Check for specific JSON parsing errors if possible, otherwise generic
-        if strcmp(ME.identifier, 'MATLAB:json:ExpectedEOS') || contains(ME.identifier, 'JSON')
-            error('readSignalJourney:JSONDecodeError', ...
-                  'Invalid JSON format in file: %s. Reason: %s', filename, ME.message);
-        else
-            % Rethrow unexpected errors during decoding
-            rethrow(ME);
-        end
+        % Catch potential JSON decoding errors
+        error('readSignalJourney:jsonDecodeError', ...
+              'Failed to parse JSON in file "%s": %s', filename, ME.message);
     end
 
-    % Basic check: Ensure it looks somewhat like a signalJourney file
-    requiredFields = {'sj_version', 'schema_version', 'description', 'pipelineInfo', 'processingSteps'};
-    if ~isstruct(data) || ~all(isfield(data, requiredFields))
-         warning('readSignalJourney:FormatWarning', ...
-                 'File %s was parsed but might not be a valid signalJourney file (missing top-level fields).', filename);
-    end
+    % Basic validation (optional - can be expanded in later tasks)
+    % Example: Check for a required top-level field
+    % if ~isfield(journeyData, 'sj_version')
+    %     warning('readSignalJourney:missingField', ...
+    %             'Required field "sj_version" is missing in file "%s"', filename);
+    % end
 
 end
 
