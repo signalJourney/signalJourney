@@ -1,0 +1,96 @@
+{
+  "sj_version": "0.1.0",
+  "schema_version": "0.1.0",
+  "description": "Example signalJourney file for a connectivity analysis pipeline using MNE-Connectivity (Coherence).",
+  "pipelineInfo": {
+    "name": "Connectivity Analysis (Coherence)",
+    "description": "Calculates spectral coherence between EEG sensor pairs using multitaper method on epoched data.",
+    "pipelineType": "connectivity",
+    "version": "1.0.0",
+    "executionDate": "2024-05-02T14:00:00Z"
+  },
+  "processingSteps": [
+    {
+      "stepId": "1",
+      "name": "Load Epoched Data",
+      "description": "Load epoched data (e.g., output from an epoching step after ICA cleaning).",
+      "software": {
+        "name": "MNE-Python",
+        "version": "1.6.1",
+        "functionCall": "mne.read_epochs('sub-01_task-rest_desc-cleaned_epo.fif', preload=True)"
+      },
+      "parameters": {
+        "filename": "sub-01_task-rest_desc-cleaned_epo.fif",
+        "preload": true
+      },
+      "inputSources": [
+        {
+          "sourceType": "file",
+          "location": "./derivatives/signaljourney/sub-01/eeg/sub-01_task-rest_desc-cleaned_epo.fif", 
+          "entityLabels": {
+            "sub": "01",
+            "task": "rest",
+            "desc": "cleaned",
+            "suffix": "epo"
+          },
+           "pipelineSource": { 
+             "pipelineName": "ICA Decomposition", 
+             "pipelineVersion": "1.0.0"
+           }
+        }
+      ],
+      "outputTargets": [
+        {
+          "targetType": "in-memory",
+          "format": "mne.Epochs",
+          "description": "Loaded epoched data object."
+        }
+      ]
+    },
+    {
+      "stepId": "2",
+      "name": "Calculate Spectral Connectivity (Coherence)",
+      "description": "Compute coherence between all EEG sensor pairs in the alpha band (8-13 Hz) using multitaper method.",
+      "dependsOn": ["1"],
+      "software": {
+        "name": "MNE-Connectivity",
+        "version": "0.6", 
+        "functionCall": "con = mne_connectivity.spectral_connectivity_epochs(epochs, method='coh', mode='multitaper', sfreq=epochs.info['sfreq'], fmin=8., fmax=13., faverage=True, mt_adaptive=True, n_jobs=1)"
+      },
+      "parameters": {
+        "method": "coh",
+        "mode": "multitaper",
+        "fmin": 8.0,
+        "fmax": 13.0,
+        "faverage": true,
+        "mt_adaptive": true,
+        "n_jobs": 1
+      },
+      "inputSources": [
+        {
+          "sourceType": "previousStepOutput",
+          "stepId": "1",
+          "outputId": "Loaded epoched data object."
+        }
+      ],
+      "outputTargets": [
+        {
+          "targetType": "file",
+          "location": "./derivatives/signaljourney/sub-01/eeg/sub-01_task-rest_desc-cohAlpha_con.nc",
+          "format": "NetCDF", 
+          "description": "Computed coherence connectivity object (alpha band)."
+        }
+      ],
+      "qualityMetrics": {
+        "frequencyBandHz": [8.0, 13.0],
+        "method": "coh",
+        "mode": "multitaper"
+      }
+    }
+  ],
+  "summaryMetrics": {
+    "analysisType": "Connectivity",
+    "method": "Coherence (multitaper)",
+    "domain": "sensor"
+  }
+} 
