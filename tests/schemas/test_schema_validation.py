@@ -13,10 +13,10 @@ VALID_EXAMPLES = [
 
 INVALID_EXAMPLES_FAILURES = [
     ("invalid/missing_required_top_level.json", "is a required property", "'sj_version' is a required property"),
-    ("invalid/wrong_type.json", "is not of type \'string\'", "0.1 is not of type 'string'"), # Check type error for sj_version
-    ("invalid/bad_pattern.json", "does not match pattern", "'0.1' does not match '^[0-9]+\\\\.[0-9]+\\\\.[0-9]+$'"), # Adjusted expected message for pattern
-    ("invalid/processing_steps_empty.json", "should be non-empty", "[] should be non-empty"), # Adjusted expected message for minItems
-    ("invalid/step_missing_required.json", "is a required property", "'name' is a required property"), # Check required 'name' in step
+    ("invalid/wrong_type.json", "is not of type 'string'", "0.1 is not of type 'string'"),  # Check type error for sj_version
+    ("invalid/bad_pattern.json", "does not match pattern", "'0.1' does not match '^[0-9]+\\.[0-9]+\\.[0-9]+$'"),  # Adjusted expected message for pattern
+    ("invalid/processing_steps_empty.json", "should be non-empty", "[] should be non-empty"),  # Adjusted expected message for minItems
+    ("invalid/step_missing_required.json", "is a required property", "'name' is a required property"),  # Check required 'name' in step
     # Add more invalid examples and expected error substrings here
 ]
 
@@ -27,9 +27,9 @@ def test_valid_examples(validator, load_json_example, filename):
     data = load_json_example(filename)
     try:
         validator.validate(data)
-    except SignalJourneyValidationError as e: # Check for our custom exception
+    except SignalJourneyValidationError as e:  # Check for our custom exception
         pytest.fail(f"Validation failed unexpectedly for {filename}:\n{e}\nErrors: {e.errors}")
-    except jsonschema.ValidationError as e: # Keep original check just in case base error slips through
+    except jsonschema.ValidationError as e:  # Keep original check just in case base error slips through
         pytest.fail(f"Validation failed unexpectedly with base jsonschema error for {filename}:\n{e}")
 
 
@@ -47,7 +47,11 @@ def test_invalid_examples(validator, load_json_example, filename, error_part, ex
         if expected_message in error_detail.message:
             found_error = True
             break
-    assert found_error, f"Expected error containing '{expected_message}' not found in errors: {[str(e) for e in excinfo.value.errors]}"
+    # Assert message split for length
+    assert found_error, (
+        f"Expected error containing '{expected_message}' not found in errors: "
+        f"{[str(e) for e in excinfo.value.errors]}"
+    )
 
 # Future tests can add parametrization for more examples
 # @pytest.mark.parametrize("filename", [

@@ -3,7 +3,7 @@
 import pytest
 import json
 from pathlib import Path
-from jsonschema import Draft7Validator, RefResolver
+from jsonschema import RefResolver
 from urllib.parse import urljoin
 
 # Import our custom Validator
