@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://raw.githubusercontent.com/signal-journey/specification/main/schema/signalJourney.schema.json",
   "title": "Signal Journey Schema",
-  "description": "Schema for documenting signal processing pipelines with detailed provenance tracking. Files should follow the naming convention: sub-<participant>_task-<taskname>_signalJourney.json and use UTF-8 encoding.",
+  "description": "Schema for documenting signal processing pipelines with detailed provenance tracking. Files should follow the naming convention: sub-<participant>_task-<taskname>_signalJourney.json and use UTF-8 encoding. Uses namespaces (e.g., 'eeg:', 'nemar:') within the 'extensions' property for domain-specific fields.",
   "type": "object",
   "required": [
     "sj_version",
@@ -75,7 +75,62 @@
       "type": "object",
       "description": "Optional section for summary statistics or overall quality metrics. To be defined in subtask 4.",
       "properties": {} # Define structure later
+    },
+    "extensions": {
+      "type": "object",
+      "description": "Container for domain-specific extensions using namespaces. Add custom fields under the appropriate namespace (e.g., extensions.eeg.channelNoise).",
+      "properties": {
+        "eeg": {
+          "type": "object",
+          "description": "Namespace for EEG-specific properties.",
+          "additionalProperties": true // Allow any EEG-specific fields initially
+        },
+        "nemar": {
+          "type": "object",
+          "description": "Namespace for NEMAR-specific properties (e.g., pipeline IDs).",
+          "additionalProperties": true // Allow any NEMAR-specific fields initially
+        }
+        // Add other namespaces here as needed
+      },
+      "additionalProperties": true // Allow adding new top-level namespaces
     }
   },
-  "additionalProperties": false
+  "additionalProperties": false,
+
+  "definitions": {
+    "processingStep": {
+      "type": "object",
+      "description": "Placeholder definition for a single processing step. To be defined in subtask 3.",
+      "properties": {},
+      "required": []
+    },
+    "summaryMetrics": {
+        "type": "object",
+        "description": "Placeholder definition for summary metrics. To be defined in subtask 4.",
+        "properties": {},
+        "required": []
+      },
+     "softwareDetails": {
+        "type": "object",
+        "description": "Reusable definition for software details.",
+        "properties": {
+            "name": {"type": "string"},
+            "version": {"type": "string"},
+            "url": {"type": "string", "format": "uri"}
+        },
+        "required": ["name", "version"]
+     },
+      "parameter": {
+        "type": "object",
+        "description": "Reusable definition for a parameter.",
+        "properties": {
+            "name": {"type": "string"},
+            "value": {},
+            "description": {"type": "string"},
+            "unit": {"type": "string"}
+        },
+        "required": ["name", "value"]
+      }
+    // Add other common definitions here
+  }
 } 
