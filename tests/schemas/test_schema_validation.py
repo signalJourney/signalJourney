@@ -14,7 +14,7 @@ VALID_EXAMPLES = [
 INVALID_EXAMPLES_FAILURES = [
     ("invalid/missing_required_top_level.json", "is a required property", "'sj_version' is a required property"),
     ("invalid/wrong_type.json", "is not of type 'string'", "0.1 is not of type 'string'"),  # Check type error for sj_version
-    ("invalid/bad_pattern.json", "does not match pattern", "'0.1' does not match '^[0-9]+\\.[0-9]+\\.[0-9]+$'"),  # Adjusted expected message for pattern
+    ("invalid/bad_pattern.json", "does not match pattern", "'0.1' does not match '^[0-9]+\\\\.[0-9]+\\\\.[0-9]+$'"),  # Adjusted expected message for pattern
     ("invalid/processing_steps_empty.json", "should be non-empty", "[] should be non-empty"),  # Adjusted expected message for minItems
     ("invalid/step_missing_required.json", "is a required property", "'name' is a required property"),  # Check required 'name' in step
     # Add more invalid examples and expected error substrings here
@@ -43,14 +43,17 @@ def test_invalid_examples(validator, load_json_example, filename, error_part, ex
     # Check if the specific error message part is present within the wrapped errors
     # Access the list of ValidationErrorDetail objects via excinfo.value.errors
     found_error = False
+    actual_errors_str = []
     for error_detail in excinfo.value.errors:
+        actual_errors_str.append(str(error_detail))
+        # Use 'in' for substring matching instead of exact match
         if expected_message in error_detail.message:
             found_error = True
             break
     # Assert message split for length
     assert found_error, (
         f"Expected error containing '{expected_message}' not found in errors: "
-        f"{[str(e) for e in excinfo.value.errors]}"
+        f"{actual_errors_str}"
     )
 
 # Future tests can add parametrization for more examples
