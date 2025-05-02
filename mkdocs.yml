@@ -1,0 +1,142 @@
+site_name: signalJourney
+site_url: https://github.com/neuromechanist/signalJourney # TODO: Replace with actual docs URL
+site_description: Documentation for the signalJourney specification and tools.
+
+repo_url: https://github.com/neuromechanist/signalJourney
+repo_name: neuromechanist/signalJourney
+edit_uri: edit/main/docs/ # Path for 'Edit on GitHub' links
+
+# Theme Configuration
+theme:
+  name: material
+  # logo: docs/_static/logo.png # Path relative to docs_dir
+  # favicon: docs/_static/favicon.png # Path relative to docs_dir
+  palette:
+    # Palette toggle for light/dark modes
+    - media: "(prefers-color-scheme: light)" 
+      scheme: default
+      primary: indigo
+      accent: blue 
+      toggle:
+        icon: material/brightness-7 
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)" 
+      scheme: slate 
+      primary: indigo
+      accent: blue
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - content.code.annotate # Allows code annotations
+    - content.tabs.link # Persist tabs across pages
+    - navigation.instant # Faster page loading
+    - navigation.indexes # Make sections clickable indices
+    - navigation.sections # Group pages in navigation
+    - navigation.tabs # Top-level navigation tabs
+    - navigation.top # Back-to-top button
+    - search.highlight # Highlight search terms
+    - search.share # Share search results link
+    - search.suggest # Search suggestions
+    - toc.integrate # Integrate table of contents into navigation
+  font:
+    text: Roboto
+    code: Roboto Mono
+
+# Extensions
+markdown_extensions:
+  - admonition # Nice alert boxes
+  - codehilite:
+      guess_lang: false
+      # linenums: true # Optional: Add line numbers
+  - pymdownx.highlight: # More advanced highlighting
+      anchor_linenums: true
+      line_spans: __span # Required for annotations
+      pygments_lang_class: true
+  - pymdownx.inlinehilite # Inline code highlighting
+  - pymdownx.snippets: # Include content from other files
+      check_paths: true
+  - pymdownx.superfences # Nested code/content blocks
+  - pymdownx.tabbed:
+      alternate_style: true 
+  - toc:
+      permalink: true
+      toc_depth: 3
+  - attr_list # Add attributes to Markdown elements
+  - md_in_html # Allow Markdown within HTML blocks
+  - pymdownx.emoji:
+      emoji_index: !!python/name:materialx.emoji.twemoji
+      emoji_generator: !!python/name:materialx.emoji.to_svg
+
+# Plugins
+plugins:
+  - search # Built-in search
+  - mkdocstrings: # API docs generation
+      handlers:
+        python:
+          options:
+            docstring_style: google # Or numpy
+            show_root_heading: true
+            show_source: true
+            members_order: source # Keep source order
+            # Optional: Add filters
+            # filters: ["!^_", "!^__"]
+            # heading_level: 2
+  - git-revision-date-localized: # Show last updated date
+      enable_creation_date: true
+      type: date
+      # fallback_to_build_date: true # Use build date if git info missing
+
+# Navigation Structure
+nav:
+  - Home: index.md
+  - Introduction: introduction.md
+  - Specification: 
+    - Overview: specification/overview.md
+    - Fields: specification/fields.md
+    - Namespaces: specification/namespaces.md
+    - Validation: specification/validation.md
+    - Versioning: specification/versioning.md
+  - Guides: 
+    - Python Validator: guides/validator_python.md
+    - CLI Tool: guides/validator_cli.md
+    - MATLAB Tools: guides/tools_matlab.md
+  - Tutorials:
+    - Creating Manually: tutorials/creating_manual.md
+    - Using Python Lib: tutorials/python_lib.md
+    - Using MATLAB Tools: tutorials/matlab_tools.md
+    - Validating Files: tutorials/validating.md
+  - Examples:
+    - Basic Preprocessing: examples/basic_preprocessing.md
+    - ICA Decomposition: examples/ica_decomposition.md
+    - Time-Frequency: examples/time_frequency.md
+    - Source Localization: examples/source_localization.md
+    - Connectivity: examples/connectivity.md
+    - Best Practices: examples/best_practices.md
+  - API Reference: api/index.md
+  - BIDS Integration: bids.md
+  - Contributing: contributing.md
+  - FAQ: faq.md
+  # - Pipeline Research: pipeline_research.md # Keep this out for now?
+
+# Optional: Custom directories
+# docs_dir: docs # Default is 'docs'
+# site_dir: site
+
+# Optional: Specify files/dirs to exclude from build
+exclude_docs: |
+  _build/
+  _templates/
+  conf.py
+  Makefile
+  requirements.txt
+  README.md # Usually want project README outside docs
+
+# Optional: Add extra CSS or JS
+# extra_css:
+#   - stylesheets/extra.css
+# extra_javascript:
+#   - javascript/extra.js
+
+# Copyright notice
+copyright: Copyright &copy; 2024 signalJourney Contributors 

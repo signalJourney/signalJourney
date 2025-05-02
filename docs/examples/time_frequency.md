@@ -1,6 +1,6 @@
 # Example: Time-Frequency Analysis
 
-This page explains the [`time_frequency_analysis_pipeline.signalJourney.json`](../../schema/examples/time_frequency_analysis_pipeline.signalJourney.json) example file. This pipeline calculates the Time-Frequency Representation (TFR) of epoched EEG data using Morlet wavelets in MNE-Python.
+This page explains the [`time_frequency_analysis_pipeline.signalJourney.json`](https://github.com/neuromechanist/signalJourney/blob/main/schema/examples/time_frequency_analysis_pipeline.signalJourney.json) example file, which documents a typical time-frequency analysis using MNE-Python.
 
 ```json
 {

@@ -1,6 +1,6 @@
 # Example: Connectivity Analysis
 
-This page explains the [`connectivity_analysis_pipeline.signalJourney.json`](../../schema/examples/connectivity_analysis_pipeline.signalJourney.json) example file. This pipeline calculates spectral coherence between EEG sensors using the `mne-connectivity` Python package.
+This page explains the [`connectivity_analysis_pipeline.signalJourney.json`](https://github.com/neuromechanist/signalJourney/blob/main/schema/examples/connectivity_analysis_pipeline.signalJourney.json) example file, which documents a functional connectivity analysis workflow. This pipeline calculates spectral coherence between EEG sensors using the `mne-connectivity` Python package.
 
 ```json
 {
