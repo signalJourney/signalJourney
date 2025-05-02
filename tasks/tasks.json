@@ -348,12 +348,12 @@
           "id": 4,
           "title": "Implement version conversion functions for signalJourney files",
           "description": "Create functions to convert between different versions of the signalJourney specification",
-          "status": "pending",
+          "status": "done",
           "dependencies": [
             1,
             3
           ],
-          "details": "Develop functions to convert signalJourney structures between different specification versions. Create a function `convertSignalJourneyVersion(data, targetVersion)` that transforms a structure to comply with the target version. Implement specific conversion logic for each version pair (e.g., v1 to v2, v2 to v3). Include validation before and after conversion to ensure data integrity. Document all changes made during conversion, including any potential data loss. Handle backward and forward compatibility issues appropriately."
+          "details": "Develop functions to convert signalJourney structures between different specification versions. Create a function `convertSignalJourneyVersion(data, targetVersion)` that transforms a structure to comply with the target version. Implement specific conversion logic for each version pair (e.g., v1 to v2, v2 to v3). Include validation before and after conversion to ensure data integrity. Document all changes made during conversion, including any potential data loss. Handle backward and forward compatibility issues appropriately.\n\n<info added on 2025-05-02T01:42:31.518Z>\nAdd the following implementation details:\n\nThe function should follow this implementation pattern:\n\n```matlab\nfunction data = convertSignalJourneyVersion(data, targetVersion)\n    % Get current version\n    currentVersion = data.sj_version;\n    \n    % Define version conversion path\n    conversionPath = determineConversionPath(currentVersion, targetVersion);\n    \n    % Apply conversions sequentially\n    for i = 1:length(conversionPath)-1\n        fromVer = conversionPath(i);\n        toVer = conversionPath(i+1);\n        data = applyVersionConversion(data, fromVer, toVer);\n    end\nend\n```\n\nImplement specific conversion functions for each version pair:\n- `v1_to_v2.m`: Handles renaming of fields, restructuring of signal metadata\n- `v2_to_v3.m`: Adds support for new signal types, updates timestamp format\n- `v3_to_v2.m`: Backward compatibility, with graceful degradation for features not in v2\n\nInclude a version compatibility matrix as a global constant to track which conversions are supported and their potential data loss implications.\n\nFor validation, implement `validateSignalJourneyVersion.m` that checks schema compliance before and after conversion, with detailed error reporting.\n\nLog all transformations applied during conversion in a `conversionLog` field that can be optionally returned to the caller.\n</info added on 2025-05-02T01:42:31.518Z>"
         },
         {
           "id": 5,
