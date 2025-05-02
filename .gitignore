@@ -26,7 +26,6 @@ node_modules/
 .DS_Store
 
 # Task files
-tasks.json
 tasks/
 scripts/
 
@@ -108,3 +107,11 @@ ipython_config.py
 
 # pipenv
 #   According to p<remaining_args_truncated />
+.pnp.js
+.pnp.loader.mjs
+
+# MkDocs / Built documentation
+site/
+docs_backup_*/
+
+# Environments
