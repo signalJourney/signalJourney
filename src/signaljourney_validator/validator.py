@@ -23,6 +23,7 @@ class SignalJourneyValidationError(Exception):
 class Validator:
     """
     Validates signalJourney JSON data against the official schema.
+    Also includes experimental support for BIDS context validation.
     """
 
     def __init__(self, schema: Optional[Union[Path, str, JsonDict]] = None):
@@ -66,34 +67,38 @@ class Validator:
             raise TypeError("Schema must be a Path, string, dictionary, or None.")
 
     def validate(
-        self, data: Union[Path, str, JsonDict], raise_exceptions: bool = True
+        self,
+        data: Union[Path, str, JsonDict],
+        raise_exceptions: bool = True,
+        bids_context: Optional[Path] = None
     ) -> Union[bool, List[ValidationErrorDetail]]:
         """
-        Validates the given signalJourney data against the loaded schema.
+        Validates the given signalJourney data against the loaded schema,
+        optionally considering BIDS context.
 
         Args:
-            data: Path to the JSON file, the JSON string, or a dictionary representing the data.
-            raise_exceptions: If True, raises SignalJourneyValidationError on failure,
-                              containing detailed errors.
-                              If False, returns an empty list if valid, or a list
-                              of ValidationErrorDetail objects if invalid.
+            data: Path to the JSON file, the JSON string, or a dictionary
+                  representing the data.
+            raise_exceptions: If True, raises SignalJourneyValidationError on failure.
+                              If False, returns a list of errors or an empty list.
+            bids_context: Optional Path to the root of the BIDS dataset.
+                          If provided, performs additional BIDS-related checks.
+                          (Currently placeholder).
 
         Returns:
-            True if raise_exceptions is True and data is valid.
-            Empty list if raise_exceptions is False and data is valid.
-            List of ValidationErrorDetail objects if raise_exceptions is False and data is invalid.
+            True or List[ValidationErrorDetail] based on raise_exceptions and validity.
 
         Raises:
             SignalJourneyValidationError: If validation fails and raise_exceptions is True.
-                                         The exception contains a list of detailed errors.
-            FileNotFoundError: If data is a path and the file does not exist.
-            SignalJourneyValidationError: If data is a string and cannot be parsed as JSON,
-                                         or if other loading/unexpected validation errors occur.
+            FileNotFoundError: If data file/path does not exist.
             TypeError: If data is not a Path, string, or dictionary.
         """
         instance: JsonDict
+        file_path_context: Optional[Path] = None
+
         if isinstance(data, (Path, str)):
             file_path = Path(data)
+            file_path_context = file_path
             if not file_path.exists():
                 raise FileNotFoundError(f"Data file not found at {file_path}")
             try:
@@ -108,12 +113,13 @@ class Validator:
         else:
             raise TypeError("Data must be a Path, string, or dictionary.")
 
-        errors: List[ValidationErrorDetail] = []
+        schema_errors: List[ValidationErrorDetail] = []
+        bids_errors: List[ValidationErrorDetail] = []
+
         try:
             for error in sorted(self._validator.iter_errors(instance), key=str):
                 error_path = list(error.path)
                 schema_error_path = list(error.schema_path)
-
                 nested_errors = []
                 if error.context:
                     nested_errors = [
@@ -126,7 +132,6 @@ class Validator:
                             instance_value=sub_error.instance
                         ) for sub_error in error.context
                     ]
-
                 error_detail = ValidationErrorDetail(
                     message=error.message,
                     path=error_path,
@@ -137,23 +142,50 @@ class Validator:
                     context=nested_errors
                 )
                 error_detail.generate_suggestion()
-                errors.append(error_detail)
-
-            if errors:
-                if raise_exceptions:
-                    raise SignalJourneyValidationError("Validation failed.", errors=errors)
-                else:
-                    return errors
-            else:
-                if raise_exceptions:
-                    return True
-                else:
-                    return []
+                schema_errors.append(error_detail)
 
         except jsonschema.SchemaError as e:
             raise SignalJourneyValidationError(f"Invalid schema: {e}") from e
         except Exception as e:
-            raise SignalJourneyValidationError(f"An unexpected error occurred during validation: {e}") from e
+            raise SignalJourneyValidationError(f"An unexpected error occurred during schema validation: {e}") from e
+
+        if bids_context:
+            bids_errors = self._validate_bids_context(instance, file_path_context, bids_context)
+
+        all_errors = schema_errors + bids_errors
+
+        if all_errors:
+            if raise_exceptions:
+                raise SignalJourneyValidationError("Validation failed.", errors=all_errors)
+            else:
+                return all_errors
+        else:
+            if raise_exceptions:
+                return True
+            else:
+                return []
+
+    def _validate_bids_context(
+        self, instance: JsonDict, file_path: Optional[Path], bids_root: Path
+    ) -> List[ValidationErrorDetail]:
+        """Placeholder for BIDS context validation logic."""
+        errors: List[ValidationErrorDetail] = []
+        print(f"[INFO] BIDS context validation requested for {file_path} within {bids_root} (Not implemented)")
+
+        # TODO: Implement BIDS checks using file_path and bids_root
+        # - Check if file_path is correctly placed within bids_root derivatives
+        # - Check naming convention against BIDS standards (might need pybids)
+        # - Check if files referenced in inputSources/outputTargets exist relative to bids_root
+        # - Differentiate rules for root-level vs derivative-level journey files
+
+        # Example placeholder error:
+        # if file_path and "derivatives" not in file_path.parts:
+        #     errors.append(ValidationErrorDetail(
+        #         message="File does not appear to be in a BIDS derivatives directory.",
+        #         path=["filepath"]
+        #     ))
+
+        return errors
 
 
 # Example usage (optional, for quick testing)
@@ -171,22 +203,24 @@ if __name__ == '__main__':
         }
     }
     valid_example_file = Path(__file__).parent.parent.parent / "schema" / "examples" / "simple_pipeline.json"
+    # Example BIDS context (adjust path as needed for your system)
+    example_bids_root = Path(__file__).parent.parent.parent / "tests" / "data" / "bids_dataset" # Assuming tests/data exists
 
     if schema_file.exists():
         print(f"Using schema: {schema_file}\n")
         try:
             validator = Validator(schema_file)
 
-            # --- Test valid example (raise_exceptions=False) ---
-            print(f"Validating valid example (no exceptions): {valid_example_file}")
+            # --- Test valid example (no BIDS) ---
+            print(f"Validating valid example (no BIDS): {valid_example_file}")
             validation_result_valid = validator.validate(valid_example_file, raise_exceptions=False)
             if isinstance(validation_result_valid, list) and not validation_result_valid:
                 print("VALID example validation successful (returned empty list).\n")
             else:
                 print(f"VALID example validation FAILED (unexpected result): {validation_result_valid}\n")
 
-            # --- Test invalid example (raise_exceptions=False) ---
-            print("Validating invalid example (no exceptions)...")
+            # --- Test invalid example (no BIDS) ---
+            print("Validating invalid example (no BIDS)...")
             validation_result_invalid = validator.validate(invalid_example_dict, raise_exceptions=False)
             if isinstance(validation_result_invalid, list) and validation_result_invalid:
                 print(f"INVALID example validation failed as expected. Found {len(validation_result_invalid)} errors:")
@@ -196,17 +230,16 @@ if __name__ == '__main__':
             else:
                 print(f"INVALID example validation FAILED (unexpected result): {validation_result_invalid}\n")
 
-            # --- Test invalid example (raise_exceptions=True) ---
-            print("Validating invalid example (expecting exception)...")
-            try:
-                validator.validate(invalid_example_dict, raise_exceptions=True)
-                print("INVALID example validation FAILED (no exception raised)\n")
-            except SignalJourneyValidationError as e:
-                print(f"INVALID example validation failed as expected. Exception caught: {e}")
-                print(f"Contained {len(e.errors)} detailed errors:")
-                for err_detail in e.errors:
-                    print(f"- {err_detail}")
-                print("\n")
+            # --- Test valid example (with BIDS context) ---
+            print(f"Validating valid example (with BIDS context at {example_bids_root}): {valid_example_file}")
+            # Note: This will just print the INFO message currently
+            validation_result_bids = validator.validate(valid_example_file, raise_exceptions=False, bids_context=example_bids_root)
+            if isinstance(validation_result_bids, list) and not validation_result_bids:
+                 print("VALID example BIDS context validation successful (returned empty list - placeholder).\n")
+            elif isinstance(validation_result_bids, list) and validation_result_bids:
+                 print(f"VALID example BIDS context validation FAILED (placeholder errors): {validation_result_bids}\n")
+            else:
+                 print(f"VALID example BIDS context validation FAILED (unexpected result): {validation_result_bids}\n")
 
         except FileNotFoundError as e:
             print(f"Setup Error: {e}")
