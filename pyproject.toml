@@ -4,16 +4,22 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "signaljourney_validator"
-version = "0.0.1"
+version = "0.1.0"
 authors = [
-  { name="Your Name", email="your.email@example.com" }, # TODO: Update author details
+  { name="Signal Journey Contributors", email="signaljourney.specification@gmail.com" }, # Updated placeholder
 ]
-description = "A Python library to validate signalJourney JSON files."
-readme = "README.md"
+description = "A Python library to validate signalJourney JSON files against the official specification schema."
+readme = "src/signaljourney_validator/README.md" # Point to the package README
+license = {text = "MIT License"} # Explicitly state license
 requires-python = ">=3.8"
+keywords = ["signaljourney", "schema", "validation", "provenance", "biosignal", "neuroscience"]
 classifiers = [
     "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: MIT License", # TODO: Confirm License
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Science/Research",
@@ -24,27 +30,35 @@ dependencies = [
 ]
 
 [project.urls]
-"Homepage" = "https://github.com/signal-journey/specification" # TODO: Update if repo structure changes
-"Bug Tracker" = "https://github.com/signal-journey/specification/issues" # TODO: Update if repo structure changes
+"Homepage" = "https://github.com/signal-journey/specification"
+"Repository" = "https://github.com/signal-journey/specification" # Added Repository URL
+"Bug Tracker" = "https://github.com/signal-journey/specification/issues"
 
 [project.optional-dependencies]
 dev = [
     "pytest>=7.0",
     "mypy>=1.0",
-    "flake8>=6.0",
-    "black>=23.0",
     "ruff>=0.1.0", # Combines flake8, black, isort etc. - recommended
     "fuzzywuzzy>=0.18", # For suggestions
-    "python-Levenshtein>=0.12" # Optional but improves fuzzywuzzy speed
+    "python-Levenshtein>=0.12", # Optional but improves fuzzywuzzy speed
+    "build", # For building the package
+    "twine" # For uploading to PyPI
+]
+suggestions = [
+    "fuzzywuzzy>=0.18",
+    "python-Levenshtein>=0.12"
 ]
 
 [tool.setuptools]
-packages = ["signaljourney_validator"]
+packages = find:
 package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
 
 [tool.ruff]
 line-length = 88
-select = ["E", "F", "W", "I"] # Base flake8 rules + isort
+select = ["E", "F", "W", "I"]
 
 [tool.mypy]
 strict = true 
