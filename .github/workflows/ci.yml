@@ -1,0 +1,80 @@
+name: Python CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        # Test on relevant Python versions
+        python-version: ['3.9', '3.10', '3.11', '3.12'] 
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install ruff pytest pytest-cov
+        # Install package with test dependencies
+        pip install -e '.[test]'
+
+    - name: Lint with Ruff
+      run: |
+        ruff check .
+        ruff format --check .
+
+    - name: Test with pytest
+      run: |
+        # Run tests and generate coverage report
+        pytest --cov=src/signaljourney_validator --cov-report=xml
+
+    - name: Upload coverage reports to Codecov
+      uses: codecov/codecov-action@v4.0.1
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }} # Optional: for private repos
+        slug: neuromechanist/signalJourney # Optional: explicitly specify repo slug
+
+  # Placeholder Job for MATLAB tests (requires self-hosted runner or MATLAB license setup)
+  # matlab-tests:
+  #   needs: lint-and-test # Optional: run after Python tests
+  #   runs-on: ubuntu-latest # Or a self-hosted runner with MATLAB
+  #   steps:
+  #   - uses: actions/checkout@v4
+  #   - name: Set up MATLAB
+  #     # Option 1: Use official MATLAB actions (requires license config)
+  #     # uses: matlab-actions/setup-matlab@v1 
+  #     # Option 2: Manually setup MATLAB path on self-hosted runner
+  #     run: echo "MATLAB setup steps would go here"
+  # 
+  #   - name: Run MATLAB Tests
+  #     run: |
+  #       echo "Running MATLAB tests..."
+  #       # Option 1: Using official action
+  #       # uses: matlab-actions/run-tests@v1
+  #       # with:
+  #       #   test-results-junit: test-results/matlab-results.xml
+  #       
+  #       # Option 2: Manually running via batch command (adjust cd path)
+  #       # matlab -batch "cd('$GITHUB_WORKSPACE/tests/matlab'); results = run_matlab_tests; exit(double(any([results.Failed])));"
+  #       echo "(Skipping actual MATLAB test execution in this example CI)"
+  #       exit 0 # Force success for now
+  # 
+  #   - name: Upload MATLAB Test Results (JUnit XML)
+  #     # uses: actions/upload-artifact@v3
+  #     # with:
+  #     #   name: matlab-test-results
+  #     #   path: test-results/matlab-results.xml
+  #     run: echo "MATLAB artifact upload would go here" 
