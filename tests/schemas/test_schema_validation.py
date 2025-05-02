@@ -1,7 +1,7 @@
 """Tests for validating Signal Journey JSON files against the schema."""
 
-import pytest
 import jsonschema
+import pytest
 
 # Import our custom exception
 from signaljourney_validator.validator import SignalJourneyValidationError
@@ -11,12 +11,33 @@ VALID_EXAMPLES = [
     # Add more valid example filenames here as they are created
 ]
 
+# Define sets of invalid examples and the core error message expected
 INVALID_EXAMPLES_FAILURES = [
-    ("invalid/missing_required_top_level.json", "is a required property", "'sj_version' is a required property"),
-    ("invalid/wrong_type.json", "is not of type 'string'", "0.1 is not of type 'string'"),  # Check type error for sj_version
-    ("invalid/bad_pattern.json", "does not match pattern", "'0.1' does not match '^[0-9]+\\\\.[0-9]+\\\\.[0-9]+$'"),  # Adjusted expected message for pattern
-    ("invalid/processing_steps_empty.json", "should be non-empty", "[] should be non-empty"),  # Adjusted expected message for minItems
-    ("invalid/step_missing_required.json", "is a required property", "'name' is a required property"),  # Check required 'name' in step
+    (
+        "invalid/missing_required_top_level.json",
+        "is a required property",
+        "'sj_version' is a required property",
+    ),
+    (
+        "invalid/wrong_type.json",
+        "is not of type 'string'",
+        "0.1 is not of type 'string'",
+    ),  # Check type error for sj_version
+    (
+        "invalid/bad_pattern.json",
+        "does not match pattern",
+        "'0.1' does not match '^[0-9]+\\.\\.[0-9]+\\.\\.[0-9]+$'",
+    ),  # Adjusted expected message for pattern
+    (
+        "invalid/processing_steps_empty.json",
+        "should be non-empty",
+        "[] should be non-empty",
+    ),  # Adjusted expected message for minItems
+    (
+        "invalid/step_missing_required.json",
+        "is a required property",
+        "'name' is a required property",
+    ),  # Check required 'name' in step
     # Add more invalid examples and expected error substrings here
 ]
 
@@ -28,13 +49,22 @@ def test_valid_examples(validator, load_json_example, filename):
     try:
         validator.validate(data)
     except SignalJourneyValidationError as e:  # Check for our custom exception
-        pytest.fail(f"Validation failed unexpectedly for {filename}:\n{e}\nErrors: {e.errors}")
-    except jsonschema.ValidationError as e:  # Keep original check just in case base error slips through
-        pytest.fail(f"Validation failed unexpectedly with base jsonschema error for {filename}:\n{e}")
+        pytest.fail(
+            f"Validation failed unexpectedly for {filename}:\n{e}\nErrors: {e.errors}"
+        )
+    except jsonschema.ValidationError as e:  # Keep original check
+        pytest.fail(
+            f"Validation failed unexpectedly with base jsonschema error "
+            f"for {filename}:\n{e}"
+        )
 
 
-@pytest.mark.parametrize("filename, error_part, expected_message", INVALID_EXAMPLES_FAILURES)
-def test_invalid_examples(validator, load_json_example, filename, error_part, expected_message):
+@pytest.mark.parametrize(
+    "filename, error_part, expected_message", INVALID_EXAMPLES_FAILURES
+)
+def test_invalid_examples(
+    validator, load_json_example, filename, error_part, expected_message
+):
     """Test that invalid example files fail validation with expected errors."""
     data = load_json_example(filename)
     # Expect our custom exception now
@@ -56,6 +86,7 @@ def test_invalid_examples(validator, load_json_example, filename, error_part, ex
         f"{actual_errors_str}"
     )
 
+
 # Future tests can add parametrization for more examples
 # @pytest.mark.parametrize("filename", [
 #     "valid/example1.json",
@@ -69,8 +100,10 @@ def test_invalid_examples(validator, load_json_example, filename, error_part, ex
 #     ("invalid/wrong_type.json", "is not of type 'string'"),
 #     ("invalid/bad_pattern.json", "does not match"),
 # ])
-# def test_other_invalid_examples(validator, load_json_example, filename, expected_error_part):
+# def test_other_invalid_examples(
+#     validator, load_json_example, filename, expected_error_part
+# ):
 #     data = load_json_example(filename)
 #     with pytest.raises(jsonschema.ValidationError) as excinfo:
 #         validator.validate(data)
-#     assert expected_error_part in str(excinfo.value) 
+#     assert expected_error_part in str(excinfo.value)
