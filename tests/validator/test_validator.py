@@ -83,10 +83,12 @@ def test_validate_suggestions(validator, load_json_example):
         load_json_example("invalid/step_missing_required.json"), False
     )
     # Check that *all* missing required properties are mentioned
-    assert (
-        "Ensure required property or properties ('stepId', 'name', 'description', 'software') are present."
-        in errors_req[0].suggestion
+    # Split assertion string for length
+    expected_suggestion_part = (
+        "Ensure required property or properties "
+        "('stepId', 'name', 'description', 'software') are present."
     )
+    assert expected_suggestion_part in errors_req[0].suggestion
 
     # minItems error
     errors_min = validator.validate(
