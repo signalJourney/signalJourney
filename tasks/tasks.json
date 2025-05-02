@@ -103,7 +103,7 @@
       "id": 2,
       "title": "Develop Core Python Validation Library",
       "description": "Create a Python package that implements validation against the signalJourney JSON Schema with detailed error reporting.",
-      "status": "pending",
+      "status": "in-progress",
       "dependencies": [
         1
       ],
@@ -115,9 +115,9 @@
           "id": 1,
           "title": "Set up project structure and dependencies",
           "description": "Initialize the Python package structure with necessary files and dependencies for the validation library",
-          "status": "pending",
+          "status": "done",
           "dependencies": [],
-          "details": "Create a proper Python package structure including setup.py, README.md, and directory structure. Set up virtual environment. Add dependencies on jsonschema and other required libraries. Initialize git repository. Create package namespace and module structure. Set up testing framework (pytest). Configure type checking with mypy. Ensure PEP 8 compliance with tools like flake8 or black."
+          "details": "Create a proper Python package structure including setup.py, README.md, and directory structure. Set up virtual environment. Add dependencies on jsonschema and other required libraries. Initialize git repository. Create package namespace and module structure. Set up testing framework (pytest). Configure type checking with mypy. Ensure PEP 8 compliance with tools like flake8 or black.\n\n<info added on 2025-05-02T01:29:14.940Z>\nFor the `signaljourney_validator` package structure:\n\n- Added `pyproject.toml` with Poetry configuration instead of setup.py for modern dependency management\n- Created core module files: `src/signaljourney_validator/validator.py`, `src/signaljourney_validator/exceptions.py`, `src/signaljourney_validator/schema_registry.py`\n- Set up test directory with structure: `tests/unit/`, `tests/integration/`, `tests/fixtures/`\n- Added CI configuration in `.github/workflows/python-tests.yml` for automated testing\n- Configured Ruff for linting and formatting (replacing flake8/black) with `.ruff.toml`\n- Created mypy configuration in `mypy.ini` with strict type checking enabled\n- Added `src/signaljourney_validator/py.typed` marker file for PEP 561 compliance\n- Included version management in `src/signaljourney_validator/__init__.py` with `__version__ = \"0.1.0\"`\n- Set up pre-commit hooks with `.pre-commit-config.yaml` for code quality checks\n</info added on 2025-05-02T01:29:14.940Z>"
         },
         {
           "id": 2,

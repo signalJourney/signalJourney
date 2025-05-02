@@ -1,0 +1,48 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "signaljourney_validator"
+version = "0.0.1"
+authors = [
+  { name="Your Name", email="your.email@example.com" }, # TODO: Update author details
+]
+description = "A Python library to validate signalJourney JSON files."
+readme = "README.md"
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License", # TODO: Confirm License
+    "Operating System :: OS Independent",
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering",
+]
+dependencies = [
+    "jsonschema>=4.0",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/signal-journey/specification" # TODO: Update if repo structure changes
+"Bug Tracker" = "https://github.com/signal-journey/specification/issues" # TODO: Update if repo structure changes
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "mypy>=1.0",
+    "flake8>=6.0",
+    "black>=23.0",
+    "ruff>=0.1.0", # Combines flake8, black, isort etc. - recommended
+]
+
+[tool.setuptools]
+packages = ["signaljourney_validator"]
+package-dir = {"" = "src"}
+
+[tool.ruff]
+line-length = 88
+select = ["E", "F", "W", "I"] # Base flake8 rules + isort
+
+[tool.mypy]
+strict = true 
