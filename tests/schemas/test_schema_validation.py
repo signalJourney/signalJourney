@@ -3,6 +3,9 @@
 import pytest
 import jsonschema
 
+# Import our custom exception
+from signaljourney_validator.validator import SignalJourneyValidationError
+
 VALID_EXAMPLES = [
     "valid/minimal_valid.json",
     # Add more valid example filenames here as they are created
@@ -24,19 +27,27 @@ def test_valid_examples(validator, load_json_example, filename):
     data = load_json_example(filename)
     try:
         validator.validate(data)
-    except jsonschema.ValidationError as e:
-        pytest.fail(f"Validation failed unexpectedly for {filename}:\n{e}")
+    except SignalJourneyValidationError as e: # Check for our custom exception
+        pytest.fail(f"Validation failed unexpectedly for {filename}:\n{e}\nErrors: {e.errors}")
+    except jsonschema.ValidationError as e: # Keep original check just in case base error slips through
+        pytest.fail(f"Validation failed unexpectedly with base jsonschema error for {filename}:\n{e}")
 
 
 @pytest.mark.parametrize("filename, error_part, expected_message", INVALID_EXAMPLES_FAILURES)
 def test_invalid_examples(validator, load_json_example, filename, error_part, expected_message):
     """Test that invalid example files fail validation with expected errors."""
     data = load_json_example(filename)
-    with pytest.raises(jsonschema.ValidationError) as excinfo:
+    # Expect our custom exception now
+    with pytest.raises(SignalJourneyValidationError) as excinfo:
         validator.validate(data)
-    # Check if the specific error message part is present
-    # Using the full expected message for stricter checking now
-    assert expected_message in str(excinfo.value)
+    # Check if the specific error message part is present within the wrapped errors
+    # Access the list of ValidationErrorDetail objects via excinfo.value.errors
+    found_error = False
+    for error_detail in excinfo.value.errors:
+        if expected_message in error_detail.message:
+            found_error = True
+            break
+    assert found_error, f"Expected error containing '{expected_message}' not found in errors: {[str(e) for e in excinfo.value.errors]}"
 
 # Future tests can add parametrization for more examples
 # @pytest.mark.parametrize("filename", [
