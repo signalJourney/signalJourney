@@ -82,8 +82,9 @@ def test_validate_suggestions(validator, load_json_example):
     errors_req = validator.validate(
         load_json_example("invalid/step_missing_required.json"), False
     )
+    # Check that *all* missing required properties are mentioned
     assert (
-        "Ensure required property or properties ('name') are present."
+        "Ensure required property or properties ('stepId', 'name', 'description', 'software') are present."
         in errors_req[0].suggestion
     )
 
