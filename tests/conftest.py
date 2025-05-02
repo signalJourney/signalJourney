@@ -2,7 +2,6 @@
 
 import json
 from pathlib import Path
-from urllib.parse import urljoin
 
 import pytest
 from jsonschema import RefResolver
@@ -47,7 +46,7 @@ def main_schema(main_schema_path):
 @pytest.fixture(scope="session")
 def all_schemas(main_schema, main_schema_path, schema_base_uri):
     """Loads all schema files into a dictionary suitable for RefResolver store.
-    
+
     Uses the schema's internal '$id' as the key for the store, which is the
     standard mechanism for jsonschema resolution.
     """
@@ -58,7 +57,6 @@ def all_schemas(main_schema, main_schema_path, schema_base_uri):
     else:
         # Fallback if $id is missing, though it shouldn't be for the main schema
         store[schema_base_uri + main_schema_path.name] = main_schema
-
 
     def load_schemas_from_dir(directory):
         if not directory.exists():
@@ -71,13 +69,22 @@ def all_schemas(main_schema, main_schema_path, schema_base_uri):
                 if "$id" in schema_content:
                     store[schema_content["$id"]] = schema_content
                 else:
-                    print(f"Warning: Schema file {schema_file} is missing '$id'. Skipping.")
+                    # Split print statement for length
+                    print(
+                        f"Warning: Schema file {schema_file} is missing '$id'. "
+                        f"Skipping."
+                    )
             except json.JSONDecodeError:
+                # Split print statement for length
                 print(f"Warning: Could not decode JSON from {schema_file}. Skipping.")
             except Exception as e:
-                 print(f"Warning: Could not load schema {schema_file}: {e}. Skipping.")
+                # Split print statement for length
+                print(f"Warning: Could not load schema {schema_file}: {e}. Skipping.")
 
-    load_schemas_from_dir(SCHEMA_DIR) # Load top-level schemas like signalJourney.schema.json if needed (already added though)
+    # Split comment and function calls for length
+    # Load top-level schemas (like signalJourney.schema.json)
+    # if needed (already added by initial logic)
+    load_schemas_from_dir(SCHEMA_DIR)
     load_schemas_from_dir(DEFINITIONS_DIR)
     load_schemas_from_dir(EXTENSIONS_DIR)
 
@@ -93,7 +100,7 @@ def all_schemas(main_schema, main_schema_path, schema_base_uri):
 @pytest.fixture(scope="session")
 def schema_resolver(schema_base_uri, main_schema, all_schemas):
     """Create a RefResolver pre-filled with all local schemas.
-    
+
     The resolver uses the store (keyed by $id) to find schemas.
     The base_uri here helps if any $refs *inside* schemas are relative,
     but primarily resolution happens via the absolute $id URIs in the store.
@@ -102,9 +109,9 @@ def schema_resolver(schema_base_uri, main_schema, all_schemas):
     # The base_uri here helps if any $refs *inside* schemas are relative,
     # but primarily resolution happens via the absolute $id URIs in the store.
     return RefResolver(
-        base_uri=schema_base_uri, # Use the standard URI
+        base_uri=schema_base_uri,  # Use the standard URI
         referrer=main_schema,
-        store=all_schemas
+        store=all_schemas,
     )
 
 

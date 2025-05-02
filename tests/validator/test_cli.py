@@ -42,7 +42,7 @@ def test_cli_validate_valid_file(runner):
     result = runner.invoke(cli, ["validate", str(valid_file)])
     assert result.exit_code == 0
     assert "Validating:" in result.output
-    assert "OK" in result.output
+    assert "PASSED" in result.output
 
 
 def test_cli_validate_invalid_file(runner):
@@ -71,7 +71,7 @@ def test_cli_validate_directory(runner):
     assert result.exit_code == 0
     assert "Scanning directory:" in result.output
     assert str(valid_dir / "minimal_valid.json") in result.output
-    assert "OK" in result.output
+    assert "PASSED" in result.output
 
 
 # TODO: Add tests for recursive validation
