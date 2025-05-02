@@ -33,7 +33,11 @@ def cli():
               help='Output format: "text" (human-readable, default) or "json" (machine-readable).')
 @click.option('--verbose', '-v', is_flag=True, default=False,
               help='Enable verbose output for the "text" format (shows more error details).')
-def validate(path: Path, schema: Path, recursive: bool, output_format: str, verbose: bool):
+@click.option('--bids', is_flag=True, default=False,
+              help='Enable BIDS context validation checks (experimental).')
+@click.option('--bids-root', type=click.Path(exists=True, file_okay=False, path_type=Path, resolve_path=True),
+              help='Path to the BIDS dataset root directory (required if --bids is used).')
+def validate(path: Path, schema: Path, recursive: bool, output_format: str, verbose: bool, bids: bool, bids_root: Path):
     """
     Validate one or more signalJourney JSON files.
 
@@ -53,7 +57,15 @@ def validate(path: Path, schema: Path, recursive: bool, output_format: str, verb
     Validate all files recursively, outputting JSON:
 
         signaljourney-validate -r -o json path/to/bids_dataset/
+
+    Validate with BIDS context checks:
+
+        signaljourney-validate --bids --bids-root path/to/bids_dataset path/to/bids_dataset/derivatives/...
     """
+    if bids and not bids_root:
+        click.echo("Error: --bids-root is required when using the --bids flag.", err=True)
+        sys.exit(1)
+
     files_to_validate: List[Path] = []
     if path.is_file():
         if path.name.endswith('_signalJourney.json'):
@@ -62,7 +74,7 @@ def validate(path: Path, schema: Path, recursive: bool, output_format: str, verb
             click.echo(f"Skipping non-signalJourney file: {path}", err=True)
     elif path.is_dir():
         if output_format == 'text':
-             click.echo(f"Scanning directory: {path}{ ' recursively' if recursive else ''}")
+             click.echo(f"Scanning directory: {path}{ ' recursively' if recursive else ''}{ ' (BIDS mode)' if bids else ''}")
         if recursive:
             for root, _, filenames in os.walk(path):
                 for filename in filenames:
@@ -85,7 +97,7 @@ def validate(path: Path, schema: Path, recursive: bool, output_format: str, verb
 
     overall_success = True
     validator = None
-    results: Dict[str, Any] = {"files": []} # Structure for JSON output
+    results: Dict[str, Any] = {"files": [], "bids_mode_enabled": bids}
 
     for filepath in files_to_validate:
         file_result: Dict[str, Any] = {"filepath": str(filepath), "status": "unknown", "errors": []}
@@ -96,7 +108,9 @@ def validate(path: Path, schema: Path, recursive: bool, output_format: str, verb
             if validator is None:
                  validator = Validator(schema=schema)
 
-            validation_errors = validator.validate(filepath, raise_exceptions=False)
+            # Pass bids_root to validator if bids flag is set
+            current_bids_context = bids_root if bids else None
+            validation_errors = validator.validate(filepath, raise_exceptions=False, bids_context=current_bids_context)
 
             if validation_errors:
                 file_result["status"] = "failed"

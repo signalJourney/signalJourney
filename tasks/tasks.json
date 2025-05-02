@@ -177,7 +177,7 @@
       "id": 3,
       "title": "Implement Command-Line Interface for Validation",
       "description": "Create a command-line tool that leverages the Python validation library to validate signalJourney files.",
-      "status": "in-progress",
+      "status": "done",
       "dependencies": [
         2
       ],
@@ -230,12 +230,12 @@
           "id": 5,
           "title": "Implement BIDS-aware functionality",
           "description": "Add BIDS dataset awareness to the CLI to properly handle validation within BIDS directory structures.",
-          "status": "pending",
+          "status": "done",
           "dependencies": [
             1,
             2
           ],
-          "details": "1) Add detection for BIDS dataset structures when scanning directories. 2) Implement special handling for root-level journey files in BIDS datasets. 3) Add command-line options to specify BIDS-specific validation rules or behaviors. 4) Ensure validation respects BIDS directory hierarchy and naming conventions. 5) Consider adding a dedicated BIDS validation mode that understands the relationship between journey files and other BIDS components. 6) Update help documentation to include BIDS-specific usage examples."
+          "details": "1) Add detection for BIDS dataset structures when scanning directories. 2) Implement special handling for root-level journey files in BIDS datasets. 3) Add command-line options to specify BIDS-specific validation rules or behaviors. 4) Ensure validation respects BIDS directory hierarchy and naming conventions. 5) Consider adding a dedicated BIDS validation mode that understands the relationship between journey files and other BIDS components. 6) Update help documentation to include BIDS-specific usage examples.\n\n<info added on 2025-05-02T01:47:21.527Z>\nHere's additional implementation information for the BIDS-aware functionality:\n\n```python\n# Implementation details for BIDS detection and validation\n\n# 1. BIDS dataset detection function\ndef is_bids_dataset(directory_path):\n    \"\"\"\n    Detect if a directory is a BIDS dataset by checking for:\n    - dataset_description.json file at the root\n    - Expected folder structure (sub-* directories)\n    \"\"\"\n    desc_file = os.path.join(directory_path, \"dataset_description.json\")\n    if not os.path.exists(desc_file):\n        return False\n    \n    # Check for at least one subject directory\n    subject_dirs = glob.glob(os.path.join(directory_path, \"sub-*\"))\n    return len([d for d in subject_dirs if os.path.isdir(d)]) > 0\n\n# 2. BIDS-specific validation rules\nclass BIDSValidator(Validator):\n    def __init__(self, bids_root, **kwargs):\n        super().__init__(**kwargs)\n        self.bids_root = bids_root\n        \n    def validate(self, journey_file):\n        # Get relative path from BIDS root\n        rel_path = os.path.relpath(journey_file, self.bids_root)\n        \n        # Special handling for root-level journey files\n        if '/' not in rel_path:\n            return self._validate_root_level_journey(journey_file)\n        \n        # Handle subject/session level journey files\n        if rel_path.startswith('sub-'):\n            return self._validate_subject_level_journey(journey_file)\n            \n        return super().validate(journey_file)\n```\n\nWhen implementing the CLI integration:\n- Store BIDS context in the validation process to track relationships between journey files\n- Implement special handling for derivatives/ directory which may contain journey files\n- Add BIDS-specific error messages that reference the BIDS specification\n- Consider implementing a BIDS summary report showing all journey files organized by subject/session\n</info added on 2025-05-02T01:47:21.527Z>"
         }
       ]
     },
