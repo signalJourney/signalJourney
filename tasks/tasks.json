@@ -1,0 +1,671 @@
+{
+  "tasks": [
+    {
+      "id": 1,
+      "title": "Define JSON Schema for signalJourney Specification",
+      "description": "Create the formal JSON Schema definition that will serve as the foundation for the signalJourney specification, including all required and optional fields.",
+      "status": "pending",
+      "dependencies": [],
+      "priority": "high",
+      "details": "Develop a JSON Schema (draft-07) that defines the structure for documenting biosignal processing steps. Include top-level structure (metadata, pipeline info, processing steps array, summary/quality metrics), processing step model (step identification, software references, parameter specifications, input/output relationships), and quality metrics model. Define the extensible namespace system with core, eeg, and nemar prefixes. Ensure UTF-8 encoding requirement is specified. The schema should validate file naming convention (sub-<participant>_task-<taskname>_signalJourney.json) and support versioning. A draft of the schema has been drafted under ../scripts/schema-ideation.md",
+      "testStrategy": "Create a set of valid and invalid example JSON files to test against the schema. Use a JSON Schema validator to verify that valid examples pass and invalid examples fail appropriately. Ensure all required fields and relationships are properly enforced.",
+      "subtasks": [
+        {
+          "id": 1,
+          "title": "Define core schema structure and metadata components",
+          "description": "Create the foundational JSON Schema structure including the top-level components and metadata fields that will form the basis of the signalJourney specification. A draft of the schema has been drafted under ../scripts/schema-ideation.md",
+          "status": "done",
+          "dependencies": [],
+          "details": "Implement the JSON Schema draft-07 skeleton with $schema and $id properties. Define the top-level structure including required metadata fields (version, description, etc.), file naming pattern validation using pattern properties (sub-<participant>_task-<taskname>_signalJourney.json), and UTF-8 encoding requirement. Include versioning support in the schema. Create the basic structure for pipeline information, processing steps array, and summary/quality metrics sections that will be detailed in later subtasks.\n\n<info added on 2025-05-02T00:51:53.647Z>\n# Implementation Plan for Subtask 1\n\n## Schema Structure Implementation Details\n\n```json\n{\n  \"$schema\": \"http://json-schema.org/draft-07/schema#\",\n  \"$id\": \"https://raw.githubusercontent.com/your-org/signalJourney/main/schema/signalJourney.schema.json\",\n  \"title\": \"Signal Journey Schema\",\n  \"description\": \"Schema for documenting signal processing pipelines with detailed provenance tracking. Files must use UTF-8 encoding.\",\n  \"type\": \"object\",\n  \"required\": [\"sj_version\", \"schema_version\", \"description\", \"pipelineInfo\", \"processingSteps\"],\n  \"properties\": {\n    \"sj_version\": {\n      \"type\": \"string\",\n      \"description\": \"Version of the signalJourney specification being followed\",\n      \"pattern\": \"^[0-9]+\\\\.[0-9]+\\\\.[0-9]+$\"\n    },\n    \"schema_version\": {\n      \"type\": \"string\",\n      \"description\": \"Version of this schema file\",\n      \"pattern\": \"^[0-9]+\\\\.[0-9]+\\\\.[0-9]+$\"\n    }\n  }\n}\n```\n\n## File Naming Pattern Implementation\n\nFor the file naming pattern validation, implement using a combination of:\n\n1. A custom `patternProperties` section:\n   ```json\n   \"patternProperties\": {\n     \"^sub-[a-zA-Z0-9]+_task-[a-zA-Z0-9]+_signalJourney\\\\.json$\": {\n       \"type\": \"object\",\n       \"description\": \"Validates the filename follows the required convention\"\n     }\n   }\n   ```\n\n2. Consider using a custom validation keyword via AJV if direct filename validation is needed beyond JSON Schema's capabilities.\n\n## Versioning Strategy\n\nImplement semantic versioning (MAJOR.MINOR.PATCH) with validation rules:\n- MAJOR: Breaking changes to the schema structure\n- MINOR: Non-breaking additions to the schema\n- PATCH: Documentation updates or bug fixes\n\nInclude a version history object in the schema to track changes:\n```json\n\"versionHistory\": {\n  \"type\": \"array\",\n  \"items\": {\n    \"type\": \"object\",\n    \"properties\": {\n      \"version\": { \"type\": \"string\" },\n      \"date\": { \"type\": \"string\", \"format\": \"date\" },\n      \"changes\": { \"type\": \"string\" }\n    },\n    \"required\": [\"version\", \"date\", \"changes\"]\n  }\n}\n```\n\n## Testing Approach\n\nCreate a validation script that:\n1. Validates example files against the schema\n2. Specifically tests filename pattern compliance\n3. Verifies required fields are present and correctly formatted\n4. Tests version string format validation\n</info added on 2025-05-02T00:51:53.647Z>\n\n<info added on 2025-05-02T00:54:53.331Z>\n<info added on 2025-05-03T14:22:18.000Z>\n## Schema Implementation Progress\n\nI've completed the initial schema implementation with the following technical details:\n\n### Core Structure Extensions\n```json\n\"properties\": {\n  \"pipelineInfo\": {\n    \"type\": \"object\",\n    \"description\": \"Information about the processing pipeline\",\n    \"required\": [\"name\", \"version\", \"description\"],\n    \"properties\": {\n      \"name\": { \"type\": \"string\" },\n      \"version\": { \"type\": \"string\" },\n      \"description\": { \"type\": \"string\" },\n      \"institution\": { \"type\": \"string\" },\n      \"references\": {\n        \"type\": \"array\",\n        \"items\": {\n          \"type\": \"object\",\n          \"required\": [\"doi\"],\n          \"properties\": {\n            \"doi\": { \"type\": \"string\" },\n            \"citation\": { \"type\": \"string\" }\n          }\n        }\n      }\n    }\n  }\n}\n```\n\n### Metadata Validation Rules\nAdded constraints to ensure proper metadata validation:\n- `sj_version` and `schema_version` must match regex `^[0-9]+\\.[0-9]+\\.[0-9]+$`\n- Added `minLength: 10` to description fields to ensure meaningful content\n- Implemented `format: \"date-time\"` for all timestamp fields\n\n### UTF-8 Encoding Enforcement\nSince JSON Schema can't directly enforce file encoding, I've added:\n1. A clear note in schema description\n2. A validation helper script (`scripts/validate-encoding.js`) that checks:\n   ```javascript\n   const fs = require('fs');\n   \n   function validateUtf8(filePath) {\n     const buffer = fs.readFileSync(filePath);\n     try {\n       buffer.toString('utf8');\n       return true;\n     } catch (e) {\n       return false;\n     }\n   }\n   ```\n\n### Schema Extensibility\nAdded an extension mechanism for future compatibility:\n```json\n\"extensions\": {\n  \"type\": \"object\",\n  \"description\": \"Custom extensions to the schema\",\n  \"additionalProperties\": true\n}\n```\n\n### Testing Status\n- Created 3 valid test files and 2 invalid test files\n- Validated schema using AJV\n- Confirmed proper rejection of malformed version strings\n</info added on 2025-05-03T14:22:18.000Z>\n</info added on 2025-05-02T00:54:53.331Z>"
+        },
+        {
+          "id": 2,
+          "title": "Implement namespace system and extensibility framework",
+          "description": "Define the extensible namespace system that allows for domain-specific extensions while maintaining core functionality.",
+          "status": "pending",
+          "dependencies": [
+            1
+          ],
+          "details": "Create the namespace system with core, eeg, and nemar prefixes. Define how these namespaces will be used throughout the schema to identify properties. Implement the extensibility framework that allows for adding custom properties while maintaining validation. Document how new namespaces can be added and registered. Include examples of namespace usage in property definitions. This system should allow for domain-specific extensions while maintaining the integrity of the core schema."
+        },
+        {
+          "id": 3,
+          "title": "Define processing step model schema",
+          "description": "Create the detailed schema for individual processing steps, including identification, parameters, and input/output relationships.",
+          "status": "pending",
+          "dependencies": [
+            1,
+            2
+          ],
+          "details": "Define the JSON Schema for processing steps including required fields for step identification (id, name, description), software references (name, version, URL), parameter specifications (name, value, data type, units), and input/output relationships between steps. Implement validation rules for parameter types and values. Include support for step dependencies and execution order. Ensure the schema supports both simple and complex processing steps with nested operations. Use the namespace system defined in subtask 2 to properly categorize properties."
+        },
+        {
+          "id": 4,
+          "title": "Implement quality metrics model schema",
+          "description": "Define the schema components for quality metrics and summary statistics that can be used to evaluate processing results.",
+          "status": "pending",
+          "dependencies": [
+            1,
+            2
+          ],
+          "details": "Create the schema definition for quality metrics including standard metrics for signal quality assessment, statistical summaries, and processing outcomes. Define the structure for metric categories, individual metrics (name, value, threshold, units), and validation rules. Implement support for both global metrics and step-specific metrics. Ensure the schema allows for custom metrics using the namespace system. Include validation for metric value types and ranges where appropriate."
+        },
+        {
+          "id": 5,
+          "title": "Validate and finalize complete schema with examples",
+          "description": "Integrate all schema components, validate the complete schema, and create example instances to demonstrate proper usage.",
+          "status": "pending",
+          "dependencies": [
+            1,
+            2,
+            3,
+            4
+          ],
+          "details": "Combine all schema components into a complete JSON Schema document. Validate the schema against the JSON Schema draft-07 meta-schema to ensure correctness. Create at least three example signalJourney JSON files that demonstrate different use cases (simple pipeline, complex pipeline with multiple steps, pipeline with extensive quality metrics). Test the examples against the schema to verify validation works correctly. Document any edge cases or implementation notes. Finalize the schema with proper documentation for all properties and components."
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Develop Core Python Validation Library",
+      "description": "Create a Python package that implements validation against the signalJourney JSON Schema with detailed error reporting.",
+      "status": "pending",
+      "dependencies": [
+        1
+      ],
+      "priority": "high",
+      "details": "Implement a Python library that validates signalJourney JSON files against the schema defined in Task 1. Use jsonschema or a similar library for validation. Include functions to: 1) Validate a file against the schema, 2) Generate detailed error messages for invalid files, 3) Provide suggestions for fixing common errors, 4) Support different versions of the schema. Package the library for PyPI distribution with proper documentation. Include type hints and follow PEP 8 style guidelines.",
+      "testStrategy": "Create unit tests using pytest that cover validation of both valid and invalid files. Include edge cases such as missing required fields, incorrect data types, and invalid relationships between fields. Test version compatibility handling.",
+      "subtasks": [
+        {
+          "id": 1,
+          "title": "Set up project structure and dependencies",
+          "description": "Initialize the Python package structure with necessary files and dependencies for the validation library",
+          "status": "pending",
+          "dependencies": [],
+          "details": "Create a proper Python package structure including setup.py, README.md, and directory structure. Set up virtual environment. Add dependencies on jsonschema and other required libraries. Initialize git repository. Create package namespace and module structure. Set up testing framework (pytest). Configure type checking with mypy. Ensure PEP 8 compliance with tools like flake8 or black."
+        },
+        {
+          "id": 2,
+          "title": "Implement core schema validation functionality",
+          "description": "Create the primary validation module that validates signalJourney JSON files against the schema",
+          "status": "pending",
+          "dependencies": [
+            1
+          ],
+          "details": "Implement a Validator class that loads and validates JSON files against the schema from Task 1. Create functions to load JSON schema files, validate documents, and return validation status. Handle different schema versions through a version parameter. Implement proper error handling for schema loading failures. Add type hints to all functions. Write unit tests for basic validation functionality. Ensure validation works for both file paths and JSON objects in memory."
+        },
+        {
+          "id": 3,
+          "title": "Develop detailed error reporting system",
+          "description": "Enhance the validator to provide detailed, user-friendly error messages for validation failures",
+          "status": "pending",
+          "dependencies": [
+            2
+          ],
+          "details": "Extend the Validator to capture and format jsonschema validation errors. Create a custom ErrorReport class to structure validation errors. Map cryptic jsonschema error paths to human-readable field names. Include context information such as the location of errors in the document. Add severity levels for different types of validation errors. Implement error aggregation to show multiple errors at once. Write unit tests with various invalid documents to verify error reporting."
+        },
+        {
+          "id": 4,
+          "title": "Implement error correction suggestions",
+          "description": "Add functionality to provide suggestions for fixing common validation errors",
+          "status": "pending",
+          "dependencies": [
+            3
+          ],
+          "details": "Create a suggestion engine that analyzes validation errors and provides fixing hints. Implement pattern matching for common error types (e.g., type mismatches, missing required fields, format errors). Add domain-specific suggestions for signalJourney-specific fields. Implement fuzzy matching for enum values to suggest closest valid options. Create a suggestion formatter to present fixes in a user-friendly way. Write comprehensive tests for the suggestion system with various error scenarios."
+        },
+        {
+          "id": 5,
+          "title": "Package library and create documentation",
+          "description": "Finalize the package for distribution and create comprehensive documentation",
+          "status": "pending",
+          "dependencies": [
+            2,
+            3,
+            4
+          ],
+          "details": "Complete setup.py with all metadata for PyPI distribution. Generate API documentation using Sphinx or a similar tool. Write a comprehensive README with installation and usage examples. Create detailed API reference documentation with examples for each function. Add docstrings to all public functions and classes. Implement a command-line interface for validation. Create example scripts demonstrating library usage. Prepare the package for PyPI publication with proper versioning. Set up CI/CD for automated testing and deployment."
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Implement Command-Line Interface for Validation",
+      "description": "Create a command-line tool that leverages the Python validation library to validate signalJourney files.",
+      "status": "pending",
+      "dependencies": [
+        2
+      ],
+      "priority": "medium",
+      "details": "Build a command-line interface (CLI) using argparse or click that wraps the validation library from Task 2. The CLI should: 1) Accept file paths or directories as input, 2) Validate single files or recursively validate directories, 3) Output validation results in human-readable format, 4) Provide options for verbose output, JSON output, and exit codes for scripting, 5) Include help documentation and examples. Add installation instructions for pip installation.",
+      "testStrategy": "Create integration tests that verify the CLI correctly processes valid and invalid files. Test directory recursion, different output formats, and exit codes. Include tests for help documentation and argument parsing.",
+      "subtasks": [
+        {
+          "id": 1,
+          "title": "Set up CLI framework and basic file validation",
+          "description": "Create the basic command-line interface structure using argparse or click that can accept file paths and perform basic validation on individual files.",
+          "status": "pending",
+          "dependencies": [],
+          "details": "1) Choose between argparse or click (click is recommended for more complex CLIs). 2) Set up the basic CLI structure with a main entry point. 3) Implement argument parsing for file paths. 4) Connect to the validation library to validate individual files. 5) Implement basic output of validation results. 6) Add proper error handling for file not found or permission issues."
+        },
+        {
+          "id": 2,
+          "title": "Implement directory handling and recursive validation",
+          "description": "Extend the CLI to handle directory inputs and recursively validate all signalJourney files within directories.",
+          "status": "pending",
+          "dependencies": [
+            1
+          ],
+          "details": "1) Add logic to detect if the input path is a file or directory. 2) Implement recursive directory traversal to find all relevant files (consider allowing file pattern matching). 3) Process each file through the validation function. 4) Handle errors gracefully when processing multiple files. 5) Implement progress indication for large directories. 6) Consider adding a flag to control recursion depth."
+        },
+        {
+          "id": 3,
+          "title": "Implement output formatting options and exit codes",
+          "description": "Add various output format options including verbose mode, JSON output, and appropriate exit codes for scripting integration.",
+          "status": "pending",
+          "dependencies": [
+            1,
+            2
+          ],
+          "details": "1) Implement a verbose flag that shows detailed validation information. 2) Create a JSON output option that formats results in machine-readable JSON. 3) Design a consistent output structure for both human-readable and JSON formats. 4) Implement appropriate exit codes (0 for success, non-zero for validation failures or errors). 5) Add color coding for terminal output (using a library like colorama) to highlight errors/warnings. 6) Ensure all output modes handle both single file and directory validation results appropriately."
+        },
+        {
+          "id": 4,
+          "title": "Add help documentation and package for distribution",
+          "description": "Complete the CLI with comprehensive help documentation, usage examples, and package it for pip installation.",
+          "status": "pending",
+          "dependencies": [
+            1,
+            2,
+            3
+          ],
+          "details": "1) Write detailed help text for all commands and options. 2) Add usage examples for common scenarios. 3) Create a proper Python package structure with setup.py. 4) Configure entry points for the CLI tool. 5) Write installation and usage instructions in README.md. 6) Test the pip installation process. 7) Consider adding shell completion support. 8) Ensure the package has appropriate metadata (author, version, description, etc.)."
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Create Sample signalJourney Files for Common Processing Pipelines",
+      "description": "Develop a set of example signalJourney JSON files that represent common biosignal processing workflows.",
+      "status": "pending",
+      "dependencies": [
+        1
+      ],
+      "priority": "medium",
+      "details": "Create at least 5 example signalJourney files that document common processing pipelines for EEG/MEG data. Include examples for: 1) Basic preprocessing (filtering, referencing, artifact rejection), 2) ICA decomposition and cleaning, 3) Time-frequency analysis, 4) Source localization, 5) Connectivity analysis. Each example should include realistic parameters, quality metrics, and function references to common tools (EEGLAB, MNE-Python, Fieldtrip). Ensure all examples validate against the schema from Task 1.",
+      "testStrategy": "Validate all examples against the schema using the validation library from Task 2. Have domain experts review the examples for accuracy and completeness. Test that the examples cover the range of common processing approaches in the field.",
+      "subtasks": [
+        {
+          "id": 1,
+          "title": "Research and document common parameters for biosignal processing pipelines",
+          "description": "Research and document typical parameters, function calls, and quality metrics used in the five required processing pipelines across EEGLAB, MNE-Python, and Fieldtrip.",
+          "status": "pending",
+          "dependencies": [],
+          "details": "For each of the five required pipelines (basic preprocessing, ICA decomposition, time-frequency analysis, source localization, and connectivity analysis), document: 1) Common function names in each toolbox, 2) Typical parameter ranges and default values, 3) Standard quality metrics used to evaluate results, 4) Typical processing sequence. Create a structured document organizing this information by pipeline type and toolbox for reference when creating the actual JSON files."
+        },
+        {
+          "id": 2,
+          "title": "Create basic preprocessing and ICA decomposition example files",
+          "description": "Develop two signalJourney JSON files for basic preprocessing and ICA decomposition workflows.",
+          "status": "pending",
+          "dependencies": [
+            1
+          ],
+          "details": "Using the research from subtask 1, create two complete signalJourney JSON files: 1) Basic preprocessing pipeline including filtering (high-pass, low-pass), referencing, and artifact rejection steps with realistic parameters. 2) ICA decomposition and cleaning workflow including preprocessing steps, ICA computation, component selection criteria, and artifact removal. Include appropriate metadata, quality metrics (like variance explained, residual noise), and references to specific functions in common toolboxes. Ensure both examples follow the schema structure from Task 1."
+        },
+        {
+          "id": 3,
+          "title": "Create time-frequency analysis example file",
+          "description": "Develop a signalJourney JSON file for time-frequency analysis workflow.",
+          "status": "pending",
+          "dependencies": [
+            1
+          ],
+          "details": "Create a comprehensive signalJourney JSON file for time-frequency analysis that includes: 1) Necessary preprocessing steps, 2) Time-frequency decomposition methods (e.g., wavelet transform, short-time Fourier transform), 3) Parameters for frequency bands, time windows, and baseline correction, 4) Visualization settings, 5) Statistical analysis steps. Include quality metrics such as signal-to-noise ratio and references to specific functions in EEGLAB, MNE-Python, and Fieldtrip. Ensure the example validates against the schema from Task 1."
+        },
+        {
+          "id": 4,
+          "title": "Create source localization example file",
+          "description": "Develop a signalJourney JSON file for source localization workflow.",
+          "status": "pending",
+          "dependencies": [
+            1
+          ],
+          "details": "Create a detailed signalJourney JSON file for source localization that includes: 1) Preprocessing requirements, 2) Head model creation steps, 3) Forward modeling parameters, 4) Inverse solution methods (e.g., MNE, LORETA, beamforming), 5) Source space definition, 6) Visualization settings. Include appropriate quality metrics like explained variance, cross-validation metrics, and references to specific functions in common toolboxes. Ensure the example includes realistic parameters for different head models and inverse methods, and validates against the schema from Task 1."
+        },
+        {
+          "id": 5,
+          "title": "Create connectivity analysis example file and validate all examples",
+          "description": "Develop a signalJourney JSON file for connectivity analysis workflow and validate all five examples against the schema.",
+          "status": "pending",
+          "dependencies": [
+            1,
+            2,
+            3,
+            4
+          ],
+          "details": "Create a comprehensive signalJourney JSON file for connectivity analysis that includes: 1) Preprocessing requirements, 2) Connectivity measure calculations (e.g., coherence, phase locking value, Granger causality), 3) Parameters for frequency bands and time windows, 4) Network analysis steps, 5) Visualization settings. Include quality metrics like statistical significance thresholds and surrogate data testing. Then, validate all five created examples against the schema from Task 1, ensuring they are properly formatted, contain all required fields, and represent realistic workflows. Make any necessary adjustments to ensure all examples are consistent in structure while accurately representing their specific pipeline types."
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "Develop MATLAB Tools for Reading/Writing signalJourney Files",
+      "description": "Create a MATLAB library for working with signalJourney files, including reading, writing, and basic validation.",
+      "status": "pending",
+      "dependencies": [
+        1
+      ],
+      "priority": "high",
+      "details": "Implement a MATLAB toolbox that provides functions to: 1) Read signalJourney JSON files into MATLAB structures, 2) Write MATLAB structures to signalJourney JSON files, 3) Perform basic validation of structures against the specification, 4) Convert between different versions of the specification if needed. Include documentation, examples, and a test suite. Package the toolbox for distribution via MATLAB File Exchange. Ensure compatibility with MATLAB R2019b and newer.",
+      "testStrategy": "Create a comprehensive test suite using MATLAB's testing framework. Test reading and writing of all example files from Task 4. Verify round-trip conversion (read-write-read) preserves all information. Test validation functionality against valid and invalid structures.",
+      "subtasks": [
+        {
+          "id": 1,
+          "title": "Implement JSON parsing functions for signalJourney files",
+          "description": "Create core functions to read signalJourney JSON files into MATLAB structures with proper data type handling",
+          "status": "pending",
+          "dependencies": [],
+          "details": "Develop a function `readSignalJourney(filename)` that uses MATLAB's built-in `jsondecode` function to parse signalJourney files. Implement proper handling for all data types in the specification, including arrays, nested objects, and special values. Include error handling for file access issues and malformed JSON. Create helper functions to process specific sections of the signalJourney format (metadata, signals, events, etc.). Return a well-structured MATLAB object that preserves the hierarchical nature of the signalJourney format."
+        },
+        {
+          "id": 2,
+          "title": "Implement JSON writing functions for signalJourney files",
+          "description": "Create functions to write MATLAB structures to signalJourney JSON files with proper formatting",
+          "status": "pending",
+          "dependencies": [
+            1
+          ],
+          "details": "Develop a function `writeSignalJourney(data, filename)` that converts MATLAB structures to JSON using `jsonencode`. Ensure proper handling of all MATLAB data types, including numeric arrays, cell arrays, and structs. Implement pretty-printing for the output JSON to ensure human readability. Add validation to ensure the MATLAB structure contains all required fields before writing. Include error handling for file access issues and invalid MATLAB structures. Create helper functions to properly format specific sections of the signalJourney format."
+        },
+        {
+          "id": 3,
+          "title": "Implement validation functions for signalJourney structures",
+          "description": "Create functions to validate MATLAB structures against the signalJourney specification",
+          "status": "pending",
+          "dependencies": [
+            1
+          ],
+          "details": "Develop a function `validateSignalJourney(data)` that checks if a MATLAB structure conforms to the signalJourney specification. Implement validation for required fields, data types, and value ranges. Create separate validation functions for each major section of the specification (metadata, signals, events, etc.). Return detailed error messages for validation failures, including the path to the problematic field. Implement warning generation for non-critical issues. Add support for validating against different versions of the specification if needed."
+        },
+        {
+          "id": 4,
+          "title": "Implement version conversion functions for signalJourney files",
+          "description": "Create functions to convert between different versions of the signalJourney specification",
+          "status": "pending",
+          "dependencies": [
+            1,
+            3
+          ],
+          "details": "Develop functions to convert signalJourney structures between different specification versions. Create a function `convertSignalJourneyVersion(data, targetVersion)` that transforms a structure to comply with the target version. Implement specific conversion logic for each version pair (e.g., v1 to v2, v2 to v3). Include validation before and after conversion to ensure data integrity. Document all changes made during conversion, including any potential data loss. Handle backward and forward compatibility issues appropriately."
+        },
+        {
+          "id": 5,
+          "title": "Create documentation, examples, and package the toolbox",
+          "description": "Prepare comprehensive documentation, usage examples, and package the toolbox for distribution",
+          "status": "pending",
+          "dependencies": [
+            1,
+            2,
+            3,
+            4
+          ],
+          "details": "Create comprehensive documentation for all functions using MATLAB's documentation format. Include function signatures, parameter descriptions, return values, and examples. Develop a suite of example scripts demonstrating common use cases (reading files, modifying data, writing files, validation). Create a test suite using MATLAB's testing framework to verify all functionality. Package the toolbox according to MATLAB File Exchange requirements, including proper folder structure and metadata. Create a README file with installation instructions and quick-start guide. Verify compatibility with MATLAB R2019b and newer versions. Generate HTML documentation using MATLAB's publishing feature."
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "Implement EEGLAB Plugin for signalJourney Integration",
+      "description": "Develop an EEGLAB plugin that allows users to export and import processing steps as signalJourney files.",
+      "status": "pending",
+      "dependencies": [
+        5
+      ],
+      "priority": "medium",
+      "details": "Create an EEGLAB plugin that: 1) Tracks processing steps applied to EEG datasets, 2) Exports processing history as signalJourney JSON files, 3) Imports signalJourney files to recreate processing pipelines, 4) Provides a GUI for viewing and editing signalJourney metadata. The plugin should leverage the MATLAB tools from Task 5 and follow EEGLAB plugin development guidelines. Include documentation on installation and usage. Ensure compatibility with recent EEGLAB versions (2019 onwards).",
+      "testStrategy": "Test the plugin with standard EEGLAB processing workflows. Verify that exported signalJourney files accurately capture all processing steps and parameters. Test importing signalJourney files and verify that processing is correctly reproduced. Test the GUI functionality for usability.",
+      "subtasks": [
+        {
+          "id": 1,
+          "title": "Set up EEGLAB plugin structure and configuration",
+          "description": "Create the basic plugin structure following EEGLAB guidelines, including folder organization, plugin_init function, and configuration files.",
+          "status": "pending",
+          "dependencies": [],
+          "details": "Create a plugin folder named 'signalJourney' with required EEGLAB plugin structure. Implement eegplugin_signalJourney.m as the entry point that adds menu items to EEGLAB. Create plugin_init.m to handle initialization and version checking. Set up configuration files to store plugin settings. Ensure the plugin registers properly with EEGLAB's plugin manager. Include version compatibility checks for EEGLAB 2019 onwards."
+        },
+        {
+          "id": 2,
+          "title": "Implement processing step tracking mechanism",
+          "description": "Develop functions to track and store EEGLAB processing steps applied to datasets in a format compatible with signalJourney.",
+          "status": "pending",
+          "dependencies": [
+            1
+          ],
+          "details": "Create a tracking system that hooks into EEGLAB's command history and EEG.history. Implement functions to capture processing parameters for each operation (filtering, ICA, epoch extraction, etc.). Store processing steps in a structured format compatible with signalJourney JSON specification. Include metadata like timestamps, parameter values, and processing order. Create a data structure that maintains the full processing pipeline state. Implement this as a background process that doesn't interfere with normal EEGLAB operations."
+        },
+        {
+          "id": 3,
+          "title": "Develop signalJourney export functionality",
+          "description": "Create functions to export the tracked processing steps as signalJourney JSON files, including all required metadata.",
+          "status": "pending",
+          "dependencies": [
+            2
+          ],
+          "details": "Implement export_signaljourney.m function that converts the tracked processing steps into signalJourney JSON format. Integrate with the MATLAB tools from Task 5 for JSON conversion. Include proper error handling and validation to ensure exported files meet the signalJourney specification. Add functionality to export dataset-specific metadata (subject info, recording parameters, etc.). Create a user dialog for specifying export options and file location. Ensure the export function handles all EEGLAB processing step types correctly."
+        },
+        {
+          "id": 4,
+          "title": "Implement signalJourney import functionality",
+          "description": "Develop functions to import signalJourney files and recreate processing pipelines in EEGLAB.",
+          "status": "pending",
+          "dependencies": [
+            3
+          ],
+          "details": "Create import_signaljourney.m function that parses signalJourney JSON files. Implement a system to translate signalJourney operations into equivalent EEGLAB commands. Build a pipeline execution engine that can apply the imported processing steps to a dataset in the correct order. Include validation to check if operations are supported in the current EEGLAB version. Implement error handling for cases where operations cannot be recreated. Add functionality to handle parameter mapping between signalJourney and EEGLAB formats."
+        },
+        {
+          "id": 5,
+          "title": "Create GUI for viewing and editing signalJourney metadata",
+          "description": "Develop a graphical interface for users to view, edit, and manage signalJourney processing pipelines within EEGLAB.",
+          "status": "pending",
+          "dependencies": [
+            3,
+            4
+          ],
+          "details": "Create a MATLAB figure-based GUI that displays the processing pipeline in a readable format. Implement functionality to view detailed parameters for each processing step. Add controls to enable/disable specific processing steps. Include editing capabilities for modifying parameters of existing steps. Create visualization of the processing flow (e.g., flowchart or list view). Ensure the GUI follows EEGLAB's design patterns and integrates well with the existing interface. Add buttons for importing, exporting, and applying signalJourney pipelines."
+        },
+        {
+          "id": 6,
+          "title": "Write documentation and finalize plugin",
+          "description": "Create comprehensive documentation, perform testing across EEGLAB versions, and prepare the plugin for distribution.",
+          "status": "pending",
+          "dependencies": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "details": "Write detailed documentation including installation instructions, usage examples, and function references. Create a user manual with screenshots and step-by-step guides. Implement help tooltips within the GUI. Test the plugin across multiple EEGLAB versions (2019 onwards) to ensure compatibility. Create example signalJourney files for testing. Package the plugin for distribution through the EEGLAB plugin manager. Include README files and licensing information. Perform final bug fixes and optimizations based on testing results."
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "title": "Develop Processing Pipeline Visualization Tools",
+      "description": "Create tools to visualize processing pipelines described in signalJourney files as flowcharts or directed graphs.",
+      "status": "pending",
+      "dependencies": [
+        2,
+        5
+      ],
+      "priority": "low",
+      "details": "Implement visualization tools in both Python and MATLAB that: 1) Parse signalJourney files to extract processing steps and dependencies, 2) Generate visual representations of processing pipelines as flowcharts, 3) Highlight key parameters and transformations, 4) Allow interactive exploration of complex pipelines. For Python, use libraries like matplotlib, networkx, or plotly. For MATLAB, use built-in plotting capabilities or the GraphPlot toolbox. Include options for exporting visualizations as images or interactive HTML.",
+      "testStrategy": "Test visualization with a range of signalJourney files, from simple to complex. Verify that all processing steps and relationships are correctly represented. Test interactive features and export functionality. Gather feedback from potential users on clarity and usefulness of visualizations.",
+      "subtasks": [
+        {
+          "id": 1,
+          "title": "Implement signalJourney File Parser",
+          "description": "Create a parser module that can read and extract processing steps, dependencies, and parameters from signalJourney files in both Python and MATLAB.",
+          "status": "pending",
+          "dependencies": [],
+          "details": "Develop a parser that: 1) Reads signalJourney file formats, 2) Extracts processing steps with their input/output relationships, 3) Identifies parameters and transformations, 4) Creates a structured data representation (graph data structure) that can be used by visualization components. For Python, use libraries like json, xml, or yaml depending on the signalJourney file format. For MATLAB, use appropriate file reading functions. Create a common internal representation that works across both platforms."
+        },
+        {
+          "id": 2,
+          "title": "Develop Basic Pipeline Graph Visualization in Python",
+          "description": "Create the core visualization functionality in Python to render processing pipelines as directed graphs or flowcharts.",
+          "status": "pending",
+          "dependencies": [
+            1
+          ],
+          "details": "Using the parser from subtask 1, implement visualization using networkx for graph structure and matplotlib/plotly for rendering. Include: 1) Node representation for processing steps, 2) Edge representation for data flow, 3) Basic layout algorithms (hierarchical, force-directed), 4) Node styling to represent different types of processing steps, 5) Edge styling to represent data dependencies. Implement functions to generate static visualizations with proper node placement, labels, and flow direction."
+        },
+        {
+          "id": 3,
+          "title": "Develop Basic Pipeline Graph Visualization in MATLAB",
+          "description": "Create the core visualization functionality in MATLAB to render processing pipelines as directed graphs or flowcharts.",
+          "status": "pending",
+          "dependencies": [
+            1
+          ],
+          "details": "Using the parser from subtask 1, implement visualization using MATLAB's built-in graph/digraph objects and plotting capabilities or the GraphPlot toolbox. Include: 1) Node representation for processing steps, 2) Edge representation for data flow, 3) Layout algorithms appropriate for pipeline visualization, 4) Node styling to represent different types of processing steps, 5) Edge styling to represent data dependencies. Ensure the MATLAB implementation provides similar visual output to the Python version while leveraging MATLAB-specific features."
+        },
+        {
+          "id": 4,
+          "title": "Implement Interactive Exploration Features",
+          "description": "Enhance both Python and MATLAB visualizations with interactive features for exploring complex pipelines.",
+          "status": "pending",
+          "dependencies": [
+            2,
+            3
+          ],
+          "details": "For Python: 1) Use plotly or bokeh to create interactive visualizations, 2) Implement node hover information showing detailed parameters, 3) Add zoom and pan capabilities, 4) Create collapsible/expandable subgraphs for complex pipelines, 5) Add filtering options to focus on specific parts of the pipeline. For MATLAB: 1) Implement interactive graphs using MATLAB's interactive plotting features, 2) Add callbacks for node selection to display detailed information, 3) Create UI controls for adjusting visualization parameters, 4) Implement subgraph expansion/collapse functionality. Both implementations should allow users to interactively explore complex processing pipelines."
+        },
+        {
+          "id": 5,
+          "title": "Develop Export and Documentation Features",
+          "description": "Add capabilities to export visualizations in various formats and create comprehensive documentation for both implementations.",
+          "status": "pending",
+          "dependencies": [
+            4
+          ],
+          "details": "For both Python and MATLAB: 1) Implement export to static image formats (PNG, SVG, PDF), 2) For Python, add export to interactive HTML using plotly or bokeh, 3) For MATLAB, add export to interactive MATLAB figures, 4) Create comprehensive documentation including: usage examples, API reference, customization options, and example visualizations of common pipeline patterns. Include sample code for integrating the visualization tools into existing workflows. Create a unified user interface approach where possible between the two implementations to simplify learning and usage."
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "title": "Integrate with BIDS-validator",
+      "description": "Develop a plugin or extension for the BIDS-validator tool that validates signalJourney files within BIDS datasets.",
+      "status": "pending",
+      "dependencies": [
+        2
+      ],
+      "priority": "medium",
+      "details": "Create an extension for the BIDS-validator that: 1) Recognizes signalJourney files in the derivatives directory, 2) Validates their structure against the signalJourney schema, 3) Checks BIDS-specific requirements like naming conventions and file placement, 4) Reports validation results within the BIDS-validator output. Follow the BIDS-validator extension API and development guidelines. Coordinate with the BIDS community for potential inclusion in the official validator. The extension should use the validation library from Task 2 for schema validation.",
+      "testStrategy": "Test the extension with various BIDS datasets containing signalJourney files. Verify that validation correctly identifies valid and invalid files. Test integration with the main BIDS-validator workflow. Ensure proper reporting of validation results.",
+      "subtasks": [
+        {
+          "id": 1,
+          "title": "Research BIDS-validator extension API and architecture",
+          "description": "Investigate the BIDS-validator extension mechanism, API requirements, and development guidelines to understand how to properly integrate a signalJourney validator.",
+          "status": "pending",
+          "dependencies": [],
+          "details": "Study the BIDS-validator codebase on GitHub to understand its architecture. Document the extension points, API requirements, and development workflow. Create a technical design document outlining: 1) How extensions are registered with the validator, 2) The lifecycle of validation in BIDS-validator, 3) How to hook into the validation process, 4) How results are reported back to the main validator. Include code examples and references to relevant parts of the BIDS-validator documentation. Reach out to BIDS community members if documentation is insufficient."
+        },
+        {
+          "id": 2,
+          "title": "Develop core extension structure with signalJourney file detection",
+          "description": "Create the basic extension structure that can be loaded by BIDS-validator and implement the file detection logic to recognize signalJourney files within BIDS datasets.",
+          "status": "pending",
+          "dependencies": [
+            1
+          ],
+          "details": "Create the extension scaffold following BIDS-validator conventions identified in subtask 1. Implement file detection logic that: 1) Identifies files with .signaljourney.json extension in the derivatives directory, 2) Recognizes the appropriate directory structure for signalJourney files according to BIDS conventions, 3) Registers these files for validation. Test the extension with sample BIDS datasets containing signalJourney files to ensure proper detection. The extension should log detection events but not perform validation yet."
+        },
+        {
+          "id": 3,
+          "title": "Implement validation logic using the signalJourney validation library",
+          "description": "Integrate the signalJourney validation library from Task 2 to validate the structure and content of detected signalJourney files against the schema.",
+          "status": "pending",
+          "dependencies": [
+            2
+          ],
+          "details": "Import and integrate the signalJourney validation library developed in Task 2. Implement the validation logic that: 1) Takes detected signalJourney files and passes them to the validation library, 2) Validates file structure against the signalJourney schema, 3) Performs BIDS-specific validation checks including naming conventions, required fields, and file placement rules, 4) Collects validation results in a format compatible with BIDS-validator. Create unit tests to verify validation works correctly with both valid and invalid signalJourney files."
+        },
+        {
+          "id": 4,
+          "title": "Implement results reporting and finalize BIDS community integration",
+          "description": "Format validation results according to BIDS-validator conventions, implement error reporting, and prepare the extension for potential inclusion in the official BIDS-validator.",
+          "status": "pending",
+          "dependencies": [
+            3
+          ],
+          "details": "Implement result reporting that: 1) Formats validation errors and warnings according to BIDS-validator conventions, 2) Integrates with the BIDS-validator UI to display signalJourney-specific validation results, 3) Provides clear error messages and suggestions for fixing issues. Create comprehensive documentation for the extension including installation instructions, usage examples, and validation rules. Package the extension according to BIDS-validator guidelines. Create a pull request or proposal for the BIDS community to review the extension for potential inclusion in the official validator. Address feedback from the community review process."
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "title": "Implement Quality Metrics Visualization Dashboard",
+      "description": "Create a dashboard for visualizing and comparing quality metrics from signalJourney files.",
+      "status": "pending",
+      "dependencies": [
+        2,
+        5,
+        7
+      ],
+      "priority": "low",
+      "details": "Develop a web-based dashboard using a framework like Dash, Streamlit, or Shiny that: 1) Loads and parses signalJourney files, 2) Extracts and displays quality metrics in an interactive dashboard, 3) Allows comparison of metrics across multiple files or processing approaches, 4) Provides visualizations like bar charts, histograms, and heatmaps for different metric types. Include filtering and sorting capabilities. Support both standalone usage and integration with existing platforms. Provide documentation for installation and usage.",
+      "testStrategy": "Test the dashboard with various signalJourney files containing different quality metrics. Verify that all metrics are correctly extracted and displayed. Test comparison functionality with multiple files. Evaluate usability with potential users and gather feedback on the interface and visualizations.",
+      "subtasks": [
+        {
+          "id": 1,
+          "title": "Create data loading and parsing module",
+          "description": "Develop a module that can load and parse signalJourney files to extract quality metrics data",
+          "status": "pending",
+          "dependencies": [],
+          "details": "Implement a Python module that: 1) Accepts signalJourney files as input, 2) Parses the file structure to extract all quality metrics, 3) Organizes the data into a standardized format (e.g., pandas DataFrame) suitable for visualization, 4) Handles different file formats and versions gracefully with appropriate error handling, 5) Includes utility functions to extract specific metric categories. The module should be independent of the visualization framework to allow for reuse."
+        },
+        {
+          "id": 2,
+          "title": "Set up basic dashboard framework",
+          "description": "Initialize the web dashboard framework and create the basic application structure",
+          "status": "pending",
+          "dependencies": [
+            1
+          ],
+          "details": "Select and set up one of the recommended frameworks (Dash, Streamlit, or Shiny). Create the basic application structure including: 1) Project directory organization, 2) Required dependencies in requirements.txt, 3) Main application file with initialization code, 4) Basic layout with placeholders for visualization components, 5) Integration with the data loading module from subtask 1. Ensure the application can be launched locally with minimal configuration."
+        },
+        {
+          "id": 3,
+          "title": "Implement core visualization components",
+          "description": "Develop the primary visualization components for displaying individual quality metrics",
+          "status": "pending",
+          "dependencies": [
+            1,
+            2
+          ],
+          "details": "Create visualization components that display quality metrics in various formats: 1) Bar charts for comparing discrete metrics, 2) Histograms for distribution analysis, 3) Heatmaps for correlation or time-series data, 4) Summary statistics tables. Each component should: accept standardized data from the parser module, include appropriate labels and legends, use a consistent color scheme, and handle edge cases like missing data. Implement these as modular, reusable components that can be arranged on the dashboard."
+        },
+        {
+          "id": 4,
+          "title": "Add interactive comparison features",
+          "description": "Implement functionality to compare metrics across multiple files or processing approaches",
+          "status": "pending",
+          "dependencies": [
+            2,
+            3
+          ],
+          "details": "Enhance the dashboard with comparison capabilities: 1) Add file upload or selection interface for multiple signalJourney files, 2) Implement side-by-side visualization of metrics from different files, 3) Create differential views that highlight changes or improvements between files, 4) Add filtering controls to focus on specific metrics or value ranges, 5) Implement sorting functionality to rank files by specific metrics. Ensure the UI remains responsive even when comparing multiple large files."
+        },
+        {
+          "id": 5,
+          "title": "Finalize dashboard with documentation and integration options",
+          "description": "Complete the dashboard with export features, documentation, and integration capabilities",
+          "status": "pending",
+          "dependencies": [
+            3,
+            4
+          ],
+          "details": "Finalize the dashboard with: 1) Data and visualization export functionality (CSV, PNG, PDF), 2) Comprehensive user documentation including installation instructions, usage examples, and explanation of metrics, 3) Developer documentation for extending the dashboard, 4) Configuration options for standalone usage or integration with existing platforms (API endpoints, embedding options), 5) Responsive design for different screen sizes, 6) Final testing across different browsers and platforms. Package everything for easy deployment with Docker or similar containerization."
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "title": "Create Comprehensive Documentation and Tutorials",
+      "description": "Develop detailed documentation, tutorials, and examples for the signalJourney specification and associated tools.",
+      "status": "pending",
+      "dependencies": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ],
+      "priority": "high",
+      "details": "Create comprehensive documentation that includes: 1) Detailed specification guide with field descriptions and examples, 2) Tutorials for creating signalJourney files manually and with tools, 3) User guides for all developed tools (Python library, MATLAB tools, EEGLAB plugin, etc.), 4) Examples of common use cases with sample code, 5) Best practices for integration with BIDS datasets, 6) FAQ and troubleshooting section. Use a documentation framework like Sphinx or MkDocs. Host documentation on Read the Docs or GitHub Pages. Include interactive examples where possible.",
+      "testStrategy": "Review documentation for accuracy, completeness, and clarity. Have users with different levels of expertise test the tutorials and provide feedback. Verify that all tools and features are adequately documented. Test that code examples work as expected.",
+      "subtasks": [
+        {
+          "id": 1,
+          "title": "Set up documentation framework and structure",
+          "description": "Select and configure a documentation framework (Sphinx or MkDocs) and establish the overall structure for the signalJourney documentation.",
+          "status": "pending",
+          "dependencies": [],
+          "details": "Choose between Sphinx (Python-focused) or MkDocs (Markdown-based) based on team preferences. Set up the initial repository with proper configuration. Create a comprehensive structure including sections for: specification guide, tutorials, user guides for each tool, examples, BIDS integration, and FAQ/troubleshooting. Configure automated builds and prepare for hosting on Read the Docs or GitHub Pages. Establish style guidelines and templates for consistent documentation."
+        },
+        {
+          "id": 2,
+          "title": "Create detailed signalJourney specification documentation",
+          "description": "Develop the core specification documentation with complete field descriptions, validation rules, and multiple examples.",
+          "status": "pending",
+          "dependencies": [
+            1
+          ],
+          "details": "Document the complete signalJourney specification including: all required and optional fields with detailed descriptions, data types, and constraints; validation rules and schema information; multiple examples showing different use cases (simple to complex); versioning information and compatibility notes; relationship to other standards (especially BIDS). Include diagrams showing the structure of signalJourney files and their relationships. Add interactive examples if the documentation platform supports it."
+        },
+        {
+          "id": 3,
+          "title": "Develop tutorials for creating and working with signalJourney files",
+          "description": "Create step-by-step tutorials for manually creating signalJourney files and using the various tools to generate them.",
+          "status": "pending",
+          "dependencies": [
+            1,
+            2
+          ],
+          "details": "Develop multiple tutorials including: step-by-step guide for manually creating signalJourney files; tutorial for using the Python library to generate files; tutorial for using MATLAB tools; tutorial for using the EEGLAB plugin; guide for validating signalJourney files; tutorial for converting existing metadata to signalJourney format. Each tutorial should include complete code examples, screenshots where appropriate, and expected outcomes. Structure tutorials from basic to advanced usage patterns."
+        },
+        {
+          "id": 4,
+          "title": "Write comprehensive user guides for all tools",
+          "description": "Create detailed user guides for each tool in the signalJourney ecosystem (Python library, MATLAB tools, EEGLAB plugin, etc.).",
+          "status": "pending",
+          "dependencies": [
+            1
+          ],
+          "details": "For each tool (Python library, MATLAB tools, EEGLAB plugin, and any others), create a comprehensive user guide including: installation instructions; API reference with function/method documentation; configuration options; common usage patterns; performance considerations; troubleshooting section. Include code examples for all major functions. Document version compatibility requirements. Add diagrams showing the architecture of each tool and how they interact with signalJourney files."
+        },
+        {
+          "id": 5,
+          "title": "Create examples and best practices documentation",
+          "description": "Develop a collection of examples covering common use cases and best practices, especially for BIDS integration.",
+          "status": "pending",
+          "dependencies": [
+            2,
+            3,
+            4
+          ],
+          "details": "Create a comprehensive examples section including: complete working examples for common research scenarios; best practices for organizing signalJourney files; guidelines for integrating with BIDS datasets (with specific examples); examples showing integration with analysis pipelines; performance optimization tips; versioning and file management recommendations. Include downloadable sample code and data files. Document common pitfalls and how to avoid them. Create decision trees to help users determine the best approach for their specific use case."
+        },
+        {
+          "id": 6,
+          "title": "Develop FAQ, troubleshooting guide, and publish documentation",
+          "description": "Create a comprehensive FAQ and troubleshooting section, finalize all documentation, and publish to the selected hosting platform.",
+          "status": "pending",
+          "dependencies": [
+            2,
+            3,
+            4,
+            5
+          ],
+          "details": "Compile a comprehensive FAQ based on anticipated user questions and early feedback. Create a detailed troubleshooting guide addressing common errors and issues. Review and edit all documentation for consistency, completeness, and clarity. Implement cross-references between related sections. Add search functionality and proper indexing. Deploy the documentation to the selected hosting platform (Read the Docs or GitHub Pages). Set up processes for maintaining and updating documentation as the specification and tools evolve. Create a feedback mechanism for users to report documentation issues or request clarifications."
+        }
+      ]
+    }
+  ],
+  "metadata": {
+    "projectName": "signalJourney Implementation",
+    "totalTasks": 10,
+    "sourceFile": "scripts/prd.txt",
+    "generatedAt": "2023-11-15"
+  }
+}

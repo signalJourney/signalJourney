@@ -1,0 +1,81 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/signal-journey/specification/main/schema/signalJourney.schema.json",
+  "title": "Signal Journey Schema",
+  "description": "Schema for documenting signal processing pipelines with detailed provenance tracking. Files should follow the naming convention: sub-<participant>_task-<taskname>_signalJourney.json and use UTF-8 encoding.",
+  "type": "object",
+  "required": [
+    "sj_version",
+    "schema_version",
+    "description",
+    "pipelineInfo",
+    "processingSteps"
+  ],
+  "properties": {
+    "sj_version": {
+      "type": "string",
+      "description": "Version of the signalJourney specification being followed (Semantic Versioning MAJOR.MINOR.PATCH)",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "schema_version": {
+      "type": "string",
+      "description": "Version of this schema file (Semantic Versioning MAJOR.MINOR.PATCH)",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "description": {
+      "type": "string",
+      "description": "A brief human-readable description of the processing pipeline documented in this file."
+    },
+    "versionHistory": {
+      "type": "array",
+      "description": "Tracks changes made to this schema file over time.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "string",
+            "description": "The schema version for this entry.",
+            "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+          },
+          "date": {
+            "type": "string",
+            "description": "The release date of this schema version.",
+            "format": "date"
+          },
+          "changes": {
+            "type": "string",
+            "description": "A summary of changes introduced in this version."
+          }
+        },
+        "required": ["version", "date", "changes"]
+      },
+      "default": [
+        {
+          "version": "0.1.0",
+          "date": "YYYY-MM-DD", # Placeholder, update on release
+          "changes": "Initial schema structure definition."
+        }
+      ]
+    },
+    "pipelineInfo": {
+      "type": "object",
+      "description": "Placeholder for general pipeline information (e.g., project name, dataset details). To be defined in subtask X.",
+      "properties": {} # Define structure later
+    },
+    "processingSteps": {
+      "type": "array",
+      "description": "An ordered list of processing steps performed. To be defined in subtask 3.",
+      "items": {
+        "type": "object",
+        "properties": {} # Define structure later
+      },
+      "minItems": 1
+    },
+    "summaryMetrics": {
+      "type": "object",
+      "description": "Optional section for summary statistics or overall quality metrics. To be defined in subtask 4.",
+      "properties": {} # Define structure later
+    }
+  },
+  "additionalProperties": false
+} 
