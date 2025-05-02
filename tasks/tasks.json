@@ -4,7 +4,7 @@
       "id": 1,
       "title": "Define JSON Schema for signalJourney Specification",
       "description": "Create the formal JSON Schema definition that will serve as the foundation for the signalJourney specification, including all required and optional fields.",
-      "status": "in-progress",
+      "status": "done",
       "dependencies": [],
       "priority": "high",
       "details": "Develop a JSON Schema (draft-07) that defines the structure for documenting biosignal processing steps. Include top-level structure (metadata, pipeline info, processing steps array, summary/quality metrics), processing step model (step identification, software references, parameter specifications, input/output relationships), and quality metrics model. Define the extensible namespace system with core, eeg, and nemar prefixes. Ensure UTF-8 encoding requirement is specified. The schema should validate file naming convention (sub-<participant>_task-<taskname>_signalJourney.json) and support versioning. A draft of the schema has been drafted under ../scripts/schema-ideation.md\n\nImportant: Namespaces within the `extensions` object are reserved and require an application/review process for adding new ones. Existing namespaces like `eeg` and `nemar` are managed by their respective communities/projects.",
@@ -54,7 +54,7 @@
           "id": 5,
           "title": "Validate and finalize complete schema with examples",
           "description": "Integrate all schema components, validate the complete schema, and create example instances to demonstrate proper usage.",
-          "status": "in-progress",
+          "status": "done",
           "dependencies": [
             1,
             2,
@@ -108,8 +108,8 @@
         1
       ],
       "priority": "high",
-      "details": "Implement a Python library that validates signalJourney JSON files against the schema defined in Task 1. Use jsonschema or a similar library for validation. Include functions to: 1) Validate a file against the schema, 2) Generate detailed error messages for invalid files, 3) Provide suggestions for fixing common errors, 4) Support different versions of the schema. Package the library for PyPI distribution with proper documentation. Include type hints and follow PEP 8 style guidelines.",
-      "testStrategy": "Create unit tests using pytest that cover validation of both valid and invalid files. Include edge cases such as missing required fields, incorrect data types, and invalid relationships between fields. Test version compatibility handling.",
+      "details": "Implement a Python library that validates signalJourney JSON files against the schema defined in Task 1. Use jsonschema or a similar library for validation. Include functions to: 1) Validate a file against the schema, 2) Generate detailed error messages for invalid files, 3) Provide suggestions for fixing common errors, 4) Support different versions of the schema. Package the library for PyPI distribution with proper documentation. Include type hints and follow PEP 8 style guidelines. Consider BIDS context when validating, e.g., potentially checking for associated data files within a BIDS structure or handling root-level vs derivative-level journey files.",
+      "testStrategy": "Create unit tests using pytest that cover validation of both valid and invalid files. Include edge cases such as missing required fields, incorrect data types, and invalid relationships between fields. Test version compatibility handling. Include tests for BIDS-specific validation scenarios.",
       "subtasks": [
         {
           "id": 1,
@@ -160,6 +160,16 @@
             4
           ],
           "details": "Complete setup.py with all metadata for PyPI distribution. Generate API documentation using Sphinx or a similar tool. Write a comprehensive README with installation and usage examples. Create detailed API reference documentation with examples for each function. Add docstrings to all public functions and classes. Implement a command-line interface for validation. Create example scripts demonstrating library usage. Prepare the package for PyPI publication with proper versioning. Set up CI/CD for automated testing and deployment."
+        },
+        {
+          "id": 6,
+          "title": "Implement BIDS context validation",
+          "description": "Add functionality to validate signalJourney files within a BIDS directory structure context",
+          "status": "pending",
+          "dependencies": [
+            2
+          ],
+          "details": "Develop functionality to detect and validate signalJourney files within a BIDS directory structure. Implement checks for associated data files referenced in the journey file. Create different validation rules for root-level vs derivative-level journey files. Add BIDS path validation to ensure journey files are properly located. Implement functions to traverse BIDS directory structures to find and validate all journey files. Add configuration options to enable/disable BIDS-specific validations. Write tests using sample BIDS datasets to verify BIDS context validation."
         }
       ]
     },
@@ -172,8 +182,8 @@
         2
       ],
       "priority": "medium",
-      "details": "Build a command-line interface (CLI) using argparse or click that wraps the validation library from Task 2. The CLI should: 1) Accept file paths or directories as input, 2) Validate single files or recursively validate directories, 3) Output validation results in human-readable format, 4) Provide options for verbose output, JSON output, and exit codes for scripting, 5) Include help documentation and examples. Add installation instructions for pip installation.",
-      "testStrategy": "Create integration tests that verify the CLI correctly processes valid and invalid files. Test directory recursion, different output formats, and exit codes. Include tests for help documentation and argument parsing.",
+      "details": "Build a command-line interface (CLI) using argparse or click that wraps the validation library from Task 2. The CLI should: 1) Accept file paths or directories as input, 2) Validate single files or recursively validate directories, 3) Output validation results in human-readable format, 4) Provide options for verbose output, JSON output, and exit codes for scripting, 5) Include help documentation and examples. Add installation instructions for pip installation. The CLI should ideally be BIDS-aware, potentially offering options to validate files within a BIDS dataset structure or handle root-level journey files correctly.",
+      "testStrategy": "Create integration tests that verify the CLI correctly processes valid and invalid files. Test directory recursion, different output formats, and exit codes. Include tests for help documentation and argument parsing. Test BIDS-specific functionality with sample BIDS dataset structures.",
       "subtasks": [
         {
           "id": 1,
@@ -215,6 +225,17 @@
             3
           ],
           "details": "1) Write detailed help text for all commands and options. 2) Add usage examples for common scenarios. 3) Create a proper Python package structure with setup.py. 4) Configure entry points for the CLI tool. 5) Write installation and usage instructions in README.md. 6) Test the pip installation process. 7) Consider adding shell completion support. 8) Ensure the package has appropriate metadata (author, version, description, etc.)."
+        },
+        {
+          "id": 5,
+          "title": "Implement BIDS-aware functionality",
+          "description": "Add BIDS dataset awareness to the CLI to properly handle validation within BIDS directory structures.",
+          "status": "pending",
+          "dependencies": [
+            1,
+            2
+          ],
+          "details": "1) Add detection for BIDS dataset structures when scanning directories. 2) Implement special handling for root-level journey files in BIDS datasets. 3) Add command-line options to specify BIDS-specific validation rules or behaviors. 4) Ensure validation respects BIDS directory hierarchy and naming conventions. 5) Consider adding a dedicated BIDS validation mode that understands the relationship between journey files and other BIDS components. 6) Update help documentation to include BIDS-specific usage examples."
         }
       ]
     },
@@ -353,7 +374,7 @@
       "id": 6,
       "title": "Implement EEGLAB Plugin for signalJourney Integration",
       "description": "Develop an EEGLAB plugin that allows users to export and import processing steps as signalJourney files.",
-      "status": "pending",
+      "status": "deferred",
       "dependencies": [
         5
       ],
@@ -430,7 +451,7 @@
       "id": 7,
       "title": "Develop Processing Pipeline Visualization Tools",
       "description": "Create tools to visualize processing pipelines described in signalJourney files as flowcharts or directed graphs.",
-      "status": "pending",
+      "status": "deferred",
       "dependencies": [
         2,
         5
@@ -494,7 +515,7 @@
       "id": 8,
       "title": "Integrate with BIDS-validator",
       "description": "Develop a plugin or extension for the BIDS-validator tool that validates signalJourney files within BIDS datasets.",
-      "status": "pending",
+      "status": "deferred",
       "dependencies": [
         2
       ],
@@ -546,7 +567,7 @@
       "id": 9,
       "title": "Implement Quality Metrics Visualization Dashboard",
       "description": "Create a dashboard for visualizing and comparing quality metrics from signalJourney files.",
-      "status": "pending",
+      "status": "deferred",
       "dependencies": [
         2,
         5,
@@ -619,14 +640,10 @@
         2,
         3,
         4,
-        5,
-        6,
-        7,
-        8,
-        9
+        5
       ],
       "priority": "high",
-      "details": "Create comprehensive documentation that includes: 1) Detailed specification guide with field descriptions and examples, 2) Tutorials for creating signalJourney files manually and with tools, 3) User guides for all developed tools (Python library, MATLAB tools, EEGLAB plugin, etc.), 4) Examples of common use cases with sample code, 5) Best practices for integration with BIDS datasets, 6) FAQ and troubleshooting section. Use a documentation framework like Sphinx or MkDocs. Host documentation on Read the Docs or GitHub Pages. Include interactive examples where possible.",
+      "details": "Create comprehensive documentation that includes: 1) Detailed specification guide with field descriptions and examples, 2) Tutorials for creating signalJourney files manually and with tools, 3) User guides for all developed tools (Python library, MATLAB tools, EEGLAB plugin, etc.), 4) Examples of common use cases with sample code, 5) Best practices for integration with BIDS datasets, 6) FAQ and troubleshooting section. Use a documentation framework like Sphinx or MkDocs. Host documentation on Read the Docs or GitHub Pages. Include interactive examples where possible. Explicitly discuss BIDS integration strategies, including the use of .bidsignore and the possibility of root-level vs. derivative-level signalJourney files for dataset-wide pipelines.",
       "testStrategy": "Review documentation for accuracy, completeness, and clarity. Have users with different levels of expertise test the tutorials and provide feedback. Verify that all tools and features are adequately documented. Test that code examples work as expected.",
       "subtasks": [
         {
@@ -692,6 +709,17 @@
             5
           ],
           "details": "Compile a comprehensive FAQ based on anticipated user questions and early feedback. Create a detailed troubleshooting guide addressing common errors and issues. Review and edit all documentation for consistency, completeness, and clarity. Implement cross-references between related sections. Add search functionality and proper indexing. Deploy the documentation to the selected hosting platform (Read the Docs or GitHub Pages). Set up processes for maintaining and updating documentation as the specification and tools evolve. Create a feedback mechanism for users to report documentation issues or request clarifications."
+        },
+        {
+          "id": 7,
+          "title": "Document BIDS integration strategies",
+          "description": "Create detailed documentation on BIDS integration approaches for signalJourney files",
+          "status": "pending",
+          "dependencies": [
+            2,
+            5
+          ],
+          "details": "Develop comprehensive documentation specifically addressing BIDS integration strategies, including: detailed explanation of using .bidsignore to manage signalJourney files within BIDS datasets; comparison of root-level vs. derivative-level placement of signalJourney files for dataset-wide pipelines; examples of both approaches with pros and cons; recommendations for different use cases; compatibility considerations with BIDS validators; examples of directory structures showing proper integration. Include diagrams illustrating the different integration approaches and their implications for data organization and analysis workflows."
         }
       ]
     }
