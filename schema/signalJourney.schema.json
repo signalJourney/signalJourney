@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://raw.githubusercontent.com/signal-journey/specification/main/schema/signalJourney.schema.json",
   "title": "Signal Journey Schema",
-  "description": "Schema for documenting signal processing pipelines with detailed provenance tracking. Files should follow the naming convention: sub-<participant>_task-<taskname>_signalJourney.json and use UTF-8 encoding. Uses namespaces (e.g., 'eeg:', 'nemar:') within the 'extensions' property for domain-specific fields.",
+  "description": "Schema for documenting signal processing pipelines with detailed provenance tracking. Files should follow the naming convention: sub-<participant>_task-<taskname>_signalJourney.json and use UTF-8 encoding. Uses namespaces within the 'extensions' property for domain-specific fields (e.g., 'eeg:', 'nemar:'). Note: Namespaces are reserved; adding new ones requires a formal proposal (see documentation).",
   "type": "object",
   "required": [
     "sj_version",
@@ -52,7 +52,7 @@
       "default": [
         {
           "version": "0.1.0",
-          "date": "2024-05-03", // Update on release
+          "date": "2024-05-03",
           "changes": "Initial schema structure definition."
         }
       ]
@@ -61,7 +61,7 @@
       "type": "object",
       "description": "General pipeline information (e.g., project name, dataset details). Specific fields TBD, allows additional properties for now.",
       "additionalProperties": true,
-      "properties": {} // Define structure later
+      "properties": {}
     },
     "processingSteps": {
       "type": "array",
@@ -78,24 +78,22 @@
     },
     "extensions": {
       "type": "object",
-      "description": "Container for domain-specific extensions using namespaces. Add custom fields under the appropriate namespace (e.g., extensions.eeg.channelNoise).",
+      "description": "Container for domain-specific extensions using reserved namespaces (e.g., 'eeg', 'nemar'). Adding custom fields under the appropriate namespace is allowed, but adding new top-level namespaces requires approval. See contribution guidelines.",
       "properties": {
         "eeg": {
           "type": "object",
           "description": "Namespace for EEG-specific properties.",
-          "additionalProperties": true // Allow any EEG-specific fields initially
+          "additionalProperties": true
         },
         "nemar": {
           "type": "object",
           "description": "Namespace for NEMAR-specific properties (e.g., pipeline IDs).",
-          "additionalProperties": true // Allow any NEMAR-specific fields initially
+          "additionalProperties": true
         }
-        // Add other namespaces here as needed
       },
-      "additionalProperties": true // Allow adding new top-level namespaces
+      "additionalProperties": true
     }
   },
-  "additionalProperties": false,
 
   "definitions": {
     "processingStep": {
@@ -151,7 +149,7 @@
     "qualityMetricsObject": {
       "type": "object",
       "description": "A container for quality metrics. Keys are metric names (potentially namespaced, e.g., 'eeg:percentBadChannels'). Values can be simple types or objects containing fields like 'value', 'unit', 'threshold'.",
-      "additionalProperties": true // Allows any metric key-value pairs
+      "additionalProperties": true
     },
     "softwareDetails": {
       "type": "object",
