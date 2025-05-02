@@ -1,0 +1,128 @@
+{
+  "sj_version": "0.1.0",
+  "schema_version": "0.1.0",
+  "description": "Example signalJourney file for a time-frequency analysis pipeline using MNE-Python.",
+  "pipelineInfo": {
+    "name": "Time-Frequency Analysis (Morlet)",
+    "description": "Calculates time-frequency representation using Morlet wavelets on epoched data and applies baseline correction.",
+    "pipelineType": "time-frequency",
+    "version": "1.0.0",
+    "executionDate": "2024-05-02T12:00:00Z"
+  },
+  "processingSteps": [
+    {
+      "stepId": "1",
+      "name": "Load Epoched Data",
+      "description": "Load epoched data (e.g., output from an epoching step after ICA cleaning).",
+      "software": {
+        "name": "MNE-Python",
+        "version": "1.6.1",
+        "functionCall": "mne.read_epochs('sub-01_task-rest_desc-cleaned_epo.fif', preload=True)"
+      },
+      "parameters": {
+        "filename": "sub-01_task-rest_desc-cleaned_epo.fif",
+        "preload": true
+      },
+      "inputSources": [
+        {
+          "sourceType": "file",
+          "location": "./derivatives/signaljourney/sub-01/eeg/sub-01_task-rest_desc-cleaned_epo.fif", 
+          "entityLabels": {
+            "sub": "01",
+            "task": "rest",
+            "desc": "cleaned",
+            "suffix": "epo"
+          },
+          "pipelineSource": { 
+             "pipelineName": "ICA Decomposition", 
+             "pipelineVersion": "1.0.0"
+           }
+        }
+      ],
+      "outputTargets": [
+        {
+          "targetType": "in-memory",
+          "format": "mne.Epochs",
+          "description": "Loaded epoched data object."
+        }
+      ]
+    },
+    {
+      "stepId": "2",
+      "name": "Calculate Time-Frequency Representation (Morlet)",
+      "description": "Compute TFR using Morlet wavelets for specified frequencies.",
+      "dependsOn": ["1"],
+      "software": {
+        "name": "MNE-Python",
+        "version": "1.6.1",
+        "functionCall": "power = mne.time_frequency.tfr_morlet(epochs['ConditionA'], freqs=np.arange(2., 40., 1.), n_cycles=freqs / 2., use_fft=True, return_itc=False, decim=3, n_jobs=1)"
+      },
+      "parameters": {
+        "event_id": "ConditionA", 
+        "freqs": {
+          "start": 2.0,
+          "stop": 40.0,
+          "step": 1.0
+        },
+        "n_cycles_formula": "freqs / 2.0",
+        "use_fft": true,
+        "return_itc": false,
+        "decim": 3,
+        "n_jobs": 1 
+      },
+      "inputSources": [
+        {
+          "sourceType": "previousStepOutput",
+          "stepId": "1",
+          "outputId": "Loaded epoched data object."
+        }
+      ],
+      "outputTargets": [
+        {
+          "targetType": "in-memory",
+          "format": "mne.time_frequency.AverageTFR",
+          "description": "Computed TFR power object (Condition A)."
+        }
+      ]
+    },
+    {
+      "stepId": "3",
+      "name": "Apply Baseline Correction",
+      "description": "Apply baseline correction (log ratio) to the TFR power.",
+      "dependsOn": ["2"],
+      "software": {
+        "name": "MNE-Python",
+        "version": "1.6.1",
+        "functionCall": "power.apply_baseline(baseline=(-0.5, 0), mode='logratio')"
+      },
+      "parameters": {
+        "baseline": [-0.5, 0.0],
+        "mode": "logratio"
+      },
+      "inputSources": [
+        {
+          "sourceType": "previousStepOutput",
+          "stepId": "2",
+          "outputId": "Computed TFR power object (Condition A)."
+        }
+      ],
+      "outputTargets": [
+        {
+          "targetType": "file",
+          "location": "./derivatives/signaljourney/sub-01/eeg/sub-01_task-rest_desc-tfrMorletCondA_tfr.h5", 
+          "format": "HDF5",
+          "description": "Baseline-corrected TFR power file (Condition A)."
+        }
+      ],
+      "qualityMetrics": {
+        "baselinePeriodSec": [-0.5, 0.0],
+        "baselineMode": "logratio"
+      }
+    }
+  ],
+  "summaryMetrics": {
+    "analysisType": "Time-Frequency",
+    "method": "Morlet Wavelet",
+    "frequencyRangeHz": [2.0, 40.0]
+  }
+} 
