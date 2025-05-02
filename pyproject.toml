@@ -27,6 +27,7 @@ classifiers = [
 ]
 dependencies = [
     "jsonschema>=4.0",
+    "click>=8.0"
 ]
 
 [project.urls]
@@ -48,6 +49,9 @@ suggestions = [
     "fuzzywuzzy>=0.18",
     "python-Levenshtein>=0.12"
 ]
+
+[project.scripts]
+signaljourney-validate = "signaljourney_validator.cli:cli"
 
 [tool.setuptools]
 packages = find:

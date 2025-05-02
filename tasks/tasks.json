@@ -177,7 +177,7 @@
       "id": 3,
       "title": "Implement Command-Line Interface for Validation",
       "description": "Create a command-line tool that leverages the Python validation library to validate signalJourney files.",
-      "status": "pending",
+      "status": "in-progress",
       "dependencies": [
         2
       ],
@@ -189,9 +189,9 @@
           "id": 1,
           "title": "Set up CLI framework and basic file validation",
           "description": "Create the basic command-line interface structure using argparse or click that can accept file paths and perform basic validation on individual files.",
-          "status": "pending",
+          "status": "done",
           "dependencies": [],
-          "details": "1) Choose between argparse or click (click is recommended for more complex CLIs). 2) Set up the basic CLI structure with a main entry point. 3) Implement argument parsing for file paths. 4) Connect to the validation library to validate individual files. 5) Implement basic output of validation results. 6) Add proper error handling for file not found or permission issues."
+          "details": "1) Choose between argparse or click (click is recommended for more complex CLIs). 2) Set up the basic CLI structure with a main entry point. 3) Implement argument parsing for file paths. 4) Connect to the validation library to validate individual files. 5) Implement basic output of validation results. 6) Add proper error handling for file not found or permission issues.\n\n<info added on 2025-05-02T01:44:07.832Z>\nHere's the additional information to add:\n\n```python\n# Example implementation for cli.py\nimport click\nimport sys\nfrom pathlib import Path\nfrom .validator import Validator\n\n@click.group()\ndef cli():\n    \"\"\"SignalJourney validation tools.\"\"\"\n    pass\n\n@cli.command()\n@click.argument('file_path', type=click.Path(exists=True, readable=True, path_type=Path))\n@click.option('--schema', '-s', help='Path to custom schema file', type=click.Path(exists=True, readable=True, path_type=Path))\ndef validate(file_path, schema=None):\n    \"\"\"Validate a SignalJourney file against the schema.\"\"\"\n    validator = Validator(schema_path=schema)\n    \n    try:\n        result = validator.validate_file(file_path)\n        if result.is_valid:\n            click.echo(click.style(f\"✓ {file_path} is valid\", fg=\"green\"))\n            return 0\n        else:\n            click.echo(click.style(f\"✗ {file_path} has validation errors:\", fg=\"red\"))\n            for error in result.errors:\n                click.echo(f\"  - {error}\")\n            return 1\n    except Exception as e:\n        click.echo(click.style(f\"Error: {str(e)}\", fg=\"red\"))\n        return 1\n\nif __name__ == '__main__':\n    sys.exit(cli())\n```\n\nFor pyproject.toml, add:\n```toml\n[project.scripts]\nsignaljourney-validate = \"signaljourney_validator.cli:cli\"\n\n[project.dependencies]\nclick = \"^8.1.3\"\n```\n\nConsider adding a progress bar for multiple file validation using `click.progressbar()` and implementing colorized output for better user experience.\n</info added on 2025-05-02T01:44:07.832Z>"
         },
         {
           "id": 2,
