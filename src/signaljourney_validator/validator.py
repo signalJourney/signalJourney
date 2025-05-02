@@ -12,11 +12,13 @@ JsonDict = Dict[str, Any]
 
 DEFAULT_SCHEMA_PATH = Path(__file__).parent.parent.parent / "schema" / "signalJourney.schema.json"
 
+
 class SignalJourneyValidationError(Exception):
     """Custom exception for validation errors."""
     def __init__(self, message: str, errors: Optional[List[ValidationErrorDetail]] = None):
         super().__init__(message)
         self.errors = errors or []
+
 
 class Validator:
     """
@@ -63,7 +65,9 @@ class Validator:
         else:
             raise TypeError("Schema must be a Path, string, dictionary, or None.")
 
-    def validate(self, data: Union[Path, str, JsonDict], raise_exceptions: bool = True) -> Union[bool, List[ValidationErrorDetail]]:
+    def validate(
+        self, data: Union[Path, str, JsonDict], raise_exceptions: bool = True
+    ) -> Union[bool, List[ValidationErrorDetail]]:
         """
         Validates the given signalJourney data against the loaded schema.
 
@@ -98,7 +102,7 @@ class Validator:
             except json.JSONDecodeError as e:
                 raise SignalJourneyValidationError(f"Error decoding data JSON from {file_path}: {e}") from e
             except Exception as e:
-                 raise SignalJourneyValidationError(f"Error loading data file from {file_path}: {e}") from e
+                raise SignalJourneyValidationError(f"Error loading data file from {file_path}: {e}") from e
         elif isinstance(data, dict):
             instance = data
         else:
@@ -112,16 +116,16 @@ class Validator:
 
                 nested_errors = []
                 if error.context:
-                     nested_errors = [
-                         ValidationErrorDetail(
-                             message=sub_error.message,
-                             path=list(sub_error.path),
-                             schema_path=list(sub_error.schema_path),
-                             validator=sub_error.validator,
-                             validator_value=sub_error.validator_value,
-                             instance_value=sub_error.instance
-                         ) for sub_error in error.context
-                     ]
+                    nested_errors = [
+                        ValidationErrorDetail(
+                            message=sub_error.message,
+                            path=list(sub_error.path),
+                            schema_path=list(sub_error.schema_path),
+                            validator=sub_error.validator,
+                            validator_value=sub_error.validator_value,
+                            instance_value=sub_error.instance
+                        ) for sub_error in error.context
+                    ]
 
                 errors.append(
                     ValidationErrorDetail(
@@ -142,14 +146,15 @@ class Validator:
                     return errors
             else:
                 if raise_exceptions:
-                     return True
+                    return True
                 else:
-                     return []
+                    return []
 
         except jsonschema.SchemaError as e:
-             raise SignalJourneyValidationError(f"Invalid schema: {e}") from e
+            raise SignalJourneyValidationError(f"Invalid schema: {e}") from e
         except Exception as e:
             raise SignalJourneyValidationError(f"An unexpected error occurred during validation: {e}") from e
+
 
 # Example usage (optional, for quick testing)
 if __name__ == '__main__':
@@ -158,8 +163,8 @@ if __name__ == '__main__':
     # Use an invalid example for testing errors
     invalid_example_dict = {
         "sj_version": "0.1.0",
-        "schema_version": "invalid-version", # Invalid format
-        "description": 123, # Invalid type
+        "schema_version": "invalid-version",
+        "description": 123,
         # Missing required fields: pipelineInfo, processingSteps
     }
     valid_example_file = Path(__file__).parent.parent.parent / "schema" / "examples" / "simple_pipeline.json"
@@ -183,7 +188,7 @@ if __name__ == '__main__':
             if isinstance(validation_result_invalid, list) and validation_result_invalid:
                 print(f"INVALID example validation failed as expected. Found {len(validation_result_invalid)} errors:")
                 for err in validation_result_invalid:
-                    print(f"- {err}") # Use the __str__ method of ValidationErrorDetail
+                    print(f"- {err}")
                 print("\n")
             else:
                 print(f"INVALID example validation FAILED (unexpected result): {validation_result_invalid}\n")
@@ -208,4 +213,4 @@ if __name__ == '__main__':
             print(f"An unexpected setup error occurred: {e}")
 
     else:
-        print("Could not find schema file for basic test.") 
+        print("Could not find schema file for basic test.")

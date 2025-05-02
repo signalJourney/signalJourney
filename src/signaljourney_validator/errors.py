@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Any, List, Optional, Deque
+from typing import Any, List, Union, Optional, Deque
 
 @dataclass
 class ValidationErrorDetail:
@@ -13,5 +13,5 @@ class ValidationErrorDetail:
     context: List['ValidationErrorDetail'] = field(default_factory=list) # For nested errors like anyOf
 
     def __str__(self) -> str:
-        path_str = \"/\".join(map(str, self.path)) if self.path else \"root\"
-        return f\"Error at '{path_str}': {self.message}\" 
+        path_str = "/".join(map(str, self.path)) if self.path else "root"
+        return f"Error at '{path_str}': {self.message}" 
