@@ -52,15 +52,16 @@
       "default": [
         {
           "version": "0.1.0",
-          "date": "YYYY-MM-DD", # Placeholder, update on release
+          "date": "2024-05-03", // Update on release
           "changes": "Initial schema structure definition."
         }
       ]
     },
     "pipelineInfo": {
       "type": "object",
-      "description": "Placeholder for general pipeline information (e.g., project name, dataset details). To be defined in subtask X.",
-      "properties": {} # Define structure later
+      "description": "General pipeline information (e.g., project name, dataset details). Specific fields TBD, allows additional properties for now.",
+      "additionalProperties": true,
+      "properties": {} // Define structure later
     },
     "processingSteps": {
       "type": "array",

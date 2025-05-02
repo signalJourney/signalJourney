@@ -1,0 +1,34 @@
+{
+  "sj_version": "0.1.0",
+  "schema_version": "0.1.0",
+  "description": "A simple preprocessing pipeline: filtering.",
+  "pipelineInfo": {
+    "pipeline_name": "Basic Filter"
+  },
+  "processingSteps": [
+    {
+      "stepId": "load-data",
+      "name": "Load Raw Data",
+      "description": "Load the initial raw dataset.",
+      "software": {"name": "MNE-Python", "version": "1.6.0"},
+      "outputTargets": ["raw_data"]
+    },
+    {
+      "stepId": "highpass",
+      "name": "High-pass Filter",
+      "description": "Apply a 1 Hz high-pass filter.",
+      "software": {"name": "MNE-Python", "version": "1.6.0"},
+      "parameters": [
+        {"name": "l_freq", "value": 1.0, "unit": "Hz"},
+        {"name": "h_freq", "value": null},
+        {"name": "method", "value": "fir"}
+      ],
+      "inputSources": ["load-data"],
+      "outputTargets": ["filtered_data"],
+      "dependsOn": ["load-data"]
+    }
+  ],
+  "summaryMetrics": {
+     "pipelineRuntimeMinutes": 0.5
+  }
+} 

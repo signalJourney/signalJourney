@@ -1,0 +1,85 @@
+{
+  "sj_version": "0.1.0",
+  "schema_version": "0.1.0",
+  "description": "Complex pipeline: Preprocessing, ICA, and Epoching.",
+  "pipelineInfo": {
+    "pipeline_name": "EEG Preprocessing + ICA",
+    "project": "Study X",
+    "dataset": "Sub-01, Task-Rest"
+  },
+  "processingSteps": [
+    {
+      "stepId": "load",
+      "name": "Load Data",
+      "description": "Load raw EEG data.",
+      "software": {"name": "EEGLAB", "version": "2023.1"}
+    },
+    {
+      "stepId": "filter",
+      "name": "Band-pass Filter",
+      "description": "Apply 1-45 Hz filter.",
+      "software": {"name": "EEGLAB", "version": "2023.1"},
+      "parameters": [
+        {"name": "locutoff", "value": 1.0, "unit": "Hz"},
+        {"name": "hicutoff", "value": 45.0, "unit": "Hz"}
+      ],
+      "dependsOn": ["load"]
+    },
+    {
+      "stepId": "resample",
+      "name": "Resample Data",
+      "description": "Resample to 250 Hz.",
+      "software": {"name": "EEGLAB", "version": "2023.1"},
+      "parameters": [{"name": "freq", "value": 250, "unit": "Hz"}],
+      "dependsOn": ["filter"]
+    },
+    {
+      "stepId": "ica",
+      "name": "Run ICA",
+      "description": "Run Independent Component Analysis.",
+      "software": {"name": "EEGLAB", "version": "2023.1"},
+      "parameters": [
+        {"name": "icatype", "value": "runica"},
+        {"name": "extended", "value": 1}
+      ],
+      "dependsOn": ["resample"],
+      "qualityMetrics": {
+        "eeg:percentVarianceAccounted": 95.2
+      }
+    },
+    {
+      "stepId": "ic_reject",
+      "name": "Reject ICs",
+      "description": "Reject artifactual independent components using ICLabel.",
+      "software": {"name": "ICLabel", "version": "1.4"},
+      "parameters": [
+        {"name": "thresholds", "value": [0, 0, 0.9, 0.9, 0.9, 0, 0]}
+      ],
+      "dependsOn": ["ica"],
+      "qualityMetrics": {
+        "numICsRejected": 5,
+        "eeg:percentVarianceRemoved": 12.1
+      }
+    },
+    {
+      "stepId": "epoch",
+      "name": "Epoch Data",
+      "description": "Create epochs around stimulus events.",
+      "software": {"name": "EEGLAB", "version": "2023.1"},
+      "parameters": [
+        {"name": "eventtype", "value": ["S 1", "S 2"]},
+        {"name": "timelim", "value": [-0.5, 1.5], "unit": "s"}
+      ],
+      "dependsOn": ["ic_reject"]
+    }
+  ],
+  "extensions": {
+    "eeg": {
+      "channelLocationsFile": "/path/to/standard_1020.elc",
+      "referenceChannels": ["TP9", "TP10"]
+    },
+    "nemar": {
+      "nemarPipelineId": "uuid-1234-abcd-5678"
+    }
+  }
+} 

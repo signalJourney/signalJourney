@@ -4,7 +4,7 @@
       "id": 1,
       "title": "Define JSON Schema for signalJourney Specification",
       "description": "Create the formal JSON Schema definition that will serve as the foundation for the signalJourney specification, including all required and optional fields.",
-      "status": "pending",
+      "status": "done",
       "dependencies": [],
       "priority": "high",
       "details": "Develop a JSON Schema (draft-07) that defines the structure for documenting biosignal processing steps. Include top-level structure (metadata, pipeline info, processing steps array, summary/quality metrics), processing step model (step identification, software references, parameter specifications, input/output relationships), and quality metrics model. Define the extensible namespace system with core, eeg, and nemar prefixes. Ensure UTF-8 encoding requirement is specified. The schema should validate file naming convention (sub-<participant>_task-<taskname>_signalJourney.json) and support versioning. A draft of the schema has been drafted under ../scripts/schema-ideation.md",
@@ -54,14 +54,14 @@
           "id": 5,
           "title": "Validate and finalize complete schema with examples",
           "description": "Integrate all schema components, validate the complete schema, and create example instances to demonstrate proper usage.",
-          "status": "pending",
+          "status": "done",
           "dependencies": [
             1,
             2,
             3,
             4
           ],
-          "details": "Combine all schema components into a complete JSON Schema document. Validate the schema against the JSON Schema draft-07 meta-schema to ensure correctness. Create at least three example signalJourney JSON files that demonstrate different use cases (simple pipeline, complex pipeline with multiple steps, pipeline with extensive quality metrics). Test the examples against the schema to verify validation works correctly. Document any edge cases or implementation notes. Finalize the schema with proper documentation for all properties and components."
+          "details": "Combine all schema components into a complete JSON Schema document. Validate the schema against the JSON Schema draft-07 meta-schema to ensure correctness. Create at least three example signalJourney JSON files that demonstrate different use cases (simple pipeline, complex pipeline with multiple steps, pipeline with extensive quality metrics). Test the examples against the schema to verify validation works correctly. Document any edge cases or implementation notes. Finalize the schema with proper documentation for all properties and components.\n\n<info added on 2025-05-02T00:58:49.282Z>\nHere's the additional information to add:\n\nFor schema validation, use a JSON Schema validator like `ajv` to validate against draft-07 meta-schema:\n```javascript\nconst Ajv = require('ajv');\nconst ajv = new Ajv({strict: false});\nconst valid = ajv.validateSchema(signalJourneySchema);\nif (!valid) console.error(ajv.errors);\n```\n\nExample files should cover these specific scenarios:\n- `simple_pipeline.json`: Linear flow with 2-3 processing steps and basic metadata\n- `complex_pipeline.json`: Branching pipeline with parallel processing paths, conditionals, and multiple output formats\n- `metrics_heavy.json`: Focus on comprehensive quality metrics, data validation results, and performance benchmarks\n\nThe `additionalProperties` flexibility in `pipelineInfo` allows for domain-specific extensions while maintaining core compatibility. Consider documenting recommended extension patterns.\n\nFor version history, use ISO 8601 format (YYYY-MM-DD) for dates and follow semantic versioning principles for version numbers.\n\nInclude a schema validation GitHub Action in CI/CD to ensure examples remain valid as schema evolves.\n</info added on 2025-05-02T00:58:49.282Z>"
         }
       ]
     },

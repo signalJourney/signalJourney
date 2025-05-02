@@ -1,0 +1,47 @@
+{
+  "sj_version": "0.1.0",
+  "schema_version": "0.1.0",
+  "description": "Pipeline focused on quality metric reporting.",
+  "pipelineInfo": {
+    "pipeline_name": "Quality Check Pipeline"
+  },
+  "processingSteps": [
+    {
+      "stepId": "data-qc",
+      "name": "Initial Data Quality Check",
+      "description": "Assess initial data quality.",
+      "software": {"name": "CustomScript", "version": "1.0"},
+      "qualityMetrics": {
+        "channelVariance": {
+           "value": [10.5, 12.1, 9.8, 25.3],
+           "unit": "uV^2",
+           "description": "Variance per channel (first 4 channels)"
+        },
+        "percentBadChannels": 8.5,
+        "bridgeImpedances": null 
+      }
+    },
+    {
+      "stepId": "filtering",
+      "name": "Band-pass Filter",
+      "description": "Apply filter 0.5 - 40 Hz.",
+      "software": {"name": "MNE-Python", "version": "1.6.0"},
+      "dependsOn": ["data-qc"],
+      "qualityMetrics": {
+         "filterRipple": 0.01,
+         "passbandAttenuation_dB": 1
+      }
+    }
+  ],
+  "summaryMetrics": {
+     "overallSubjectRating": "good",
+     "pipelineRuntimeMinutes": 5.7,
+     "diskUsageGB": 1.2,
+     "eeg:muscleArtifactLevel": {
+         "value": 3,
+         "unit": "scale 1-5",
+         "threshold": 4,
+         "description": "Subjective rating of muscle artifact"
+     }
+  }
+} 
