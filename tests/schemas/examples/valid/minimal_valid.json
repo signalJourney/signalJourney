@@ -1,0 +1,29 @@
+{
+  "sj_version": "0.1.0",
+  "schema_version": "0.1.0",
+  "description": "Minimal valid Signal Journey file",
+  "pipelineInfo": {
+    "projectName": "ExampleProject",
+    "datasetId": "ds000000"
+  },
+  "processingSteps": [
+    {
+      "stepId": "preproc-01",
+      "name": "High-pass Filter",
+      "description": "Apply a high-pass filter",
+      "software": {
+        "name": "MATLAB",
+        "version": "R2023b"
+      },
+      "parameters": [
+        {
+          "name": "cutoff",
+          "value": 1,
+          "unit": "Hz"
+        }
+      ],
+      "inputSources": ["raw_data.set"],
+      "outputTargets": ["filtered_data.set"]
+    }
+  ]
+} 
