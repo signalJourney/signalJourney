@@ -1,0 +1,9 @@
+{
+  "sj_version": "0.1.0",
+  "schema_version": "0.1.0",
+  "description": "Malformed JSON with missing comma and closing brace",
+  "pipelineInfo": {
+    "projectName": "BadProject"
+  },
+  "processingSteps": []
+} 

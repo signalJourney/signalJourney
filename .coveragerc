@@ -1,0 +1,17 @@
+[run]
+source = src
+omit =
+    */tests/*
+    */site-packages/*
+    src/signaljourney_validator/__main__.py
+
+[report]
+exclude_lines =
+    pragma: no cover
+    def __repr__
+    if self.debug:
+    if settings.DEBUG
+    raise AssertionError
+    raise NotImplementedError
+    if 0:
+    if __name__ == .__main__.: 
