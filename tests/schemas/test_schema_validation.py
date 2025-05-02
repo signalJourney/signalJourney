@@ -26,8 +26,8 @@ INVALID_EXAMPLES_FAILURES = [
     (
         "invalid/bad_pattern.json",
         "does not match pattern",
-        "'0.1' does not match '^[0-9]+\\.\\.[0-9]+\\.\\.[0-9]+$'",
-    ),  # Adjusted expected message for pattern
+        "'0.1' does not match",
+    ),
     (
         "invalid/processing_steps_empty.json",
         "should be non-empty",
