@@ -197,11 +197,11 @@
           "id": 2,
           "title": "Implement directory handling and recursive validation",
           "description": "Extend the CLI to handle directory inputs and recursively validate all signalJourney files within directories.",
-          "status": "pending",
+          "status": "done",
           "dependencies": [
             1
           ],
-          "details": "1) Add logic to detect if the input path is a file or directory. 2) Implement recursive directory traversal to find all relevant files (consider allowing file pattern matching). 3) Process each file through the validation function. 4) Handle errors gracefully when processing multiple files. 5) Implement progress indication for large directories. 6) Consider adding a flag to control recursion depth."
+          "details": "1) Add logic to detect if the input path is a file or directory. 2) Implement recursive directory traversal to find all relevant files (consider allowing file pattern matching). 3) Process each file through the validation function. 4) Handle errors gracefully when processing multiple files. 5) Implement progress indication for large directories. 6) Consider adding a flag to control recursion depth.\n\n<info added on 2025-05-02T01:44:43.944Z>\nFor the directory handling implementation:\n\n- Used `os.path.isdir()` and `os.path.isfile()` to differentiate between directory and file inputs\n- Added `--pattern` option (default: \"*_signalJourney.json\") to allow custom file pattern matching using glob syntax\n- Implemented `--max-depth` integer option to control recursion depth (default: unlimited when recursive flag is set)\n- Added colored output formatting to clearly distinguish between files during batch validation\n- Implemented parallel processing option (`--parallel / -p`) with configurable worker count for faster validation of large directories\n- Added summary statistics after batch validation showing total files processed, success count, and failure count\n- Implemented early termination option (`--fail-fast / -f`) to stop processing on first validation error\n- Added verbose logging of directory traversal with `--verbose` flag to help debug complex directory structures\n- Created helper function `find_signal_journey_files()` that handles all path resolution logic separately from validation logic\n</info added on 2025-05-02T01:44:43.944Z>"
         },
         {
           "id": 3,
