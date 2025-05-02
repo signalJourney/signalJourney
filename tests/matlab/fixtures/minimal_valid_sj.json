@@ -1,0 +1,29 @@
+{
+  "sj_version": "0.1.0",
+  "schema_version": "0.1.0",
+  "description": "Minimal valid Signal Journey file for MATLAB tests",
+  "pipelineInfo": {
+    "projectName": "MATLAB_TestProject",
+    "datasetId": "ds000001"
+  },
+  "processingSteps": [
+    {
+      "stepId": "matlab-test-01",
+      "name": "Test Filter",
+      "description": "A test processing step",
+      "software": {
+        "name": "MATLAB",
+        "version": "R2023b"
+      },
+      "parameters": [
+        {
+          "name": "cutoff",
+          "value": 50,
+          "unit": "Hz"
+        }
+      ],
+      "inputSources": ["input.dat"],
+      "outputTargets": ["output.dat"]
+    }
+  ]
+} 

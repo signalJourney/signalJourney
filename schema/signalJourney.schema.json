@@ -1,7 +1,7 @@
 {
-  "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://raw.githubusercontent.com/signal-journey/specification/main/schema/signalJourney.schema.json",
-  "title": "Signal Journey Schema",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://signaljourney.neurodata.io/schema/signalJourney.schema.json",
+  "title": "Signal Journey",
   "description": "Schema for documenting signal processing pipelines with detailed provenance tracking. Files should follow the naming convention: sub-<participant>_task-<taskname>_signalJourney.json and use UTF-8 encoding. Uses namespaces within the 'extensions' property for domain-specific fields (e.g., 'eeg:', 'nemar:'). Note: Namespaces are reserved; adding new ones requires a formal proposal (see documentation).",
   "type": "object",
   "required": [
@@ -65,9 +65,9 @@
     },
     "processingSteps": {
       "type": "array",
-      "description": "An ordered list of processing steps performed. Defined in #/definitions/processingStep",
+      "description": "An ordered list of processing steps applied.",
       "items": {
-        "$ref": "definitions/processingStep.schema.json"
+        "$ref": "https://signaljourney.neurodata.io/schema/definitions/processingStep.schema.json"
       },
       "minItems": 1
     },
@@ -75,7 +75,7 @@
       "$ref": "definitions/qualityMetricsObject.schema.json"
     },
     "extensions": {
-      "$ref": "extensions/extensionsContainer.schema.json"
+      "$ref": "https://signaljourney.neurodata.io/schema/extensions/extensionsContainer.schema.json"
     }
   }
 } 
