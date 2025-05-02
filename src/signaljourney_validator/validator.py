@@ -26,15 +26,17 @@ class Validator:
     Also includes experimental support for BIDS context validation.
     """
 
-    def __init__(self, schema: Optional[Union[Path, str, JsonDict]] = None):
+    def __init__(self, schema: Optional[Union[Path, str, JsonDict]] = None,
+                 resolver: Optional[jsonschema.RefResolver] = None):
         """
         Initializes the Validator.
 
         Args:
             schema: Path to the schema file, the schema dictionary, or None to use the default schema.
+            resolver: An optional pre-configured RefResolver instance.
         """
         self._schema = self._load_schema(schema)
-        self._validator = Draft7Validator(self._schema)
+        self._validator = Draft7Validator(self._schema, resolver=resolver)
 
     def _load_schema(self, schema_input: Optional[Union[Path, str, JsonDict]]) -> JsonDict:
         """Loads the JSON schema from a file or uses the provided dictionary."""

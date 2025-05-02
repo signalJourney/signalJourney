@@ -243,7 +243,7 @@
       "id": 4,
       "title": "Create Sample signalJourney Files for Common Processing Pipelines",
       "description": "Develop a set of example signalJourney JSON files that represent common biosignal processing workflows.",
-      "status": "in-progress",
+      "status": "done",
       "dependencies": [
         1
       ],
@@ -255,7 +255,7 @@
           "id": 1,
           "title": "Research and document common parameters for biosignal processing pipelines",
           "description": "Research and document typical parameters, function calls, and quality metrics used in the five required processing pipelines across EEGLAB, MNE-Python, and Fieldtrip.",
-          "status": "in-progress",
+          "status": "done",
           "dependencies": [],
           "details": "For each of the five required pipelines (basic preprocessing, ICA decomposition, time-frequency analysis, source localization, and connectivity analysis), document: 1) Common function names in each toolbox, 2) Typical parameter ranges and default values, 3) Standard quality metrics used to evaluate results, 4) Typical processing sequence. Create a structured document organizing this information by pipeline type and toolbox for reference when creating the actual JSON files."
         },
@@ -263,7 +263,7 @@
           "id": 2,
           "title": "Create basic preprocessing and ICA decomposition example files",
           "description": "Develop two signalJourney JSON files for basic preprocessing and ICA decomposition workflows.",
-          "status": "pending",
+          "status": "done",
           "dependencies": [
             1
           ],
@@ -273,7 +273,7 @@
           "id": 3,
           "title": "Create time-frequency analysis example file",
           "description": "Develop a signalJourney JSON file for time-frequency analysis workflow.",
-          "status": "pending",
+          "status": "done",
           "dependencies": [
             1
           ],
@@ -283,7 +283,7 @@
           "id": 4,
           "title": "Create source localization example file",
           "description": "Develop a signalJourney JSON file for source localization workflow.",
-          "status": "pending",
+          "status": "done",
           "dependencies": [
             1
           ],
@@ -293,7 +293,7 @@
           "id": 5,
           "title": "Create connectivity analysis example file and validate all examples",
           "description": "Develop a signalJourney JSON file for connectivity analysis workflow and validate all five examples against the schema.",
-          "status": "pending",
+          "status": "done",
           "dependencies": [
             1,
             2,
@@ -634,7 +634,7 @@
       "id": 10,
       "title": "Create Comprehensive Documentation and Tutorials",
       "description": "Develop detailed documentation, tutorials, and examples for the signalJourney specification and associated tools.",
-      "status": "pending",
+      "status": "done",
       "dependencies": [
         1,
         2,
@@ -650,7 +650,7 @@
           "id": 1,
           "title": "Set up documentation framework and structure",
           "description": "Select and configure a documentation framework (Sphinx or MkDocs) and establish the overall structure for the signalJourney documentation.",
-          "status": "pending",
+          "status": "done",
           "dependencies": [],
           "details": "Choose between Sphinx (Python-focused) or MkDocs (Markdown-based) based on team preferences. Set up the initial repository with proper configuration. Create a comprehensive structure including sections for: specification guide, tutorials, user guides for each tool, examples, BIDS integration, and FAQ/troubleshooting. Configure automated builds and prepare for hosting on Read the Docs or GitHub Pages. Establish style guidelines and templates for consistent documentation."
         },
@@ -658,7 +658,7 @@
           "id": 2,
           "title": "Create detailed signalJourney specification documentation",
           "description": "Develop the core specification documentation with complete field descriptions, validation rules, and multiple examples.",
-          "status": "pending",
+          "status": "done",
           "dependencies": [
             1
           ],
@@ -668,7 +668,7 @@
           "id": 3,
           "title": "Develop tutorials for creating and working with signalJourney files",
           "description": "Create step-by-step tutorials for manually creating signalJourney files and using the various tools to generate them.",
-          "status": "pending",
+          "status": "done",
           "dependencies": [
             1,
             2
@@ -679,7 +679,7 @@
           "id": 4,
           "title": "Write comprehensive user guides for all tools",
           "description": "Create detailed user guides for each tool in the signalJourney ecosystem (Python library, MATLAB tools, EEGLAB plugin, etc.).",
-          "status": "pending",
+          "status": "done",
           "dependencies": [
             1
           ],
@@ -689,7 +689,7 @@
           "id": 5,
           "title": "Create examples and best practices documentation",
           "description": "Develop a collection of examples covering common use cases and best practices, especially for BIDS integration.",
-          "status": "pending",
+          "status": "done",
           "dependencies": [
             2,
             3,
@@ -701,7 +701,7 @@
           "id": 6,
           "title": "Develop FAQ, troubleshooting guide, and publish documentation",
           "description": "Create a comprehensive FAQ and troubleshooting section, finalize all documentation, and publish to the selected hosting platform.",
-          "status": "pending",
+          "status": "done",
           "dependencies": [
             2,
             3,
@@ -714,12 +714,285 @@
           "id": 7,
           "title": "Document BIDS integration strategies",
           "description": "Create detailed documentation on BIDS integration approaches for signalJourney files",
-          "status": "pending",
+          "status": "done",
           "dependencies": [
             2,
             5
           ],
           "details": "Develop comprehensive documentation specifically addressing BIDS integration strategies, including: detailed explanation of using .bidsignore to manage signalJourney files within BIDS datasets; comparison of root-level vs. derivative-level placement of signalJourney files for dataset-wide pipelines; examples of both approaches with pros and cons; recommendations for different use cases; compatibility considerations with BIDS validators; examples of directory structures showing proper integration. Include diagrams illustrating the different integration approaches and their implications for data organization and analysis workflows."
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "title": "Refactor JSON Schema into Modular Structure with $ref References",
+      "description": "Restructure the signalJourney.schema.json file by breaking it down into smaller, reusable schema components organized in definitions/ and extensions/ subdirectories, following the structure defined in schema-org.mdc.",
+      "details": "This task involves refactoring the monolithic JSON schema file (schema/signalJourney.schema.json) into a more maintainable, modular structure:\n\n1. Create two new subdirectories:\n   - `schema/definitions/` - For core schema components that define the base data structures\n   - `schema/extensions/` - For domain-specific extensions to the core schema\n\n2. Analyze the current schema structure and the organization rules defined in `.cursor/rules/schema-org.mdc`\n\n3. Break down the schema based on logical components. For example:\n   - Common types (e.g., coordinates, timestamps) should go in definitions/\n   - Domain-specific schemas should go in extensions/\n   - Each component should be in its own file with a descriptive name\n\n4. Update the main schema file (signalJourney.schema.json) to:\n   - Keep the top-level schema structure intact\n   - Replace inline schema definitions with $ref references to the appropriate files\n   - Use proper JSON Schema $ref syntax (e.g., \"$ref\": \"./definitions/commonType.schema.json\")\n\n5. Ensure all paths in $ref are correctly relative to the main schema file\n\n6. Maintain backward compatibility - the refactored schema should validate the same documents as the original\n\n7. Update any documentation that references the schema structure\n\nThe goal is to improve maintainability and reusability while keeping the same validation behavior.\n\n**Git Workflow:**\n- Before starting, create a feature branch (e.g., `feature/11-schema-refactor`)\n- After implementation and testing, create a PR targeting `main`\n- Add a comment tagging @neuromechanist for review, mentioning this task ID",
+      "testStrategy": "To verify the refactoring has been implemented correctly:\n\n1. Schema Validation:\n   - Use a JSON Schema validator (like ajv) to validate that the refactored schema is syntactically correct\n   - Verify all $ref paths resolve correctly without errors\n\n2. Functional Equivalence Testing:\n   - Create a test suite with sample JSON documents that were valid against the original schema\n   - Verify these same documents validate correctly against the refactored schema\n   - Include edge cases that test various parts of the schema\n\n3. Regression Testing:\n   - Test documents that should fail validation against the original schema\n   - Verify they still fail validation against the refactored schema for the same reasons\n\n4. Structure Verification:\n   - Confirm the directory structure matches requirements (definitions/ and extensions/ subdirectories exist)\n   - Verify schema files are appropriately placed based on their purpose\n   - Check that no schema components are duplicated across files\n\n5. Manual Review:\n   - Conduct a code review to ensure the refactoring follows the structure defined in schema-org.mdc\n   - Verify naming conventions are consistent and intuitive\n\n6. Integration Testing:\n   - If any applications consume this schema, test them with the refactored version to ensure compatibility",
+      "status": "done",
+      "dependencies": [],
+      "priority": "high",
+      "subtasks": [
+        {
+          "id": 1,
+          "title": "Analyze Schema Structure and Create Directory Framework",
+          "description": "Analyze the current signalJourney.schema.json file to identify logical components for modularization and create the required directory structure for the refactored schema.",
+          "dependencies": [],
+          "details": "1. Create the required directories: `schema/definitions/` and `schema/extensions/`\n2. Analyze the current schema structure in signalJourney.schema.json to identify:\n   - Common/reusable types (timestamps, coordinates, identifiers)\n   - Core domain objects (users, journeys, signals)\n   - Domain-specific extensions\n   - Repeated patterns that can be extracted\n3. Map each component to either definitions/ (for core components) or extensions/ (for domain-specific extensions)\n4. Create a schema mapping document that outlines:\n   - Which components will be extracted\n   - The file naming convention (use descriptive names with .schema.json extension)\n   - The dependency relationships between components\n5. Review the organization rules in .cursor/rules/schema-org.mdc to ensure compliance\n6. Test the directory structure by ensuring proper permissions and accessibility\n\nTesting approach: Verify directory structure exists and is accessible, and that the mapping document is complete and follows best practices for JSON Schema modularization.\n\n<info added on 2025-05-02T17:52:19.899Z>\n# Implementation Plan (Iteration 1)\n\n## Schema Analysis Strategy\n- Use `jq` or a JSON schema visualization tool to analyze the current schema structure\n- Create a dependency graph to visualize relationships between schema components\n- Identify circular references that need special handling during modularization\n\n## File Organization Details\n- **Definitions Directory**: Store reusable components with high cohesion\n  - Use subdirectories for logical grouping if more than 10 definition files emerge\n  - Consider `common/` subdirectory for truly generic types (timestamps, coordinates)\n  - Consider `core/` subdirectory for domain-specific but widely reused types\n- **Extensions Directory**: Organize by domain/purpose with clear namespacing\n\n## Naming Conventions\n- Use kebab-case for filenames (e.g., `processing-step.schema.json`)\n- Use descriptive prefixes for related components (e.g., `metrics-quality.schema.json`, `metrics-summary.schema.json`)\n- Include version in filename if supporting multiple versions simultaneously\n\n## Reference Strategy\n- Use JSON Pointers with relative paths for internal references\n- Consider using JSON Schema `$id` for complex references\n- Document reference patterns in a README.md file\n\n## Schema Mapping Document Template\n```markdown\n# Schema Component Mapping\n\n## Core Components\n| Component | Source Location | Target File | Dependencies |\n|-----------|----------------|-------------|--------------|\n| Processing Step | definitions.processingStep | definitions/processing-step.schema.json | softwareDetails, parameter |\n...\n\n## Extensions\n| Extension | Purpose | Target File | Dependencies |\n|-----------|---------|-------------|--------------|\n| EEG | EEG-specific metadata | extensions/eeg.schema.json | None |\n...\n```\n\n## Validation Strategy\n- Create a script to validate that all references resolve correctly after modularization\n- Test with both absolute and relative paths to ensure portability\n</info added on 2025-05-02T17:52:19.899Z>",
+          "status": "done",
+          "parentTaskId": 11
+        },
+        {
+          "id": 2,
+          "title": "Extract Core Schema Definitions into Separate Files",
+          "description": "Extract the core schema components identified in the analysis phase into separate files in the definitions/ directory, following JSON Schema best practices.",
+          "dependencies": [
+            1
+          ],
+          "details": "1. For each core component identified in subtask 1:\n   - Create a new file in the definitions/ directory with a descriptive name (e.g., definitions/coordinate.schema.json)\n   - Copy the relevant schema section from signalJourney.schema.json\n   - Ensure each file has proper schema metadata ($schema, title, description)\n   - Add appropriate documentation in each file\n2. For each extracted component:\n   - Ensure it's a complete, valid JSON Schema\n   - Include a descriptive title and description\n   - Use $defs for any internal subschemas that are only relevant within that component\n   - Ensure any internal references use proper JSON Schema $ref syntax\n3. Validate each extracted schema file individually using a JSON Schema validator\n4. Document any dependencies between schema files for later reference\n\nTesting approach: Validate each extracted schema file individually using a tool like ajv or jsonschema to ensure it's a valid JSON Schema document. Create small test JSON documents that should validate against each schema to verify correctness.\n\n<info added on 2025-05-02T17:52:51.616Z>\n# Implementation Plan (Iteration 1)\n\n## File Structure and Naming Conventions\n- Use `.schema.json` extension for all schema files for clarity\n- Organize files with logical prefixes (e.g., `core-`, `type-`, etc.) if needed for grouping\n\n## Reference Management\n- When extracting schemas, use absolute URIs for external references: `{\"$ref\": \"https://json-schema.org/draft/2020-12/schema\"}`\n- For internal references between definition files, use relative paths with proper JSON Pointer syntax: `{\"$ref\": \"./softwareDetails.schema.json#\"}`\n- Consider using JSON Schema `$id` fields with URN format for each definition: `\"$id\": \"urn:signaljourney:schema:softwareDetails\"`\n\n## Schema Metadata Template\n```json\n{\n  \"$schema\": \"https://json-schema.org/draft/2020-12/schema\",\n  \"$id\": \"urn:signaljourney:schema:componentName\",\n  \"title\": \"Component Name\",\n  \"description\": \"Detailed description of this component's purpose\",\n  \"type\": \"object\",\n  \"properties\": {\n    // Properties go here\n  },\n  \"required\": [\"requiredProperty1\", \"requiredProperty2\"]\n}\n```\n\n## Dependency Documentation\nCreate a `dependencies.md` file in the definitions directory that maps:\n- Which schema files depend on which others\n- The nature of each dependency (composition, inheritance, etc.)\n- Any circular dependencies that need special handling\n\n## Validation Script\nCreate a Node.js script (`validate-schemas.js`) that:\n```javascript\nconst Ajv = require('ajv');\nconst fs = require('fs');\nconst path = require('path');\n\nconst ajv = new Ajv({allErrors: true});\nconst definitionsDir = path.join(__dirname, 'definitions');\n\n// Load and validate each schema\nfs.readdirSync(definitionsDir)\n  .filter(file => file.endsWith('.schema.json'))\n  .forEach(file => {\n    const schema = JSON.parse(fs.readFileSync(path.join(definitionsDir, file)));\n    const valid = ajv.validateSchema(schema);\n    \n    if (!valid) {\n      console.error(`Schema validation failed for ${file}:`, ajv.errorsText());\n    } else {\n      console.log(`✓ Schema ${file} is valid`);\n    }\n  });\n```\n</info added on 2025-05-02T17:52:51.616Z>",
+          "status": "done",
+          "parentTaskId": 11
+        },
+        {
+          "id": 3,
+          "title": "Extract Domain-Specific Extensions into Separate Files",
+          "description": "Extract domain-specific schema extensions identified in the analysis phase into separate files in the extensions/ directory, following JSON Schema best practices.",
+          "dependencies": [
+            1
+          ],
+          "details": "1. For each domain-specific extension identified in subtask 1:\n   - Create a new file in the extensions/ directory with a descriptive name (e.g., extensions/marketingData.schema.json)\n   - Copy the relevant schema section from signalJourney.schema.json\n   - Ensure each file has proper schema metadata ($schema, title, description)\n   - Add appropriate documentation in each file\n2. For each extracted extension:\n   - Ensure it's a complete, valid JSON Schema\n   - Include a descriptive title and description\n   - Use $ref to reference any core definitions from the definitions/ directory\n   - Avoid circular references between extensions\n3. Validate each extension schema file individually\n4. Document any dependencies on core definitions or other extensions\n\nTesting approach: Validate each extension schema file individually using a JSON Schema validator. Create test JSON documents that should validate against each extension schema to verify correctness. Test any references to core definitions to ensure they resolve correctly.\n\n<info added on 2025-05-02T17:55:54.332Z>\n# Implementation Details for Domain-Specific Extensions\n\n## File Structure and Naming Conventions\n- Use kebab-case for filenames (e.g., `eeg-metadata.schema.json` instead of `eegMetadata.schema.json`)\n- Follow a consistent naming pattern: `{domain}-{concept}.schema.json`\n- Create an `index.js` file in the extensions directory to export all extensions for easier importing\n\n## Schema Design Guidelines\n- Include `$id` fields with absolute URIs (e.g., `https://signaljourney.org/schema/extensions/eeg.schema.json`)\n- Use semantic versioning in schemas with `$version` property\n- Implement `allOf` to compose schemas rather than duplicating properties\n- Add `examples` array with at least one valid instance for each extension\n\n## Reference Implementation\n```json\n{\n  \"$schema\": \"http://json-schema.org/draft-07/schema#\",\n  \"$id\": \"https://signaljourney.org/schema/extensions/eeg.schema.json\",\n  \"title\": \"EEG Extension Schema\",\n  \"description\": \"Schema extension for EEG-specific metadata in Signal Journey\",\n  \"type\": \"object\",\n  \"properties\": {\n    \"samplingRate\": {\n      \"type\": \"number\",\n      \"description\": \"Sampling rate in Hz\",\n      \"minimum\": 0\n    },\n    \"channelCount\": {\n      \"type\": \"integer\",\n      \"description\": \"Number of EEG channels\",\n      \"minimum\": 1\n    }\n  },\n  \"examples\": [\n    {\n      \"samplingRate\": 256,\n      \"channelCount\": 64,\n      \"montage\": \"10-20\"\n    }\n  ]\n}\n```\n\n## Testing Strategy\n- Create a test suite with both valid and invalid examples for each extension\n- Test cross-extension references with complex nested structures\n- Implement JSON Schema validation in CI pipeline using Ajv or similar validator\n- Create documentation generation script that extracts examples from schemas\n</info added on 2025-05-02T17:55:54.332Z>",
+          "status": "done",
+          "parentTaskId": 11
+        },
+        {
+          "id": 4,
+          "title": "Update Main Schema with $ref References",
+          "description": "Refactor the main signalJourney.schema.json file to replace inline schema definitions with $ref references to the extracted component files, maintaining the same validation behavior.",
+          "dependencies": [
+            2,
+            3
+          ],
+          "details": "1. Create a backup of the original signalJourney.schema.json file\n2. Update the main schema file to:\n   - Keep the top-level schema structure intact (type, title, description, etc.)\n   - Replace each extracted component with a $ref to the appropriate file\n   - Use proper relative paths in $ref references (e.g., \"$ref\": \"./definitions/user.schema.json\")\n   - Maintain any required fields and validation rules\n3. For each $ref:\n   - Ensure the path is correctly relative to the main schema file\n   - Verify that the referenced schema exists\n   - Check that the reference resolves correctly\n4. Validate the updated main schema using a JSON Schema validator that supports $ref resolution\n5. Test the schema against sample documents that were valid against the original schema\n\nTesting approach: Use a JSON Schema validator that supports $ref resolution (like ajv) to validate the refactored schema. Test with a comprehensive set of valid and invalid sample documents to ensure the validation behavior remains unchanged from the original schema.\n\n<info added on 2025-05-02T17:56:35.206Z>\n## Implementation Plan (Iteration 1)\n\n1. **Read Source:** Load `schema/signalJourney.schema.json`.\n2. **Update `properties.processingSteps`:** Change `items.$ref` to point to `\"definitions/processingStep.json\"`.\n3. **Update `properties.summaryMetrics`:** Remove existing `type` and `description`. Change the property to be just `{\"$ref\": \"definitions/qualityMetricsObject.json\"}`.\n4. **Update `properties.extensions`:** Remove existing `type`, `description`, `properties`, and `additionalProperties`. Change the property to be just `{\"$ref\": \"extensions/extensionsContainer.json\"}`.\n5. **Remove `definitions`:** Delete the entire `definitions` object and its contents from the end of the file.\n6. **Format and Validate:** Ensure the resulting JSON is well-formatted and structurally valid (though full schema validation comes later).\n7. **Next Steps:** Proceed to subtask 11.5 for final validation and documentation updates.\n\n### Implementation Notes\n\n```javascript\n// Example Node.js implementation for updating the schema\nconst fs = require('fs');\nconst path = require('path');\n\n// Create backup\nconst schemaPath = path.join(__dirname, 'schema/signalJourney.schema.json');\nconst backupPath = path.join(__dirname, 'schema/signalJourney.schema.json.bak');\nfs.copyFileSync(schemaPath, backupPath);\n\n// Read and parse schema\nconst schema = JSON.parse(fs.readFileSync(schemaPath, 'utf8'));\n\n// Update references\nschema.properties.processingSteps.items = { \"$ref\": \"./definitions/processingStep.json\" };\nschema.properties.summaryMetrics = { \"$ref\": \"./definitions/qualityMetricsObject.json\" };\nschema.properties.extensions = { \"$ref\": \"./extensions/extensionsContainer.json\" };\n\n// Remove definitions section\ndelete schema.definitions;\n\n// Write updated schema\nfs.writeFileSync(\n  schemaPath, \n  JSON.stringify(schema, null, 2),\n  'utf8'\n);\n```\n\n### Potential Issues to Watch For\n\n- **Path Resolution**: Ensure paths are correct relative to the main schema file location\n- **Circular References**: Check for any circular dependencies that might have been created\n- **Schema ID Conflicts**: Verify that `$id` properties don't conflict between schemas\n- **JSON Pointer Syntax**: If using complex references with JSON pointers, ensure correct syntax (e.g., `\"$ref\": \"./definitions/processingStep.json#/definitions/specificPart\"`)\n\n### Validation Strategy\n\nUse a tool like `ajv-cli` to validate the refactored schema:\n\n```bash\n# Install validator\nnpm install -g ajv-cli\n\n# Validate schema\najv compile -s schema/signalJourney.schema.json\n\n# Test with sample documents\najv validate -s schema/signalJourney.schema.json -d \"samples/*.json\"\n```\n</info added on 2025-05-02T17:56:35.206Z>",
+          "status": "done",
+          "parentTaskId": 11
+        },
+        {
+          "id": 5,
+          "title": "Validate Refactored Schema and Update Documentation",
+          "description": "Perform comprehensive validation of the refactored schema structure to ensure backward compatibility and update any documentation that references the schema structure.",
+          "dependencies": [
+            4
+          ],
+          "details": "1. Perform comprehensive validation:\n   - Validate the entire schema structure using a JSON Schema validator with $ref support\n   - Test with a diverse set of valid and invalid documents from production or test environments\n   - Verify that documents that were valid against the original schema are still valid\n   - Verify that documents that were invalid against the original schema are still invalid\n2. Check for any circular references or resolution issues in the schema structure\n3. Update documentation:\n   - Update any README files or documentation that describes the schema structure\n   - Document the new modular approach and directory structure\n   - Create a schema diagram showing the relationships between components\n   - Add comments in the schema files explaining the purpose and usage of each component\n4. Create a pull request:\n   - Create a feature branch named 'feature/11-schema-refactor'\n   - Commit all changes with descriptive commit messages\n   - Create a PR targeting main\n   - Add a comment tagging @neuromechanist for review, mentioning task ID 11\n   - Include a summary of changes and validation results\n\nTesting approach: Use automated tests to validate the refactored schema against a comprehensive test suite of valid and invalid documents. Manually review the schema structure and documentation for clarity and correctness. Have another team member review the changes to ensure the modular structure is intuitive and follows best practices.\n\n<info added on 2025-05-02T17:57:03.405Z>\n## Implementation Notes (Iteration 1)\n\n### Validation Strategy\n- Use `ajv` or similar JSON Schema validator that supports draft-07 and $ref resolution\n- Create a validation script that:\n  - Recursively loads all schema files\n  - Resolves references using a custom resolver that handles local file paths\n  - Tests schema compilation to catch structural errors\n- Implement specific backward compatibility tests:\n  - Compare validation results between old and new schemas using identical test data\n  - Log any discrepancies for investigation\n\n### Documentation Enhancement\n- Add a \"Schema Migration Guide\" section explaining:\n  - How to update references from monolithic to modular schema\n  - Breaking changes (if any) and mitigation strategies\n  - Performance considerations with the new reference structure\n- Include examples of how to reference specific schema components\n- Document the rationale behind the modular structure (maintainability, reuse, etc.)\n\n### Schema Diagram Generation\n- Use a tool like `jsonschema2diagram` to automatically generate visual representations\n- Create both a high-level overview diagram and detailed component diagrams\n- Include these diagrams in both documentation and as standalone SVG files in the repo\n\n### Circular Reference Detection\n- Implement a custom script that builds a directed graph of schema references\n- Use cycle detection algorithms to identify any circular dependencies\n- Document any intentional circular references with justification\n</info added on 2025-05-02T17:57:03.405Z>",
+          "status": "done",
+          "parentTaskId": 11
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "title": "Migrate Sphinx Documentation to MkDocs with Material Theme",
+      "description": "Convert the existing Sphinx documentation in the docs/ directory to MkDocs using the Material theme and Mkdocstrings plugin, following the provided guidelines.",
+      "details": "This task involves a complete migration from Sphinx to MkDocs:\n\n**Git Workflow**:\n- Before starting, create a feature branch (e.g., `feature/12-mkdocs-migration`)\n- After implementation and testing, create a PR targeting `main`\n- Add a comment tagging @neuromechanist for review, mentioning this task ID\n\n1. **Convert RST to Markdown**:\n   - Convert all .rst files in the docs/ directory to Markdown (.md) format\n   - Ensure proper conversion of Sphinx-specific directives to Markdown equivalents\n   - Maintain all existing content, code examples, and formatting\n\n2. **Setup MkDocs Configuration**:\n   - Create a `mkdocs.yml` file in the project root\n   - Configure the Material theme with appropriate settings (colors, fonts, navigation features)\n   - Follow the guidelines specified in `.cursor/rules/mkdocs.mdc`\n\n3. **Configure Plugins**:\n   - Set up mkdocstrings for automatic API documentation generation\n   - Configure mkdocstrings to properly parse Python docstrings\n   - Add any other necessary plugins (e.g., search, navigation, etc.)\n\n4. **Restructure Navigation**:\n   - Create a logical navigation structure in mkdocs.yml\n   - Ensure all existing documentation sections are properly represented\n   - Implement proper nesting and organization of documentation pages\n\n5. **Update Dependencies**:\n   - Add mkdocs, mkdocs-material, and mkdocstrings to pyproject.toml\n   - Specify appropriate version constraints for each dependency\n   - Include any other required MkDocs plugins\n\n6. **Documentation Build Process**:\n   - Update any existing documentation build scripts or CI/CD pipelines\n   - Ensure the documentation can be built without errors\n   - Create a simple guide for local documentation building",
+      "testStrategy": "To verify successful migration:\n\n1. **Build Verification**:\n   - Run `mkdocs build` and ensure it completes without errors\n   - Run `mkdocs serve` and verify the documentation is accessible locally\n\n2. **Content Validation**:\n   - Compare the rendered MkDocs site with the original Sphinx documentation\n   - Verify all pages from the original documentation exist in the new structure\n   - Check that all images, tables, and code blocks render correctly\n\n3. **Navigation Testing**:\n   - Test all navigation links to ensure they work correctly\n   - Verify that the navigation structure matches the planned hierarchy\n   - Test on both desktop and mobile viewports to ensure responsive design\n\n4. **API Documentation**:\n   - Verify that mkdocstrings correctly generates API documentation\n   - Compare generated API docs with the original Sphinx autodoc output\n   - Ensure all classes, methods, and functions are properly documented\n\n5. **Search Functionality**:\n   - Test the search feature with various keywords\n   - Verify that search results are relevant and comprehensive\n\n6. **Dependency Verification**:\n   - Confirm that all added dependencies in pyproject.toml are correct\n   - Verify that a fresh install with the updated dependencies works correctly\n\n7. **Cross-browser Testing**:\n   - Test the documentation in Chrome, Firefox, and Safari\n   - Verify that the Material theme renders correctly in all browsers",
+      "status": "pending",
+      "dependencies": [
+        11
+      ],
+      "priority": "medium",
+      "subtasks": [
+        {
+          "id": 1,
+          "title": "Convert RST Documentation to Markdown Format",
+          "description": "Convert all existing Sphinx RST files to Markdown format while preserving content structure, formatting, and special directives.",
+          "dependencies": [],
+          "details": "Implementation steps:\n1. Install conversion tools: `pip install rst2myst pandoc`\n2. Create a backup of the original docs/ directory\n3. Use rst2myst for structural conversion: `rst2myst convert --replace-files -dr any $(find docs -name '*.rst')`\n4. For complex formatting cases, use pandoc as a fallback: `find docs -name '*.rst' -exec pandoc -f rst -t markdown -o {}.md {} \\;`\n5. Manually review and fix any conversion issues, particularly:\n   - Cross-references (replace Sphinx `:ref:` with MkDocs-style links)\n   - Code blocks and their syntax highlighting\n   - Tables and complex formatting\n   - Image references and paths\n6. Rename all converted files with .md extension\n7. Test by viewing the markdown files in a markdown previewer\n\nTesting approach:\n- Use a markdown linter to check for syntax errors\n- Visually compare original RST and converted MD files for content preservation\n- Create a checklist of special Sphinx directives and verify their proper conversion",
+          "status": "pending",
+          "parentTaskId": 12
+        },
+        {
+          "id": 2,
+          "title": "Create MkDocs Configuration with Material Theme",
+          "description": "Set up the MkDocs configuration file with Material theme settings according to project guidelines.",
+          "dependencies": [
+            1
+          ],
+          "details": "Implementation steps:\n1. Create a `mkdocs.yml` file in the project root\n2. Configure basic site information:\n   ```yaml\n   site_name: [Project Name]\n   site_url: [Project URL]\n   repo_url: [Repository URL]\n   repo_name: [Repository Name]\n   ```\n3. Set up Material theme with appropriate features:\n   ```yaml\n   theme:\n     name: material\n     palette:\n       # Configure colors according to .cursor/rules/mkdocs.mdc\n       primary: indigo\n       accent: indigo\n     features:\n       - navigation.tabs\n       - navigation.indexes\n       - navigation.top\n       - search.highlight\n       - search.suggest\n   ```\n4. Configure Markdown extensions:\n   ```yaml\n   markdown_extensions:\n     - admonition\n     - codehilite\n     - pymdownx.highlight\n     - pymdownx.superfences\n     - pymdownx.tabbed\n     - toc:\n         permalink: true\n   ```\n5. Follow the specific guidelines in `.cursor/rules/mkdocs.mdc` for any additional theme configuration\n\nTesting approach:\n- Run `mkdocs serve` to preview the site with the basic configuration\n- Verify theme appearance matches requirements\n- Check that basic navigation works correctly",
+          "status": "pending",
+          "parentTaskId": 12
+        },
+        {
+          "id": 3,
+          "title": "Configure MkDocs Plugins and API Documentation",
+          "description": "Set up mkdocstrings and other necessary plugins for API documentation generation and enhanced functionality.",
+          "dependencies": [
+            2
+          ],
+          "details": "Implementation steps:\n1. Update the mkdocs.yml file to include required plugins:\n   ```yaml\n   plugins:\n     - search\n     - mkdocstrings:\n         handlers:\n           python:\n             options:\n               show_source: true\n               show_root_heading: true\n               heading_level: 2\n               docstring_style: google\n     - git-revision-date-localized:\n         enable_creation_date: true\n   ```\n2. Create an API documentation page structure:\n   - Create an `api/` directory in the docs folder\n   - Add index.md files for each module to document\n   - Use mkdocstrings syntax to generate API docs:\n     ```markdown\n     # API Reference\n     \n     ::: module.name\n         options:\n           show_source: true\n     ```\n3. Configure any additional plugins needed (e.g., for diagrams, versioning)\n4. Test API documentation generation with sample modules\n\nTesting approach:\n- Run `mkdocs build --strict` to check for plugin configuration errors\n- Verify API documentation is correctly generated from docstrings\n- Test search functionality to ensure it indexes API documentation",
+          "status": "pending",
+          "parentTaskId": 12
+        },
+        {
+          "id": 4,
+          "title": "Create Navigation Structure and Update Dependencies",
+          "description": "Define the navigation hierarchy in mkdocs.yml and update project dependencies to include MkDocs and required plugins.",
+          "dependencies": [
+            1,
+            2,
+            3
+          ],
+          "details": "Implementation steps:\n1. Create a logical navigation structure in mkdocs.yml:\n   ```yaml\n   nav:\n     - Home: index.md\n     - User Guide:\n       - Installation: user/installation.md\n       - Configuration: user/configuration.md\n       # Add all converted documentation pages with proper hierarchy\n     - API Reference:\n       - Overview: api/index.md\n       # Add all API documentation pages\n     - Development:\n       - Contributing: development/contributing.md\n       # Add developer documentation\n   ```\n2. Ensure all existing documentation sections from Sphinx are represented\n3. Implement proper nesting and organization matching the original structure\n4. Update project dependencies in pyproject.toml:\n   ```toml\n   [project.optional-dependencies]\n   docs = [\n     \"mkdocs>=1.4.0\",\n     \"mkdocs-material>=9.0.0\",\n     \"mkdocstrings>=0.20.0\",\n     \"mkdocstrings-python>=0.8.0\",\n     \"pymdown-extensions>=9.0\",\n     \"mkdocs-git-revision-date-localized-plugin>=1.1.0\"\n   ]\n   ```\n5. Create a docs/requirements.txt file with the same dependencies for CI/CD\n\nTesting approach:\n- Run `mkdocs serve` and verify all pages are accessible through navigation\n- Check that the navigation structure matches the original Sphinx documentation\n- Install dependencies in a clean environment to verify they resolve correctly",
+          "status": "pending",
+          "parentTaskId": 12
+        },
+        {
+          "id": 5,
+          "title": "Update Build Process and Documentation",
+          "description": "Update build scripts, CI/CD pipelines, and create documentation for the new MkDocs setup.",
+          "dependencies": [
+            1,
+            2,
+            3,
+            4
+          ],
+          "details": "Implementation steps:\n1. Create a simple shell script for local documentation building:\n   ```bash\n   #!/bin/bash\n   # build_docs.sh\n   pip install -e \".[docs]\"\n   mkdocs build\n   echo \"Documentation built in ./site directory\"\n   ```\n2. Update any CI/CD pipelines (e.g., GitHub Actions):\n   ```yaml\n   name: docs\n   on: [push, pull_request]\n   jobs:\n     build:\n       runs-on: ubuntu-latest\n       steps:\n         - uses: actions/checkout@v4\n         - uses: actions/setup-python@v4\n           with:\n             python-version: '3.10'\n         - run: pip install -e \".[docs]\"\n         - run: mkdocs build --strict\n         # Add deployment steps if needed\n   ```\n3. Create a README.md in the docs/ directory with instructions:\n   - How to build docs locally\n   - How to add new documentation\n   - How to use mkdocstrings for API documentation\n4. Add a section in the documentation about the migration from Sphinx\n5. Test the complete documentation build process\n\nTesting approach:\n- Run the build script in a clean environment\n- Verify the documentation builds without errors\n- Check that all pages render correctly in the built site\n- Test any CI/CD integrations with a test commit",
+          "status": "pending",
+          "parentTaskId": 12
+        }
+      ]
+    },
+    {
+      "id": 13,
+      "title": "Implement Comprehensive Test Suites for Schema Validation and Tools",
+      "description": "Create test suites for JSON schema validation, Python validator, and MATLAB tools according to the testing guidelines in .cursor/rules/testing.mdc.",
+      "details": "This task involves implementing three distinct test suites:\n\n1. **JSON Schema Validation Tests** (`tests/schemas/`):\n   - Create tests that validate both valid and invalid JSON examples against the defined schemas\n   - Include edge cases for each schema field\n   - Organize tests by schema type with clear naming conventions\n   - Test all constraints defined in schemas (required fields, data types, ranges, etc.)\n\n2. **Python Validator Tests** (`tests/validator/`):\n   - Implement unit tests for the Python validator module\n   - Test validation functions with valid/invalid inputs\n   - Include tests for error handling and edge cases\n   - Mock any external dependencies\n   - Test performance with large inputs where applicable\n\n3. **MATLAB Tools Tests** (`tests/matlab/`):\n   - Use MATLAB's unit testing framework\n   - Create test fixtures for common test data\n   - Test all MATLAB utility functions and tools\n   - Verify correct handling of various input formats\n   - Test integration between MATLAB components\n\nEnsure all tests follow the conventions specified in `.cursor/rules/testing.mdc`. Add necessary test dependencies to the project configuration files (requirements-dev.txt for Python, etc.). Implement CI-friendly tests that can run in automated environments.\n\n**Git Workflow:**\n- Before starting, create a feature branch (e.g., `feature/13-implement-tests`)\n- After implementation and testing, create a PR targeting `main`\n- Add a comment tagging @neuromechanist for review, mentioning this task ID",
+      "testStrategy": "Verification will involve:\n\n1. **Code Review**:\n   - Ensure test organization follows the specified directory structure\n   - Verify tests follow the guidelines in `.cursor/rules/testing.mdc`\n   - Check test coverage for all components\n\n2. **Test Execution**:\n   - All tests must pass when run with pytest (Python) and MATLAB's test runner\n   - Run `pytest tests/schemas/ tests/validator/ --cov` to verify Python test coverage (aim for >90%)\n   - Run MATLAB tests using `runtests('tests/matlab')` and verify all pass\n\n3. **Coverage Verification**:\n   - Generate coverage reports for Python tests\n   - Ensure all critical paths in the code are tested\n   - Verify edge cases and error conditions are covered\n\n4. **CI Integration**:\n   - Tests should run successfully in the CI pipeline\n   - Test dependencies should be properly specified in configuration files\n\nThe task is complete when all test suites are implemented, passing, and providing adequate coverage of the codebase according to the guidelines.",
+      "status": "in-progress",
+      "dependencies": [
+        11
+      ],
+      "priority": "high",
+      "subtasks": [
+        {
+          "id": 1,
+          "title": "Set up test directory structure and test utilities",
+          "description": "Create the foundational test infrastructure including directory structure, test utilities, and helper functions that will be used across all test suites.",
+          "dependencies": [],
+          "details": "1. Create the main test directories: `tests/schemas/`, `tests/validator/`, and `tests/matlab/`\n2. Set up test configuration files (pytest.ini, .coveragerc)\n3. Create shared test utilities:\n   - Implement a JSON file loader utility that handles errors gracefully\n   - Create test data generators for common test cases\n   - Implement assertion helpers for schema validation errors\n4. Set up test fixtures for reusable test data and mocks\n5. Configure test dependencies in requirements-dev.txt (pytest, pytest-cov, jsonschema, fastjsonschema)\n6. Create documentation for the test structure in tests/README.md\n7. Testing approach: Write unit tests for the utilities themselves to ensure they work correctly\n\n<info added on 2025-05-02T19:04:04.584Z>\n# Implementation Details\n\n## Directory Structure Setup\n```\nproject_root/\n├── tests/\n│   ├── __init__.py\n│   ├── conftest.py\n│   ├── schemas/\n│   │   └── __init__.py\n│   ├── validator/\n│   │   └── __init__.py\n│   └── matlab/\n│       └── __init__.py\n```\n\n## Configuration Files\n\n### pytest.ini\n```ini\n[pytest]\ntestpaths = tests\npython_files = test_*.py\npython_classes = Test*\npython_functions = test_*\naddopts = --cov=mdc_validator --cov-report=term-missing\n```\n\n### .coveragerc\n```ini\n[run]\nsource = mdc_validator\nomit = \n    */tests/*\n    */site-packages/*\n\n[report]\nexclude_lines =\n    pragma: no cover\n    def __repr__\n    raise NotImplementedError\n```\n\n## Test Utilities Implementation\n\n### JSON File Loader (tests/utils.py)\n```python\nimport json\nimport os\nfrom typing import Any, Dict, Optional\n\ndef load_json_file(filepath: str) -> Dict[str, Any]:\n    \"\"\"\n    Load and parse a JSON file with graceful error handling.\n    \n    Args:\n        filepath: Path to the JSON file\n        \n    Returns:\n        Parsed JSON content as dictionary\n        \n    Raises:\n        FileNotFoundError: If file doesn't exist\n        JSONDecodeError: If JSON is invalid\n    \"\"\"\n    if not os.path.exists(filepath):\n        raise FileNotFoundError(f\"JSON file not found: {filepath}\")\n        \n    try:\n        with open(filepath, 'r', encoding='utf-8') as f:\n            return json.load(f)\n    except json.JSONDecodeError as e:\n        raise json.JSONDecodeError(\n            f\"Invalid JSON in {filepath}: {str(e)}\", \n            e.doc, \n            e.pos\n        )\n```\n\n### Test Fixtures (conftest.py)\n```python\nimport pytest\nimport os\nimport json\nfrom pathlib import Path\n\n@pytest.fixture\ndef sample_schema_path():\n    \"\"\"Return path to test schemas directory\"\"\"\n    return Path(__file__).parent / \"schemas\" / \"samples\"\n\n@pytest.fixture\ndef load_test_schema():\n    \"\"\"Fixture to load a test schema file\"\"\"\n    def _load(filename):\n        schema_path = Path(__file__).parent / \"schemas\" / \"samples\" / filename\n        with open(schema_path, 'r', encoding='utf-8') as f:\n            return json.load(f)\n    return _load\n\n@pytest.fixture\ndef valid_minimal_schema():\n    \"\"\"Return a minimal valid schema for testing\"\"\"\n    return {\n        \"$schema\": \"http://json-schema.org/draft-07/schema#\",\n        \"type\": \"object\",\n        \"properties\": {\n            \"name\": {\"type\": \"string\"},\n            \"value\": {\"type\": \"number\"}\n        },\n        \"required\": [\"name\"]\n    }\n```\n\n### Assertion Helpers (tests/utils.py)\n```python\ndef assert_validation_error(validator_func, data, expected_error_substring):\n    \"\"\"\n    Assert that validation fails with an error containing the expected substring.\n    \n    Args:\n        validator_func: Function that performs validation and raises exceptions\n        data: Data to validate\n        expected_error_substring: String expected to be in the error message\n    \"\"\"\n    try:\n        validator_func(data)\n        pytest.fail(f\"Expected validation error containing '{expected_error_substring}', but validation passed\")\n    except Exception as e:\n        error_message = str(e)\n        assert expected_error_substring in error_message, \\\n            f\"Expected error containing '{expected_error_substring}', got: '{error_message}'\"\n```\n\n## Test Data Generators\n```python\ndef generate_test_cases():\n    \"\"\"Generate common test cases for schema validation\"\"\"\n    return [\n        {\"name\": \"valid_simple\", \"data\": {\"name\": \"test\"}, \"should_pass\": True},\n        {\"name\": \"missing_required\", \"data\": {}, \"should_pass\": False},\n        {\"name\": \"wrong_type\", \"data\": {\"name\": 123}, \"should_pass\": False},\n        {\"name\": \"extra_property\", \"data\": {\"name\": \"test\", \"extra\": True}, \"should_pass\": True},\n    ]\n```\n</info added on 2025-05-02T19:04:04.584Z>",
+          "status": "done",
+          "parentTaskId": 13
+        },
+        {
+          "id": 2,
+          "title": "Implement JSON Schema validation test suite",
+          "description": "Create comprehensive tests for validating JSON documents against the defined schemas, covering valid cases, invalid cases, and edge cases for each schema type.",
+          "dependencies": [
+            1
+          ],
+          "details": "1. For each schema type, create separate test modules with clear naming conventions\n2. Implement parameterized tests using pytest.mark.parametrize to test multiple data samples against each schema\n3. Create test data files:\n   - Valid examples that pass validation\n   - Invalid examples that fail in specific ways (missing required fields, wrong data types, out of range values)\n   - Edge cases (empty arrays, minimum/maximum values, etc.)\n4. Test all constraints defined in schemas:\n   - Required fields validation\n   - Data type validation\n   - Range constraints\n   - Pattern matching for strings\n   - Array length constraints\n5. Implement specific error message validation to ensure proper error reporting\n6. Add performance tests for large JSON documents using fastjsonschema for efficiency\n7. Testing approach: Run tests with pytest and verify that valid documents pass validation while invalid documents fail with the expected error messages\n\n<info added on 2025-05-02T19:06:15.863Z>\n## Implementation Plan (Iteration 1)\n\n### Directory Structure Setup\n```bash\nmkdir -p tests/schemas/examples/valid\nmkdir -p tests/schemas/examples/invalid\nmkdir -p tests/schemas/examples/edge_cases\n```\n\n### Example JSON Files\n\n**Valid Example (tests/schemas/examples/valid/minimal_valid.json):**\n```json\n{\n  \"sj_version\": \"1.0.0\",\n  \"schema_version\": \"1.0.0\",\n  \"description\": \"Minimal valid example\",\n  \"pipelineInfo\": {\n    \"name\": \"Test Pipeline\",\n    \"version\": \"0.1.0\"\n  },\n  \"processingSteps\": [\n    {\n      \"stepId\": \"step1\",\n      \"name\": \"First Step\",\n      \"description\": \"Initial processing step\",\n      \"software\": {\n        \"name\": \"test-software\",\n        \"version\": \"1.0.0\"\n      }\n    }\n  ]\n}\n```\n\n**Invalid Example (tests/schemas/examples/invalid/missing_required_top_level.json):**\n```json\n{\n  \"schema_version\": \"1.0.0\",\n  \"description\": \"Invalid example missing sj_version\",\n  \"pipelineInfo\": {\n    \"name\": \"Test Pipeline\",\n    \"version\": \"0.1.0\"\n  },\n  \"processingSteps\": [\n    {\n      \"stepId\": \"step1\",\n      \"name\": \"First Step\",\n      \"description\": \"Initial processing step\",\n      \"software\": {\n        \"name\": \"test-software\",\n        \"version\": \"1.0.0\"\n      }\n    }\n  ]\n}\n```\n\n### Test Implementation\n\n**conftest.py:**\n```python\nimport json\nimport os\nimport pytest\nfrom jsonschema import Draft7Validator\n\n@pytest.fixture\ndef load_json_example():\n    def _load(filename):\n        base_path = os.path.join(os.path.dirname(__file__), \"examples\")\n        with open(os.path.join(base_path, filename)) as f:\n            return json.load(f)\n    return _load\n\n@pytest.fixture\ndef validator():\n    # Load the schema from the package\n    from sciencejournal.schema import get_schema\n    schema = get_schema()\n    return Draft7Validator(schema)\n```\n\n**tests/schemas/test_schema_validation.py:**\n```python\nimport pytest\nimport jsonschema\n\ndef test_minimal_valid(validator, load_json_example):\n    \"\"\"Test that a minimal valid document passes validation.\"\"\"\n    data = load_json_example(\"valid/minimal_valid.json\")\n    validator.validate(data)  # Should not raise an exception\n\ndef test_missing_required_top_level(validator, load_json_example):\n    \"\"\"Test that missing a required top-level field fails validation.\"\"\"\n    data = load_json_example(\"invalid/missing_required_top_level.json\")\n    with pytest.raises(jsonschema.ValidationError) as excinfo:\n        validator.validate(data)\n    assert \"sj_version\" in str(excinfo.value)  # Verify error mentions missing field\n\n@pytest.mark.parametrize(\"field\", [\"schema_version\", \"description\", \"pipelineInfo\", \"processingSteps\"])\ndef test_required_fields(validator, load_json_example, field):\n    \"\"\"Parametrized test for all required top-level fields.\"\"\"\n    data = load_json_example(\"valid/minimal_valid.json\")\n    data.pop(field)  # Remove the field being tested\n    with pytest.raises(jsonschema.ValidationError):\n        validator.validate(data)\n```\n\n### Performance Testing\n\n```python\ndef test_large_document_performance(validator, benchmark):\n    \"\"\"Test validation performance with a large document.\"\"\"\n    # Generate a large document with many processing steps\n    large_doc = {\n        \"sj_version\": \"1.0.0\",\n        \"schema_version\": \"1.0.0\",\n        \"description\": \"Large test document\",\n        \"pipelineInfo\": {\"name\": \"Test\", \"version\": \"1.0\"},\n        \"processingSteps\": [\n            {\n                \"stepId\": f\"step{i}\",\n                \"name\": f\"Step {i}\",\n                \"description\": f\"Description {i}\",\n                \"software\": {\"name\": \"test\", \"version\": \"1.0\"}\n            } for i in range(1000)  # 1000 processing steps\n        ]\n    }\n    \n    # Benchmark validation time\n    def validate_large():\n        validator.validate(large_doc)\n    \n    benchmark(validate_large)\n    # Assert benchmark result is under acceptable threshold (e.g., 500ms)\n    # This will be automatically checked by pytest-benchmark\n```\n</info added on 2025-05-02T19:06:15.863Z>\n\n<info added on 2025-05-02T19:16:46.028Z>\n## Implementation Plan (Iteration 2)\n\n### Additional Invalid Test Examples\n\n**tests/schemas/examples/invalid/wrong_type.json:**\n```json\n{\n  \"sj_version\": 1.0,\n  \"schema_version\": \"1.0.0\",\n  \"description\": \"Invalid example with wrong type for sj_version\",\n  \"pipelineInfo\": {\n    \"name\": \"Test Pipeline\",\n    \"version\": \"0.1.0\"\n  },\n  \"processingSteps\": [\n    {\n      \"stepId\": \"step1\",\n      \"name\": \"First Step\",\n      \"description\": \"Initial processing step\",\n      \"software\": {\n        \"name\": \"test-software\",\n        \"version\": \"1.0.0\"\n      }\n    }\n  ]\n}\n```\n\n**tests/schemas/examples/invalid/bad_pattern.json:**\n```json\n{\n  \"sj_version\": \"0.1\",\n  \"schema_version\": \"1.0.0\",\n  \"description\": \"Invalid example with sj_version not matching pattern\",\n  \"pipelineInfo\": {\n    \"name\": \"Test Pipeline\",\n    \"version\": \"0.1.0\"\n  },\n  \"processingSteps\": [\n    {\n      \"stepId\": \"step1\",\n      \"name\": \"First Step\",\n      \"description\": \"Initial processing step\",\n      \"software\": {\n        \"name\": \"test-software\",\n        \"version\": \"1.0.0\"\n      }\n    }\n  ]\n}\n```\n\n**tests/schemas/examples/invalid/processing_steps_empty.json:**\n```json\n{\n  \"sj_version\": \"1.0.0\",\n  \"schema_version\": \"1.0.0\",\n  \"description\": \"Invalid example with empty processingSteps array\",\n  \"pipelineInfo\": {\n    \"name\": \"Test Pipeline\",\n    \"version\": \"0.1.0\"\n  },\n  \"processingSteps\": []\n}\n```\n\n**tests/schemas/examples/invalid/step_missing_required.json:**\n```json\n{\n  \"sj_version\": \"1.0.0\",\n  \"schema_version\": \"1.0.0\",\n  \"description\": \"Invalid example with processing step missing required field\",\n  \"pipelineInfo\": {\n    \"name\": \"Test Pipeline\",\n    \"version\": \"0.1.0\"\n  },\n  \"processingSteps\": [\n    {\n      \"stepId\": \"step1\",\n      \"description\": \"Step missing name field\",\n      \"software\": {\n        \"name\": \"test-software\",\n        \"version\": \"1.0.0\"\n      }\n    }\n  ]\n}\n```\n\n### Enhanced Test Implementation\n\n```python\nimport pytest\nimport jsonschema\nimport os\nimport json\n\n@pytest.mark.parametrize(\"filename,expected_valid\", [\n    (\"valid/minimal_valid.json\", True),\n    (\"invalid/missing_required_top_level.json\", False),\n    (\"invalid/wrong_type.json\", False),\n    (\"invalid/bad_pattern.json\", False),\n    (\"invalid/processing_steps_empty.json\", False),\n    (\"invalid/step_missing_required.json\", False),\n])\ndef test_schema_validation(validator, load_json_example, filename, expected_valid):\n    \"\"\"Test schema validation with various examples.\"\"\"\n    data = load_json_example(filename)\n    \n    if expected_valid:\n        validator.validate(data)  # Should not raise an exception\n    else:\n        with pytest.raises(jsonschema.ValidationError):\n            validator.validate(data)\n\n@pytest.mark.parametrize(\"filename,error_pattern\", [\n    (\"invalid/missing_required_top_level.json\", \"'sj_version' is a required property\"),\n    (\"invalid/wrong_type.json\", \"is not of type 'string'\"),\n    (\"invalid/bad_pattern.json\", \"does not match pattern\"),\n    (\"invalid/processing_steps_empty.json\", \"[] is too short\"),\n    (\"invalid/step_missing_required.json\", \"'name' is a required property\"),\n])\ndef test_specific_validation_errors(validator, load_json_example, filename, error_pattern):\n    \"\"\"Test that specific validation errors are raised with the expected message.\"\"\"\n    data = load_json_example(filename)\n    \n    with pytest.raises(jsonschema.ValidationError) as excinfo:\n        validator.validate(data)\n    \n    assert error_pattern in str(excinfo.value)\n\ndef test_edge_cases_with_fastjsonschema():\n    \"\"\"Test validation with fastjsonschema for performance comparison.\"\"\"\n    try:\n        import fastjsonschema\n    except ImportError:\n        pytest.skip(\"fastjsonschema not installed\")\n    \n    from sciencejournal.schema import get_schema\n    schema = get_schema()\n    \n    # Compile schema for faster validation\n    validate = fastjsonschema.compile(schema)\n    \n    # Test with valid data\n    base_path = os.path.join(os.path.dirname(__file__), \"examples\", \"valid\")\n    with open(os.path.join(base_path, \"minimal_valid.json\")) as f:\n        valid_data = json.load(f)\n    \n    # Should not raise an exception\n    validate(valid_data)\n    \n    # Test with invalid data\n    base_path = os.path.join(os.path.dirname(__file__), \"examples\", \"invalid\")\n    with open(os.path.join(base_path, \"missing_required_top_level.json\")) as f:\n        invalid_data = json.load(f)\n    \n    # Should raise an exception\n    with pytest.raises(fastjsonschema.JsonSchemaException):\n        validate(invalid_data)\n```\n\n### Edge Case Examples\n\n**tests/schemas/examples/edge_cases/max_length_description.json:**\n```json\n{\n  \"sj_version\": \"1.0.0\",\n  \"schema_version\": \"1.0.0\",\n  \"description\": \"Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.\",\n  \"pipelineInfo\": {\n    \"name\": \"Test Pipeline\",\n    \"version\": \"0.1.0\"\n  },\n  \"processingSteps\": [\n    {\n      \"stepId\": \"step1\",\n      \"name\": \"First Step\",\n      \"description\": \"Initial processing step\",\n      \"software\": {\n        \"name\": \"test-software\",\n        \"version\": \"1.0.0\"\n      }\n    }\n  ]\n}\n```\n</info added on 2025-05-02T19:16:46.028Z>",
+          "status": "done",
+          "parentTaskId": 13
+        },
+        {
+          "id": 3,
+          "title": "Implement Python validator unit test suite",
+          "description": "Create comprehensive unit tests for the Python validator module, focusing on function-level testing, error handling, and edge cases.",
+          "dependencies": [
+            1
+          ],
+          "details": "1. Organize tests by validator module/function with clear test class and method names\n2. Implement unit tests for each validation function using the Arrange-Act-Assert pattern:\n   - Test with valid inputs to ensure they pass\n   - Test with invalid inputs to verify proper error handling\n   - Test edge cases (empty inputs, boundary values)\n3. Use mocking (pytest-mock or unittest.mock) to isolate validator functions from external dependencies\n4. Test error handling:\n   - Verify appropriate exceptions are raised\n   - Check error messages for clarity and specificity\n5. Implement integration tests that verify the validator works end-to-end\n6. Add performance tests for validation of large datasets\n7. Use coverage reporting to ensure all code paths are tested\n8. Testing approach: Use pytest fixtures for test data setup, run with pytest, and verify function behavior matches specifications\n\n<info added on 2025-05-02T19:18:17.256Z>\nHere's additional implementation information for the Python validator test suite:\n\n```\n9. Test Implementation Details:\n   - Use parameterized tests to efficiently test multiple input variations with the same test logic\n   - Create test fixtures that provide sample valid/invalid JSON data of varying complexity\n   - Implement property-based testing using Hypothesis library for more thorough validation testing\n   - Test validation schema customization options (if supported)\n\n10. Test Data Organization:\n    - Create a dedicated test_data/ directory with subdirectories for:\n      - valid_inputs/: Contains valid JSON files of varying complexity\n      - invalid_inputs/: Contains invalid JSON files with specific validation errors\n      - edge_cases/: Contains boundary condition test files\n\n11. Specific Test Cases to Implement:\n    - test_schema_validation(): Verify schema structure validation works correctly\n    - test_data_type_validation(): Ensure proper type checking for all fields\n    - test_required_field_validation(): Verify required fields are enforced\n    - test_optional_field_handling(): Check optional fields are properly handled\n    - test_nested_object_validation(): Test validation of complex nested structures\n    - test_array_validation(): Verify array validation including min/max items\n    - test_custom_format_validators(): Test any custom format validators\n\n12. CI Integration:\n    - Configure pytest.ini with appropriate test markers and settings\n    - Set up test reporting compatible with CI environment\n    - Implement test coverage thresholds (aim for >90% coverage)\n```\n</info added on 2025-05-02T19:18:17.256Z>",
+          "status": "done",
+          "parentTaskId": 13
+        },
+        {
+          "id": 4,
+          "title": "Implement MATLAB tools test suite",
+          "description": "Create comprehensive tests for MATLAB utility functions and tools using MATLAB's unit testing framework, ensuring all components work correctly individually and together.",
+          "dependencies": [
+            1
+          ],
+          "details": "1. Set up MATLAB test classes using the matlab.unittest framework\n2. Create test fixtures for common test data in .mat format\n3. Implement tests for each MATLAB utility function:\n   - Basic functionality tests with valid inputs\n   - Error handling tests with invalid inputs\n   - Edge case tests\n4. Test integration between MATLAB components:\n   - Data flow between functions\n   - End-to-end processing pipelines\n5. For JSON schema validation in MATLAB:\n   - Test MATLAB-Python integration if using Python validators\n   - Or test custom MATLAB validation functions\n6. Implement performance tests for computationally intensive operations\n7. Create test runner scripts that can be executed from command line or CI\n8. Testing approach: Use MATLAB's verifyEqual, verifyTrue, and verifyError methods to assert expected outcomes",
+          "status": "pending",
+          "parentTaskId": 13
+        },
+        {
+          "id": 5,
+          "title": "Integrate tests with CI pipeline and documentation",
+          "description": "Configure continuous integration for automated test execution, create comprehensive test documentation, and ensure all tests follow project conventions.",
+          "dependencies": [
+            2,
+            3,
+            4
+          ],
+          "details": "1. Configure CI workflow in GitHub Actions or similar platform:\n   - Set up Python environment for schema and validator tests\n   - Configure MATLAB environment for MATLAB tests\n   - Set up test reporting and coverage analysis\n2. Create comprehensive test documentation:\n   - Document test strategy and approach\n   - Provide examples of how to run tests locally\n   - Document test data and expected outcomes\n3. Ensure all tests follow conventions in .cursor/rules/testing.mdc:\n   - Review and update naming conventions\n   - Check formatting and style consistency\n   - Verify documentation standards\n4. Implement test summary reporting:\n   - Generate HTML or XML test reports\n   - Configure coverage reporting\n5. Create a PR template with test verification checklist\n6. Testing approach: Manually verify that all tests run successfully in the CI environment and produce expected reports",
+          "status": "pending",
+          "parentTaskId": 13
+        }
+      ]
+    },
+    {
+      "id": 14,
+      "title": "Set up GitHub Actions CI/CD Workflows",
+      "description": "Implement GitHub Actions workflows for testing and documentation deployment based on the specifications in `.cursor/rules/ci-cd.mdc`.",
+      "details": "Create two GitHub Actions workflow files in the `.github/workflows/` directory:\n\n1. `test.yml`:\n   - Configure to run on push events and pull requests\n   - Include the following jobs:\n     - Linting (if applicable for the project)\n     - Python testing using pytest\n     - MATLAB testing (if feasible, research GitHub Actions support for MATLAB)\n     - Schema validation for project data files\n   - Set up appropriate environment with necessary dependencies\n   - Configure test matrix if needed for multiple Python/MATLAB versions\n   - Ensure proper caching of dependencies to speed up workflow runs\n\n2. `deploy-docs.yml`:\n   - Configure to run only on push events to the main branch\n   - Set up job to build the MkDocs documentation\n   - Configure GitHub Pages deployment\n   - Ensure proper permissions for the GitHub token\n   - Set up caching for faster builds\n\nReference the `.cursor/rules/ci-cd.mdc` file for specific requirements and configurations. Ensure both workflows use appropriate GitHub Actions marketplace actions where possible rather than custom scripts. Document any environment variables or secrets that need to be configured in the repository settings.",
+      "testStrategy": "To verify correct implementation:\n\n1. For `test.yml`:\n   - Push a commit with passing tests to verify the workflow runs successfully\n   - Push a commit with failing tests to verify the workflow correctly identifies failures\n   - Create a pull request to ensure the workflow triggers on PR events\n   - Check that all specified jobs (linting, Python tests, MATLAB tests if applicable, schema validation) are running\n   - Verify that the workflow logs show proper execution of each step\n\n2. For `deploy-docs.yml`:\n   - Push a change to the main branch that includes documentation updates\n   - Verify that the workflow runs and successfully builds the documentation\n   - Check that the documentation is properly deployed to GitHub Pages\n   - Verify the deployed site is accessible and displays the updated content\n   - Test that the workflow does not run on branches other than main\n\nAdditionally, review the workflow files to ensure they follow best practices for GitHub Actions, including proper use of actions, caching, and error handling.",
+      "status": "pending",
+      "dependencies": [
+        12,
+        13
+      ],
+      "priority": "high",
+      "subtasks": [
+        {
+          "id": 1,
+          "title": "Create basic test.yml workflow structure",
+          "description": "Set up the foundational structure for the test.yml workflow file with proper event triggers and job organization.",
+          "dependencies": [],
+          "details": "1. Create the `.github/workflows/` directory if it doesn't exist\n2. Create a new file named `test.yml` in this directory\n3. Configure the workflow to run on push events and pull requests\n4. Set up the basic structure with name, triggers, and job placeholders\n5. Define the main test job with ubuntu-latest runner\n6. Add checkout action as the first step\n7. Configure proper permissions for the workflow\n8. Test the workflow by pushing the basic structure to verify GitHub Actions recognizes it\n9. Use the following template as a starting point:\n```yaml\nname: Tests\n\non:\n  push:\n    branches: [ main, develop ]\n  pull_request:\n    branches: [ main ]\n\njobs:\n  test:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v3\n      # More steps will be added in subsequent tasks\n```",
+          "status": "pending",
+          "parentTaskId": 14
+        },
+        {
+          "id": 2,
+          "title": "Implement Python testing with pytest in test.yml",
+          "description": "Configure the test.yml workflow to set up Python environment, install dependencies, and run pytest with proper caching.",
+          "dependencies": [
+            1
+          ],
+          "details": "1. Add steps to set up Python environment using actions/setup-python@v4\n2. Implement matrix strategy to test across multiple Python versions (e.g., 3.8, 3.9, 3.10)\n3. Configure dependency caching to speed up workflow runs\n4. Add steps to install project dependencies from requirements.txt or pyproject.toml\n5. Add step to run pytest with appropriate flags\n6. Configure test coverage reporting\n7. Add the following code to the test job in test.yml:\n```yaml\n    strategy:\n      matrix:\n        python-version: ['3.8', '3.9', '3.10']\n    steps:\n      # ... existing checkout step ...\n      - name: Set up Python ${{ matrix.python-version }}\n        uses: actions/setup-python@v4\n        with:\n          python-version: ${{ matrix.python-version }}\n          cache: 'pip'\n      - name: Install dependencies\n        run: |\n          python -m pip install --upgrade pip\n          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi\n          if [ -f requirements-dev.txt ]; then pip install -r requirements-dev.txt; fi\n          pip install pytest pytest-cov\n      - name: Run tests\n        run: pytest --cov=./ --cov-report=xml\n```",
+          "status": "pending",
+          "parentTaskId": 14
+        },
+        {
+          "id": 3,
+          "title": "Add linting and schema validation to test.yml",
+          "description": "Enhance the test workflow with linting checks and schema validation for project data files.",
+          "dependencies": [
+            2
+          ],
+          "details": "1. Add a separate job for linting in the test.yml workflow\n2. Configure linting tools based on project requirements (e.g., flake8, pylint, or black)\n3. Implement schema validation for project data files\n4. Ensure proper dependency installation for validation tools\n5. Configure appropriate exit codes to fail the workflow on validation errors\n6. Add the following code to test.yml:\n```yaml\n  lint:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v3\n      - name: Set up Python\n        uses: actions/setup-python@v4\n        with:\n          python-version: '3.10'\n          cache: 'pip'\n      - name: Install linting dependencies\n        run: |\n          python -m pip install --upgrade pip\n          pip install flake8 black isort\n      - name: Run linters\n        run: |\n          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics\n          black --check .\n          isort --check .\n          \n  validate-schema:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v3\n      - name: Set up Python\n        uses: actions/setup-python@v4\n        with:\n          python-version: '3.10'\n      - name: Install validation dependencies\n        run: |\n          python -m pip install --upgrade pip\n          pip install jsonschema pyyaml\n      - name: Validate data files\n        run: |\n          # Add custom script to validate data files against schemas\n          python scripts/validate_schemas.py\n```\n7. Create a simple schema validation script if one doesn't exist",
+          "status": "pending",
+          "parentTaskId": 14
+        },
+        {
+          "id": 4,
+          "title": "Configure MATLAB testing in test.yml",
+          "description": "Research and implement GitHub Actions support for MATLAB testing within the test workflow.",
+          "dependencies": [
+            1
+          ],
+          "details": "1. Research the latest GitHub Actions marketplace actions for MATLAB support\n2. Add a dedicated job for MATLAB testing in test.yml\n3. Use the mathworks-actions/setup-matlab action to configure the MATLAB environment\n4. Set up appropriate licensing for MATLAB in GitHub Actions\n5. Configure the test script execution\n6. Add caching for MATLAB where possible\n7. Add the following code to test.yml:\n```yaml\n  matlab-test:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v3\n      - name: Set up MATLAB\n        uses: matlab-actions/setup-matlab@v1\n      - name: Run MATLAB Tests\n        uses: matlab-actions/run-tests@v1\n        with:\n          source-folder: src\n          select-by-folder: test\n          test-results-junit: test-results/results.xml\n          code-coverage-cobertura: code-coverage/coverage.xml\n      - name: Upload test results\n        uses: actions/upload-artifact@v3\n        if: always()\n        with:\n          name: matlab-test-results\n          path: test-results\n      - name: Upload code coverage\n        uses: actions/upload-artifact@v3\n        if: always()\n        with:\n          name: matlab-code-coverage\n          path: code-coverage\n```\n8. Document any required repository secrets for MATLAB licensing",
+          "status": "pending",
+          "parentTaskId": 14
+        },
+        {
+          "id": 5,
+          "title": "Create deploy-docs.yml workflow for MkDocs",
+          "description": "Implement a separate workflow file for building and deploying MkDocs documentation to GitHub Pages.",
+          "dependencies": [],
+          "details": "1. Create a new file named `deploy-docs.yml` in the `.github/workflows/` directory\n2. Configure the workflow to run only on push events to the main branch\n3. Set up a job to build the MkDocs documentation\n4. Configure GitHub Pages deployment with appropriate permissions\n5. Implement caching for faster builds\n6. Add the following code to deploy-docs.yml:\n```yaml\nname: Deploy Documentation\n\non:\n  push:\n    branches:\n      - main\n\npermissions:\n  contents: write\n\njobs:\n  deploy-docs:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v3\n        with:\n          fetch-depth: 0\n      \n      - name: Set up Python\n        uses: actions/setup-python@v4\n        with:\n          python-version: '3.10'\n          cache: 'pip'\n      \n      - name: Install dependencies\n        run: |\n          python -m pip install --upgrade pip\n          pip install mkdocs mkdocs-material\n          if [ -f docs/requirements.txt ]; then pip install -r docs/requirements.txt; fi\n      \n      - name: Build documentation\n        run: mkdocs build\n      \n      - name: Deploy to GitHub Pages\n        uses: JamesIves/github-pages-deploy-action@v4\n        with:\n          folder: site\n          clean: true\n```\n7. Test the workflow by making a small change to documentation and pushing to main\n8. Verify the documentation is properly deployed to GitHub Pages\n9. Update repository settings to use the gh-pages branch for GitHub Pages if needed",
+          "status": "pending",
+          "parentTaskId": 14
         }
       ]
     }

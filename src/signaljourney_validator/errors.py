@@ -10,7 +10,7 @@ except ImportError:
 
 @dataclass
 class ValidationErrorDetail:
-    \"\"\"Stores detailed information about a single validation error.\"\"\"
+    """Stores detailed information about a single validation error."""
     message: str
     path: List[Union[str, int]] = field(default_factory=list)
     schema_path: List[Union[str, int]] = field(default_factory=list)

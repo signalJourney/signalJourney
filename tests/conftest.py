@@ -6,6 +6,9 @@ from pathlib import Path
 from jsonschema import Draft7Validator, RefResolver
 from urllib.parse import urljoin
 
+# Import our custom Validator
+from signaljourney_validator.validator import Validator as SignalJourneyValidator
+
 # Define the root directory of the project
 PROJECT_ROOT = Path(__file__).parent.parent
 SCHEMA_DIR = PROJECT_ROOT / "schema"
@@ -74,9 +77,11 @@ def schema_resolver(main_schema, schema_base_uri, all_schemas):
 
 @pytest.fixture(scope="session")
 def validator(main_schema, schema_resolver):
-    """Provides a configured Draft7Validator instance."""
-    # Pass the pre-filled resolver to the validator
-    return Draft7Validator(main_schema, resolver=schema_resolver)
+    """Provides a configured SignalJourneyValidator instance."""
+    # Instantiate our custom validator, passing the loaded main schema
+    # and the pre-configured resolver.
+    sj_validator = SignalJourneyValidator(schema=main_schema, resolver=schema_resolver)
+    return sj_validator
 
 # Example fixture to load data - adjust as needed
 @pytest.fixture

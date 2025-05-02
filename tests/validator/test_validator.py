@@ -2,9 +2,10 @@
 
 import pytest
 from pathlib import Path
-from jsonschema import ValidationError
+from jsonschema import ValidationError # Keep for potential future use if testing iter_errors directly
 
 from signaljourney_validator.validator import Validator, SignalJourneyValidationError
+from signaljourney_validator.errors import ValidationErrorDetail # Import added
 
 # Test cases use fixtures 'validator' and 'load_json_example' from conftest.py
 
@@ -25,35 +26,45 @@ def test_validator_init_invalid_path():
     with pytest.raises(FileNotFoundError):
         Validator(schema="non_existent_schema.json")
 
-def test_validate_valid_file(validator, load_json_example):
-    """Test validate method with a known valid file."""
+def test_validate_valid_file_raise(validator, load_json_example): # Renamed for clarity
+    """Test validate method with a known valid file, raising exceptions (default)."""
+    # Load data using the fixture that loads from tests/schemas/examples
     data = load_json_example("valid/minimal_valid.json")
+    # Call validate with raise_exceptions=True (or default)
     result = validator.validate(data, raise_exceptions=True)
-    assert result is True
+    assert result is True # Expect True on success when raising
 
 def test_validate_valid_file_no_raise(validator, load_json_example):
     """Test validate method with valid file, not raising exceptions."""
+     # Load data using the fixture
     data = load_json_example("valid/minimal_valid.json")
     result = validator.validate(data, raise_exceptions=False)
     assert isinstance(result, list)
-    assert len(result) == 0
+    assert len(result) == 0 # Expect empty list on success
 
 def test_validate_invalid_file_raise(validator, load_json_example):
     """Test validate method with invalid file, raising exception."""
+    # Load data using the fixture
     data = load_json_example("invalid/missing_required_top_level.json")
     with pytest.raises(SignalJourneyValidationError) as excinfo:
-        validator.validate(data, raise_exceptions=True)
+        validator.validate(data, raise_exceptions=True) # Default behavior
+    # Check the custom exception has error details
+    assert hasattr(excinfo.value, 'errors')
+    assert isinstance(excinfo.value.errors, list)
     assert len(excinfo.value.errors) > 0
-    assert "'sj_version' is a required property" in str(excinfo.value.errors[0].message)
+    assert isinstance(excinfo.value.errors[0], ValidationErrorDetail)
+    assert excinfo.value.errors[0].message == "'sj_version' is a required property"
 
 def test_validate_invalid_file_no_raise(validator, load_json_example):
     """Test validate method with invalid file, not raising exceptions."""
+     # Load data using the fixture
     data = load_json_example("invalid/missing_required_top_level.json")
     result = validator.validate(data, raise_exceptions=False)
     assert isinstance(result, list)
     assert len(result) > 0
     # Check the detail of the first error
     first_error = result[0]
+    assert isinstance(first_error, ValidationErrorDetail)
     assert first_error.message == "'sj_version' is a required property"
     assert first_error.path == []
     assert "required" in first_error.schema_path
