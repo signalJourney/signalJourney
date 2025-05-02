@@ -20,8 +20,9 @@ EXAMPLES_DIR = PROJECT_ROOT / "tests" / "schemas" / "examples"
 
 @pytest.fixture(scope="session")
 def schema_base_uri():
-    """Return the base URI for resolving schema references (local file path)."""
-    return SCHEMA_DIR.as_uri() + "/"  # Ensure trailing slash for urljoin
+    """Return the standard base URI for resolving schema references."""
+    # Use the defined standard URI, not the local file path
+    return "https://signaljourney.neurodata.io/schema/"
 
 
 @pytest.fixture(scope="session")
@@ -45,32 +46,65 @@ def main_schema(main_schema_path):
 
 @pytest.fixture(scope="session")
 def all_schemas(main_schema, main_schema_path, schema_base_uri):
-    """Loads all schema files into a dictionary suitable for RefResolver store."""
-    store = {schema_base_uri + main_schema_path.name: main_schema}
+    """Loads all schema files into a dictionary suitable for RefResolver store.
+    
+    Uses the schema's internal '$id' as the key for the store, which is the
+    standard mechanism for jsonschema resolution.
+    """
+    store = {}
+    # Add main schema using its $id if present, otherwise fall back to base URI logic
+    if "$id" in main_schema:
+        store[main_schema["$id"]] = main_schema
+    else:
+        # Fallback if $id is missing, though it shouldn't be for the main schema
+        store[schema_base_uri + main_schema_path.name] = main_schema
 
-    def load_schemas_from_dir(directory, prefix):
+
+    def load_schemas_from_dir(directory):
         if not directory.exists():
             return
-        base_resolve_uri = schema_base_uri  # Use overall base for resolving
         for schema_file in directory.glob("*.schema.json"):
-            with open(schema_file, "r", encoding="utf-8") as f:
-                schema_content = json.load(f)
-            # Construct URI using the prefix (definitions/ or extensions/)
-            resolved_uri = urljoin(base_resolve_uri + prefix, schema_file.name)
-            store[resolved_uri] = schema_content
+            try:
+                with open(schema_file, "r", encoding="utf-8") as f:
+                    schema_content = json.load(f)
+                # Use the $id within the schema file as the key
+                if "$id" in schema_content:
+                    store[schema_content["$id"]] = schema_content
+                else:
+                    print(f"Warning: Schema file {schema_file} is missing '$id'. Skipping.")
+            except json.JSONDecodeError:
+                print(f"Warning: Could not decode JSON from {schema_file}. Skipping.")
+            except Exception as e:
+                 print(f"Warning: Could not load schema {schema_file}: {e}. Skipping.")
 
-    load_schemas_from_dir(DEFINITIONS_DIR, "definitions/")
-    load_schemas_from_dir(EXTENSIONS_DIR, "extensions/")
+    load_schemas_from_dir(SCHEMA_DIR) # Load top-level schemas like signalJourney.schema.json if needed (already added though)
+    load_schemas_from_dir(DEFINITIONS_DIR)
+    load_schemas_from_dir(EXTENSIONS_DIR)
+
+    # Debug: Print the store keys to verify
+    # print("\\nResolver Store Keys:")
+    # for key in store.keys():
+    #     print(f"- {key}")
+    # print("\\n")
 
     return store
 
 
 @pytest.fixture(scope="session")
 def schema_resolver(schema_base_uri, main_schema, all_schemas):
-    """Create a RefResolver pre-filled with all local schemas."""
-    # The resolver uses the store to find schemas by their resolved URI
+    """Create a RefResolver pre-filled with all local schemas.
+    
+    The resolver uses the store (keyed by $id) to find schemas.
+    The base_uri here helps if any $refs *inside* schemas are relative,
+    but primarily resolution happens via the absolute $id URIs in the store.
+    """
+    # The resolver uses the store (keyed by $id) to find schemas.
+    # The base_uri here helps if any $refs *inside* schemas are relative,
+    # but primarily resolution happens via the absolute $id URIs in the store.
     return RefResolver(
-        base_uri=schema_base_uri, referrer=main_schema, store=all_schemas
+        base_uri=schema_base_uri, # Use the standard URI
+        referrer=main_schema,
+        store=all_schemas
     )
 
 
