@@ -127,17 +127,17 @@ class Validator:
                         ) for sub_error in error.context
                     ]
 
-                errors.append(
-                    ValidationErrorDetail(
-                        message=error.message,
-                        path=error_path,
-                        schema_path=schema_error_path,
-                        validator=error.validator,
-                        validator_value=error.validator_value,
-                        instance_value=error.instance,
-                        context=nested_errors
-                    )
+                error_detail = ValidationErrorDetail(
+                    message=error.message,
+                    path=error_path,
+                    schema_path=schema_error_path,
+                    validator=error.validator,
+                    validator_value=error.validator_value,
+                    instance_value=error.instance,
+                    context=nested_errors
                 )
+                error_detail.generate_suggestion()
+                errors.append(error_detail)
 
             if errors:
                 if raise_exceptions:
@@ -166,6 +166,9 @@ if __name__ == '__main__':
         "schema_version": "invalid-version",
         "description": 123,
         # Missing required fields: pipelineInfo, processingSteps
+        "pipelineInfo": {
+             "type": "Procesing"
+        }
     }
     valid_example_file = Path(__file__).parent.parent.parent / "schema" / "examples" / "simple_pipeline.json"
 

@@ -34,6 +34,8 @@ dev = [
     "flake8>=6.0",
     "black>=23.0",
     "ruff>=0.1.0", # Combines flake8, black, isort etc. - recommended
+    "fuzzywuzzy>=0.18", # For suggestions
+    "python-Levenshtein>=0.12" # Optional but improves fuzzywuzzy speed
 ]
 
 [tool.setuptools]
