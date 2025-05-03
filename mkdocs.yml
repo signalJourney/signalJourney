@@ -72,7 +72,7 @@ plugins:
 
 # Navigation Structure
 nav:
-  - Introduction: index.md # Assuming index.md is the main intro
+  - Introduction: introduction.md # Use introduction.md as the main page
   - Specification:
     - Overview: specification/index.md
     - Core Concepts: specification/overview.md
@@ -98,13 +98,16 @@ nav:
     - Time-Frequency: examples/time_frequency.md
     - Source Localization: examples/source_localization.md
     - Connectivity: examples/connectivity.md
+    - Best Practices: examples/best_practices.md # Added best practices
   - API Reference:
     - Python API: api/index.md # This file uses mkdocstrings
     # - MATLAB API: api/matlab_api.md # Add if/when available
+  - Related Topics: # Added section
+    - BIDS Integration: bids.md
+    - Pipeline Research: pipeline_research.md
   - Contributing: contributing.md
   - FAQ: faq.md
-  # - BIDS Integration: bids.md # Consider where this fits best
-  # - Pipeline Research: pipeline_research.md # Needs review/placement
+  # - Home: index.md # Comment out or remove if introduction.md is the main page
 
 # Optional: Custom directories
 # docs_dir: docs # Default is 'docs'

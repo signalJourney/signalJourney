@@ -96,7 +96,7 @@ jobs:
         run: |
           pip install -r docs/requirements.txt
           # Optional: install the package itself if mkdocstrings needs it
-          # pip install -e .
+          pip install -e .
 
       - name: Build and deploy docs
         # Uses the mkdocs-material GitHub Pages deployment action
