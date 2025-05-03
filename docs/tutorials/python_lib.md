@@ -155,4 +155,4 @@ except Exception as e:
      print(f"An unexpected error occurred: {e}")
 ```
 
-This covers the main ways to use the `signaljourney-validator` library for validating your files programmatically. Refer to the [API documentation](../api/python_api.md) for more details on the available classes and methods. 
+This covers the main ways to use the `signaljourney-validator` library for validating your files programmatically. For detailed information on the available functions and classes, refer to the [Python API documentation](../api/index.md). 
