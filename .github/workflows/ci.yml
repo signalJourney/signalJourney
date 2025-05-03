@@ -78,3 +78,27 @@ jobs:
   #     #   name: matlab-test-results
   #     #   path: test-results/matlab-results.xml
   #     run: echo "MATLAB artifact upload would go here" 
+
+  deploy-docs:
+    # Run only on pushes to the main branch
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: lint-and-test # Ensure tests pass before deploying docs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11' # Use a specific Python version for docs
+
+      - name: Install documentation dependencies
+        run: |
+          pip install -r docs/requirements.txt
+          # Optional: install the package itself if mkdocstrings needs it
+          # pip install -e .
+
+      - name: Build and deploy docs
+        # Uses the mkdocs-material GitHub Pages deployment action
+        # See: https://squidfunk.github.io/mkdocs-material/publishing-your-site/#github-pages
+        run: mkdocs gh-deploy --force 
