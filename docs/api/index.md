@@ -1,14 +1,17 @@
-\# API Reference Index
+# API Reference Index
 
 API documentation for the signalJourney libraries.
 
-::: {.toctree maxdepth="1"}
-python_api matlab_api
-:::
-
 # API Reference
 
-This section provides the auto-generated API documentation for the `signaljourney_validator` Python package.
+This section provides the API documentation for the `signaljourney_validator` package.
+
+::: signaljourney_validator
+    options:
+      show_root_heading: true
+      show_source: false
+      members_order: source
+      heading_level: 2
 
 ## Validator Module
 
