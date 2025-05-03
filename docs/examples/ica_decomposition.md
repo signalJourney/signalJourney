@@ -1,6 +1,6 @@
 # Example: ICA Decomposition
 
-This page explains the [`ica_decomposition_pipeline.signalJourney.json`](../../schema/examples/ica_decomposition_pipeline.signalJourney.json) example file. This pipeline demonstrates applying Independent Component Analysis (ICA) to remove eye-blink artifacts using MNE-Python, assuming the data has already undergone basic preprocessing (as shown in the [Basic Preprocessing Example](./basic_preprocessing.md)).
+This page explains the [`ica_decomposition_pipeline.signalJourney.json`](https://github.com/neuromechanist/signalJourney/blob/main/schema/examples/ica_decomposition_pipeline.signalJourney.json) example file, which documents an ICA decomposition workflow. This pipeline demonstrates applying Independent Component Analysis (ICA) to remove eye-blink artifacts using MNE-Python, assuming the data has already undergone basic preprocessing (as shown in the [Basic Preprocessing Example](./basic_preprocessing.md)).
 
 ```json
 {

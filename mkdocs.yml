@@ -1,0 +1,129 @@
+site_name: Signal Journey
+site_url: https://neuromechanist.github.io/signalJourney/
+site_description: Documentation for the signalJourney specification and tools.
+
+repo_url: https://github.com/neuromechanist/signalJourney/
+repo_name: neuromechanist/signalJourney
+edit_uri: edit/main/docs/
+
+# Theme Configuration
+theme:
+  name: material
+  # logo: docs/_static/logo.png # Path relative to docs_dir
+  # favicon: docs/_static/favicon.png # Path relative to docs_dir
+  palette:
+    # Palette toggle for light mode
+    - scheme: default
+      toggle:
+        icon: material/brightness-7 
+        name: Switch to dark mode
+    # Palette toggle for dark mode
+    - scheme: slate
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.indexes
+    - navigation.top
+    - search.highlight
+    - search.suggest
+    - content.code.copy
+    - content.code.annotate
+    - content.tabs.link # Persist tabs across pages
+    - navigation.instant # Faster page loading
+    - navigation.sections # Group pages in navigation
+    - toc.integrate # Integrate table of contents into navigation
+  font:
+    text: Roboto
+    code: Roboto Mono
+
+# Extensions
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true 
+  - toc:
+      permalink: true
+  - attr_list # Add attributes to Markdown elements
+  - md_in_html # Allow Markdown within HTML blocks
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+
+# Plugins
+plugins:
+  - search
+  - mkdocstrings: # Will be configured in subtask 12.3
+      handlers:
+        python:
+          options:
+            show_source: true
+            show_root_heading: true
+            heading_level: 2
+            docstring_style: google
+            members_order: source # Keep source order
+            # Optional: Add filters
+            # filters: ["!^_", "!^__"]
+  - git-revision-date-localized:
+      enable_creation_date: true
+
+# Navigation Structure
+nav:
+  - Introduction: index.md # Assuming index.md is the main intro
+  - Specification:
+    - Overview: specification/index.md
+    - Core Concepts: specification/overview.md
+    - Field Details: specification/fields.md
+    - Validation: specification/validation.md
+    - Namespaces: specification/namespaces.md
+    - Versioning: specification/versioning.md
+  - Guides:
+    - Overview: guides/index.md
+    - Python Validator: guides/validator_python.md
+    - CLI Validator: guides/validator_cli.md
+    - MATLAB Tools: guides/tools_matlab.md
+  - Tutorials:
+    - Overview: tutorials/index.md
+    - Creating Manually: tutorials/creating_manual.md
+    - Using Python Lib: tutorials/python_lib.md
+    - Using MATLAB Tools: tutorials/matlab_tools.md
+    - Validating Pipelines: tutorials/validating.md
+  - Examples:
+    - Overview: examples/index.md
+    - Basic Preprocessing: examples/basic_preprocessing.md
+    - ICA Decomposition: examples/ica_decomposition.md
+    - Time-Frequency: examples/time_frequency.md
+    - Source Localization: examples/source_localization.md
+    - Connectivity: examples/connectivity.md
+  - API Reference:
+    - Python API: api/index.md # This file uses mkdocstrings
+    # - MATLAB API: api/matlab_api.md # Add if/when available
+  - Contributing: contributing.md
+  - FAQ: faq.md
+  # - BIDS Integration: bids.md # Consider where this fits best
+  # - Pipeline Research: pipeline_research.md # Needs review/placement
+
+# Optional: Custom directories
+# docs_dir: docs # Default is 'docs'
+# site_dir: site
+
+# Optional: Specify files/dirs to exclude from build
+exclude_docs: |
+  _build/
+  _templates/
+  conf.py
+  Makefile
+  requirements.txt
+  README.md # Usually want project README outside docs
+
+# Optional: Add extra CSS or JS
+# extra_css:
+#   - stylesheets/extra.css
+# extra_javascript:
+#   - javascript/extra.js
+
+# Copyright notice
+copyright: Copyright &copy; 2024 signalJourney Contributors 

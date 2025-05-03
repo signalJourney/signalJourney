@@ -1,6 +1,6 @@
 # Example: Source Localization
 
-This page explains the [`source_localization_pipeline.signalJourney.json`](../../schema/examples/source_localization_pipeline.signalJourney.json) example file. This pipeline documents the process of estimating the brain sources of EEG activity using the dSPM (dynamic Statistical Parametric Mapping) inverse solution in MNE-Python.
+This page explains the [`source_localization_pipeline.signalJourney.json`](https://github.com/neuromechanist/signalJourney/blob/main/schema/examples/source_localization_pipeline.signalJourney.json) example file, documenting a source localization workflow. This pipeline documents the process of estimating the brain sources of EEG activity using the dSPM (dynamic Statistical Parametric Mapping) inverse solution in MNE-Python.
 
 ```json
 {

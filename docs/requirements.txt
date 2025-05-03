@@ -1,5 +1,6 @@
-sphinx>=5.0
-sphinx-rtd-theme>=1.0
-myst-parser>=0.18
-sphinx-copybutton>=0.5
-linkify-it-py>=2.0
+mkdocs>=1.4.0
+mkdocs-material>=9.0.0
+mkdocstrings>=0.20.0
+mkdocstrings-python>=0.8.0
+pymdown-extensions>=9.0
+mkdocs-git-revision-date-localized-plugin>=1.1.0
