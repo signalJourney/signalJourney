@@ -1,6 +1,6 @@
 # Validation
 
-The signalJourney specification is formally defined by a JSON Schema ([`signalJourney.schema.json`](../../schema/signalJourney.schema.json)). This schema allows for automated validation of signalJourney files.
+The signalJourney specification is formally defined by a JSON Schema ([`signalJourney.schema.json`](https://github.com/neuromechanist/signalJourney/blob/main/schema/signalJourney.schema.json)). This schema allows for automated validation of signalJourney files.
 
 ## Schema Validation
 

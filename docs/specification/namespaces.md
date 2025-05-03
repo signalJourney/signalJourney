@@ -50,8 +50,8 @@ Adding new top-level namespaces (e.g., `meg`, `fnirs`, `myToolX`) requires a for
 **Process:**
 
 1.  **Discuss:** Open an issue on the Signal Journey GitHub repository to discuss the proposed namespace.
-2.  **Formal Proposal:** If the initial discussion is positive, submit a formal proposal as outlined in the main [`CONTRIBUTING.md`](../../CONTRIBUTING.md) guide (usually via a Pull Request modifying documentation or a dedicated proposal document).
+2.  **Formal Proposal:** If the initial discussion is positive, submit a formal proposal as outlined in the main [CONTRIBUTING.md](https://github.com/neuromechanist/signalJourney/blob/main/CONTRIBUTING.md) guide (usually via a Pull Request modifying documentation or a dedicated proposal document).
 3.  **Review:** The proposal will be reviewed by the Signal Journey maintainers based on the guidelines above.
 4.  **Approval & Integration:** If approved, the namespace will be officially recognized, documented, and potentially added to the main schema's `extensions.properties` list in a future release.
 
-Please refer to [`CONTRIBUTING.md`](../../CONTRIBUTING.md) for the most up-to-date details on the contribution and proposal process. 
+For guidelines on proposing changes to namespaces, please see the main [CONTRIBUTING.md](https://github.com/neuromechanist/signalJourney/blob/main/CONTRIBUTING.md). 

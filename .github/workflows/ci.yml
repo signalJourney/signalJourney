@@ -95,10 +95,16 @@ jobs:
       - name: Install documentation dependencies
         run: |
           pip install -r docs/requirements.txt
-          # Optional: install the package itself if mkdocstrings needs it
           pip install -e .
 
-      - name: Build and deploy docs
-        # Uses the mkdocs-material GitHub Pages deployment action
-        # See: https://squidfunk.github.io/mkdocs-material/publishing-your-site/#github-pages
-        run: mkdocs gh-deploy --force 
+      - name: Build docs site
+        run: mkdocs build # Build the site into the ./site directory
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GH_PAGES_TOKEN }} # Use the PAT secret
+          publish_dir: ./site # Directory containing built site
+          # Optional: configure user name and email for commit
+          # user_name: 'github-actions[bot]'
+          # user_email: 'github-actions[bot]@users.noreply.github.com' 
