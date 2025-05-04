@@ -93,6 +93,4 @@ If one pipeline's output (documented in `pipelineA_signalJourney.json`) is the i
 3.  Use **relative paths from the BIDS root** within `inputSources` and `outputTargets`.
 4.  Add `*_signalJourney.json` to your top-level `.bidsignore` file.
 5.  Store provenance alongside the data it describes (subject/session level where appropriate).
-6.  Use `pipelineSource` to link dependent pipelines.
-
-*(Content to be added in Subtask 10.7)* 
+6.  Use `pipelineSource` to link dependent pipelines. 
