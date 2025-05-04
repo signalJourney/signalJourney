@@ -1,12 +1,12 @@
 # Signal Journey: Mapping the path from raw to processed biosignals
 
 [![License: BSD 3-Clause](https://img.shields.io/badge/License-BSD_3--Clause-blue.svg)](LICENSE)
-<!-- [![PyPI version](https://badge.fury.io/py/signaljourney-validator.svg)](https://badge.fury.io/py/signaljourney-validator) TODO: Activate once published -->
 [![Docs](https://img.shields.io/badge/docs-mkdocs-green)](https://neuromechanist.github.io/signalJourney/)
 [![Tests](https://github.com/neuromechanist/signalJourney/actions/workflows/ci.yml/badge.svg)](https://github.com/neuromechanist/signalJourney/actions/workflows/ci.yml)
 [![Code style: ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+<!-- [![PyPI version](https://badge.fury.io/py/signaljourney-validator.svg)](https://badge.fury.io/py/signaljourney-validator) TODO: Activate once published -->
 
-**Track the journey of your biosignals with detailed, reproducible, machine-readable provenance.**
+**Track the journey of your biosignals with detailed, reproducible, machine-readable and human-readable steps.**
 
 ## Overview
 
