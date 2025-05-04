@@ -1,108 +1,98 @@
-# Signal Journey Specification
+# Signal Journey: Mapping the path from raw to processed biosignals
 
-**Track the journey of your biosignals with detailed, reproducible provenance.**
+[![License: BSD 3-Clause](https://img.shields.io/badge/License-BSD_3--Clause-blue.svg)](LICENSE)
+<!-- [![PyPI version](https://badge.fury.io/py/signaljourney-validator.svg)](https://badge.fury.io/py/signaljourney-validator) TODO: Activate once published -->
+[![Docs](https://img.shields.io/badge/docs-mkdocs-green)](https://neuromechanist.github.io/signalJourney/)
+[![Tests](https://github.com/neuromechanist/signalJourney/actions/workflows/ci.yml/badge.svg)](https://github.com/neuromechanist/signalJourney/actions/workflows/ci.yml)
+[![Code style: ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+
+**Track the journey of your biosignals with detailed, reproducible, machine-readable provenance.**
 
 ## Overview
 
-Signal Journey is a specification for documenting the processing steps applied to biosignal data, particularly EEG and MEG. It aims to capture the complete history of transformations, software versions, parameters, and quality metrics associated with a processed dataset.
+Signal Journey defines a specification and provides tools for documenting the processing steps applied to biosignal data (EEG, MEG, etc.). It aims to capture the complete history of transformations, software versions, parameters, and quality metrics associated with derived datasets.
 
-**Purpose & Goals:**
+This repository contains:
 
-*   **Reproducibility:** Provide a clear, machine-readable record of the entire processing pipeline.
-*   **Transparency:** Understand exactly how derived data was generated from raw data.
-*   **Quality Assessment:** Track quality metrics at each stage of processing.
-*   **Collaboration:** Share processing details effectively between researchers and labs.
-*   **Standardization:** Offer a common format for provenance tracking in neuroimaging.
+1.  **The Signal Journey Specification:** Formal definition of the `signalJourney.json` format ([`schema/signalJourney.schema.json`](schema/signalJourney.schema.json)).
+2.  **Python Validator (`signaljourney_validator`):** A library and CLI tool to validate `.json` files against the schema ([`src/signaljourney_validator`](src/signaljourney_validator)).
+3.  **Documentation:** Comprehensive guides, tutorials, and examples ([`docs/`](docs/), published at [neuromechanist.github.io/signalJourney](https://neuromechanist.github.io/signalJourney/)).
+4.  **Examples:** Illustrative `signalJourney.json` files ([`schema/examples/`](schema/examples/)).
+5.  **MATLAB Tools:** Basic utilities for working with Signal Journey structs in MATLAB ([`scripts/matlab/`](scripts/matlab/)).
 
-## Key Features
+## Why Signal Journey?
 
-*   **JSON Schema:** Defined by a formal [JSON Schema (`schema/signalJourney.schema.json`)](schema/signalJourney.schema.json) for validation.
-*   **Step-by-Step Tracking:** Records each processing step, including software, parameters, inputs, and outputs.
-*   **Quality Metrics:** Allows embedding quality metrics at both the step and pipeline level.
-*   **Extensibility:** Uses a namespace system within the `extensions` field to accommodate domain-specific information (e.g., EEG-specific channel metrics, NEMAR project details) without cluttering the core specification. *Note: Namespaces are reserved; see [CONTRIBUTING.md](CONTRIBUTING.md) and documentation for details on proposing new namespaces.*
-*   **BIDS Compatibility:** Designed to integrate with the Brain Imaging Data Structure (BIDS) standard, typically residing in the `derivatives/` directory.
+Modern biosignal analysis involves numerous steps and diverse software, making reproducibility challenging. Traditional methods like lab notes or script comments are often insufficient. Signal Journey addresses this by providing a standardized **JSON format** that captures:
 
-## Schema Structure Overview
+*   **Pipeline Metadata:** Name, version, description.
+*   **Input Data:** Origin and characteristics.
+*   **Processing Steps:** Detailed sequence including software, functions, parameters, inputs, outputs, and dependencies.
+*   **Output Data:** Description of final results.
+*   **Quality Metrics:** Quantitative or qualitative assessments at step or pipeline level.
+*   **Extensibility:** A namespaced `extensions` field for domain-specific additions.
 
-A `signalJourney.json` file contains the following main sections:
+**Key Benefits:**
 
-*   `sj_version`: The version of the Signal Journey specification used.
-*   `schema_version`: The version of the schema file itself.
-*   `description`: A human-readable description of the documented pipeline.
-*   `pipelineInfo`: General metadata about the pipeline (e.g., name, project).
-*   `processingSteps`: An ordered array detailing each processing step:
-    *   `stepId`: Unique identifier for the step.
-    *   `name`, `description`: Human-readable details.
-    *   `software`: Software used (name, version, URL).
-    *   `parameters`: List of parameters applied.
-    *   `inputSources`, `outputTargets`: Links to input/output data or previous steps.
-    *   `dependsOn`: Prerequisite step IDs.
-    *   `qualityMetrics`: Metrics specific to this step's output.
-*   `summaryMetrics`: (Optional) Metrics summarizing the overall pipeline outcome.
-*   `extensions`: (Optional) Container for namespaced, domain-specific information.
+*   **Reproducibility:** Clear, machine-readable record enables replication.
+*   **Transparency:** Explicitly details how derived data was generated.
+*   **Standardization:** Common format for provenance across tools and labs.
+*   **Interoperability:** Facilitates sharing and comparison of methods.
+*   **Automation:** Machine-readable format enables automated validation, analysis, and potentially re-execution.
 
-See the [JSON Schema (`schema/signalJourney.schema.json`)](schema/signalJourney.schema.json) for the complete structure and field descriptions.
+## Getting Started
 
-## Basic Usage
+### Using the Validator (Python)
 
-Signal Journey files are typically generated programmatically by processing pipelines or analysis tools.
+The `signaljourney_validator` package provides a CLI tool for easy validation.
 
-**Example Snippet (`complex_pipeline.json`):**
+1.  **Installation:**
+    ```bash
+    pip install signaljourney_validator
+    ```
+    *(Note: Package not yet published to PyPI yet)*
 
-```json
-{
-  "sj_version": "0.1.0",
-  "schema_version": "0.1.0",
-  "description": "Complex pipeline: Preprocessing, ICA, and Epoching.",
-  "pipelineInfo": {
-    "pipeline_name": "EEG Preprocessing + ICA",
-    "project": "Study X"
-  },
-  "processingSteps": [
-    {
-      "stepId": "filter",
-      "name": "Band-pass Filter",
-      "description": "Apply 1-45 Hz filter.",
-      "software": {"name": "EEGLAB", "version": "2023.1"},
-      "parameters": [
-        {"name": "locutoff", "value": 1.0, "unit": "Hz"},
-        {"name": "hicutoff", "value": 45.0, "unit": "Hz"}
-      ],
-      "dependsOn": ["load"]
-    },
-    // ... other steps ...
-    {
-      "stepId": "ic_reject",
-      "name": "Reject ICs",
-      // ... details ...
-      "dependsOn": ["ica"],
-      "qualityMetrics": {
-        "numICsRejected": 5,
-        "eeg:percentVarianceRemoved": 12.1
-      }
-    }
-  ],
-  "extensions": {
-    "eeg": {
-      "channelLocationsFile": "/path/to/standard_1020.elc"
-    }
-  }
-}
-```
+2.  **Validation:**
+    ```bash
+    signaljourney-validate /path/to/your_pipeline_signalJourney.json
+    ```
+    The validator will report success or list detailed errors if the file does not conform to the schema.
 
-See the [`schema/examples/`](schema/examples/) directory for more complete examples:
-*   [`simple_pipeline.json`](schema/examples/simple_pipeline.json)
-*   [`complex_pipeline.json`](schema/examples/complex_pipeline.json)
-*   [`metrics_heavy.json`](schema/examples/metrics_heavy.json)
+### Exploring the Specification
+
+*   **Introduction:** [docs/introduction.md](docs/introduction.md)
+*   **Full Specification:** [docs/specification/](docs/specification/)
+*   **Schema File:** [schema/signalJourney.schema.json](schema/signalJourney.schema.json)
+*   **Examples:** [schema/examples/](schema/examples/)
+
+### BIDS Integration
+
+Signal Journey is designed to complement the Brain Imaging Data Structure (BIDS). Learn how to integrate `signalJourney.json` files into BIDS datasets: [docs/bids.md](docs/bids.md).
 
 ## Documentation
 
-*Full documentation coming soon (See Task #10).*
+The full documentation, built with MkDocs, is available online:
+
+**[neuromechanist.github.io/signalJourney](https://neuromechanist.github.io/signalJourney/)**
+
+To build the documentation locally:
+```bash
+pip install -r docs/requirements.txt
+mkdocs build
+# Or serve locally: mkdocs serve
+```
 
 ## Contributing
 
-We welcome contributions! Please see [`CONTRIBUTING.md`](CONTRIBUTING.md) for guidelines on bug reports, feature requests, pull requests, and proposing new namespaces.
+We welcome contributions! Please see the **[CONTRIBUTING.md](CONTRIBUTING.md)** file for detailed guidelines on:
+
+*   Reporting bugs and suggesting features
+*   Setting up a development environment
+*   Running tests (`pytest`) and linters (`ruff`)
+*   Making changes and submitting pull requests
+*   Proposing schema modifications
+
+Please also adhere to our **[CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)**.
 
 ## License
 
-*License information TBD.* 
+This project is licensed under the **[BSD 3-Clause License](LICENSE)**. 

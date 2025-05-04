@@ -4,13 +4,13 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "signaljourney_validator"
-version = "0.1.0"
+version = "0.0.1"
 authors = [
-  { name="Seyed Yahya Shirazi", email="shirazi@ieee.org" }
+{ name="Seyed Yahya Shirazi", email="shirazi@ieee.org" }
 ]
 description = "A Python library to validate signalJourney JSON files against the official specification schema."
 readme = "src/signaljourney_validator/README.md" # Point to the package README
-license = {text = "MIT License"} # Explicitly state license
+license = {text = "BSD 3-Clause License"} # Explicitly state license
 requires-python = ">=3.8"
 keywords = ["signaljourney", "schema", "validation", "provenance", "biosignal", "neuroscience"]
 classifiers = [
@@ -19,7 +19,7 @@ classifiers = [
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
-    "License :: OSI Approved :: MIT License",
+    "License :: OSI Approved :: BSD License",
     "Operating System :: OS Independent",
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Science/Research",
@@ -31,9 +31,9 @@ dependencies = [
 ]
 
 [project.urls]
-"Homepage" = "https://github.com/signal-journey/specification"
-"Repository" = "https://github.com/signal-journey/specification" # Added Repository URL
-"Bug Tracker" = "https://github.com/signal-journey/specification/issues"
+"Homepage" = "https://neuromechanist.github.io/signaljourney"
+"Repository" = "https://github.com/neuromechanist/signaljourney" # Added Repository URL
+"Bug Tracker" = "https://github.com/neuromechanist/signaljourney/issues"
 
 [project.optional-dependencies]
 dev = [
