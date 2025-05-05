@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://signaljourney.example.com/schema/v0.2.0/signalJourney.schema.json",
+  "$id": "file:///Users/yahya/Documents/git/signalJourney/schema/signalJourney.schema.json",
   "title": "Signal Journey",
   "description": "Schema for documenting signal processing pipelines with detailed provenance tracking. Files should follow the naming convention: sub-<participant>_task-<taskname>_signalJourney.json and use UTF-8 encoding. Uses namespaces within the 'extensions' property for domain-specific fields (e.g., 'eeg:', 'nemar:'). Note: Namespaces are reserved; adding new ones requires a formal proposal (see documentation).",
   "type": "object",
@@ -29,26 +29,9 @@
     },
     "versionHistory": {
       "type": "array",
-      "description": "Tracks changes made to this schema file over time.",
+      "description": "Tracks changes made to this specific signalJourney file over time.",
       "items": {
-        "type": "object",
-        "properties": {
-          "version": {
-            "type": "string",
-            "description": "The schema version for this entry.",
-            "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
-          },
-          "date": {
-            "type": "string",
-            "description": "The release date of this schema version.",
-            "format": "date"
-          },
-          "changes": {
-            "type": "string",
-            "description": "A summary of changes introduced in this version."
-          }
-        },
-        "required": ["version", "date", "changes"]
+        "$ref": "file:///Users/yahya/Documents/git/signalJourney/schema/definitions/versionHistoryEntry.schema.json"
       },
       "default": [
         {
@@ -64,24 +47,21 @@
       ]
     },
     "pipelineInfo": {
-      "type": "object",
-      "description": "General pipeline information (e.g., project name, dataset details). Specific fields TBD, allows additional properties for now.",
-      "additionalProperties": true,
-      "properties": {}
+      "$ref": "file:///Users/yahya/Documents/git/signalJourney/schema/definitions/pipelineInfo.schema.json"
     },
     "processingSteps": {
       "type": "array",
       "description": "An ordered list of processing steps applied.",
       "items": {
-        "$ref": "./definitions/processingStep.schema.json"
+        "$ref": "file:///Users/yahya/Documents/git/signalJourney/schema/definitions/processingStep.schema.json"
       },
       "minItems": 1
     },
     "summaryMetrics": {
-      "$ref": "./definitions/qualityMetricsObject.schema.json"
+      "$ref": "file:///Users/yahya/Documents/git/signalJourney/schema/definitions/qualityMetricsObject.schema.json"
     },
     "extensions": {
-      "$ref": "./extensions/extensionsContainer.schema.json"
+      "$ref": "file:///Users/yahya/Documents/git/signalJourney/schema/extensions/extensionsContainer.schema.json"
     }
   }
 } 

@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "file:///Users/yahya/Documents/git/signalJourney/schema/definitions/versionHistoryEntry.schema.json",
+  "title": "Version History Entry",
+  "description": "Describes a single entry in the top-level versionHistory array.",
+  "type": "object",
+  "required": [
+    "version",
+    "date",
+    "changes"
+  ],
+  "properties": {
+    "version": {
+      "description": "The version identifier for this entry (e.g., \"1.1.0\").",
+      "type": "string"
+    },
+    "date": {
+      "description": "The date this version was created (ISO 8601 format YYYY-MM-DD).",
+      "type": "string",
+      "format": "date"
+    },
+    "changes": {
+      "description": "A description of the changes made in this version of the signalJourney file.",
+      "type": "string"
+    },
+    "author": {
+      "description": "The person or entity who made the changes.",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false
+} 
