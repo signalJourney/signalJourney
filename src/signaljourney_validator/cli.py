@@ -3,13 +3,10 @@ import os
 import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional
-from urllib.parse import urljoin
 
 import click
-import jsonschema
 
 from signaljourney_validator.validator import (
-    DEFAULT_SCHEMA_PATH,
     SignalJourneyValidationError,
     Validator,
 )

@@ -174,10 +174,12 @@ class ValidationErrorDetail:
         #       signalJourney patterns later
         # e.g., based on error.schema_path or specific known field constraints
 
+
 # --- Custom Exception ---
 
 # Make sure List and Optional are imported if not already
 from typing import List, Optional
+
 
 class SignalJourneyValidationError(Exception):
     """Custom exception for validation errors."""
