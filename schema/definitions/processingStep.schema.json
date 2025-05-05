@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://signaljourney.neurodata.io/schema/definitions/processingStep.schema.json",
+  "$id": "./processingStep.schema.json",
   "title": "Processing Step",
   "description": "Describes a single step within a signal processing pipeline.",
   "type": "object",
