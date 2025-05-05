@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "file:///Users/yahya/Documents/git/signalJourney/schema/definitions/processingStep.schema.json",
+  "$id": "processingStep.schema.json",
   "title": "Processing Step",
   "description": "Describes a single step within a signal processing pipeline.",
   "type": "object",
@@ -24,7 +24,7 @@
       "type": "string"
     },
     "software": {
-      "$ref": "file:///Users/yahya/Documents/git/signalJourney/schema/definitions/softwareDetails.schema.json"
+      "$ref": "softwareDetails.schema.json"
     },
     "parameters": {
       "description": "Key-value pairs detailing the parameters used for this step. Values can be strings, numbers, booleans, arrays, or nested objects.",
@@ -35,14 +35,14 @@
       "description": "List of data sources used as input for this step.",
       "type": "array",
       "items": {
-        "$ref": "file:///Users/yahya/Documents/git/signalJourney/schema/definitions/InputSource.schema.json"
+        "$ref": "InputSource.schema.json"
       }
     },
     "outputTargets": {
       "description": "List of data targets produced by this step.",
       "type": "array",
       "items": {
-        "$ref": "file:///Users/yahya/Documents/git/signalJourney/schema/definitions/OutputTarget.schema.json"
+        "$ref": "OutputTarget.schema.json"
       }
     },
     "dependsOn": {
@@ -58,7 +58,7 @@
       "format": "date-time"
     },
     "qualityMetrics": {
-      "$ref": "file:///Users/yahya/Documents/git/signalJourney/schema/definitions/qualityMetricsObject.schema.json"
+      "$ref": "qualityMetricsObject.schema.json"
     }
   }
 } 

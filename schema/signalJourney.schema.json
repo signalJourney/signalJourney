@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "file:///Users/yahya/Documents/git/signalJourney/schema/signalJourney.schema.json",
+  "$id": "signalJourney.schema.json",
   "title": "Signal Journey",
   "description": "Schema for documenting signal processing pipelines with detailed provenance tracking. Files should follow the naming convention: sub-<participant>_task-<taskname>_signalJourney.json and use UTF-8 encoding. Uses namespaces within the 'extensions' property for domain-specific fields (e.g., 'eeg:', 'nemar:'). Note: Namespaces are reserved; adding new ones requires a formal proposal (see documentation).",
   "type": "object",
@@ -31,7 +31,7 @@
       "type": "array",
       "description": "Tracks changes made to this specific signalJourney file over time.",
       "items": {
-        "$ref": "file:///Users/yahya/Documents/git/signalJourney/schema/definitions/versionHistoryEntry.schema.json"
+        "$ref": "definitions/versionHistoryEntry.schema.json"
       },
       "default": [
         {
@@ -47,21 +47,21 @@
       ]
     },
     "pipelineInfo": {
-      "$ref": "file:///Users/yahya/Documents/git/signalJourney/schema/definitions/pipelineInfo.schema.json"
+      "$ref": "definitions/pipelineInfo.schema.json"
     },
     "processingSteps": {
       "type": "array",
       "description": "An ordered list of processing steps applied.",
       "items": {
-        "$ref": "file:///Users/yahya/Documents/git/signalJourney/schema/definitions/processingStep.schema.json"
+        "$ref": "definitions/processingStep.schema.json"
       },
       "minItems": 1
     },
     "summaryMetrics": {
-      "$ref": "file:///Users/yahya/Documents/git/signalJourney/schema/definitions/qualityMetricsObject.schema.json"
+      "$ref": "definitions/qualityMetricsObject.schema.json"
     },
     "extensions": {
-      "$ref": "file:///Users/yahya/Documents/git/signalJourney/schema/extensions/extensionsContainer.schema.json"
+      "$ref": "extensions/extensionsContainer.schema.json"
     }
   }
 } 

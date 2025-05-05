@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "file:///Users/yahya/Documents/git/signalJourney/schema/definitions/pipelineInfo.schema.json",
+  "$id": "pipelineInfo.schema.json",
   "title": "Pipeline Information",
   "description": "Metadata about the overall processing pipeline.",
   "type": "object",
