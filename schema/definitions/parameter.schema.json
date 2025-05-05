@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://signaljourney.neurodata.io/schema/definitions/parameter.schema.json",
+  "$id": "parameter.schema.json",
   "title": "Parameter Definition",
   "description": "Reusable definition for a parameter.",
   "type": "object",

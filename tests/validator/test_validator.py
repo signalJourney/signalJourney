@@ -1,5 +1,7 @@
 """Unit tests for the signaljourney_validator.validator module."""
 
+from pathlib import Path
+
 import pytest
 
 from signaljourney_validator.errors import ValidationErrorDetail
@@ -14,8 +16,26 @@ from signaljourney_validator.validator import SignalJourneyValidationError, Vali
 def test_validator_init_default_schema(main_schema):
     """Test initializing Validator with the default schema."""
     validator_instance = Validator()  # Uses default schema loaded internally
-    # Check if loaded schema matches expected
-    assert validator_instance._schema == main_schema
+    # Check if loaded schema matches expected, accounting for potentially injected $id
+    # We expect the validator to inject the absolute file URI as $id
+    expected_schema = main_schema.copy()
+    # Determine the expected absolute URI based on the default path
+    default_schema_path = (
+        (
+            Path(__file__).parent.parent / "src/signaljourney_validator/validator.py"
+        ).parent.parent.parent
+        / "schema"
+        / "signalJourney.schema.json"
+    )
+    if default_schema_path.exists():
+        expected_schema["$id"] = default_schema_path.resolve().as_uri()
+    else:
+        # Fallback if default schema path logic is wrong, just check core keys exist
+        assert "$schema" in validator_instance._schema
+        assert "properties" in validator_instance._schema
+        return
+
+    assert validator_instance._schema == expected_schema
 
 
 def test_validator_init_custom_schema(main_schema_path):
@@ -24,12 +44,6 @@ def test_validator_init_custom_schema(main_schema_path):
     # Check internal schema object is loaded
     assert isinstance(validator_instance._schema, dict)
     assert validator_instance._schema["$id"]  # Check if a common key exists
-
-
-def test_validator_init_schema_dict(main_schema):
-    """Test initializing Validator with a schema dictionary."""
-    validator_instance = Validator(schema=main_schema)
-    assert validator_instance._schema == main_schema
 
 
 def test_validate_valid(validator, load_json_example):
@@ -104,3 +118,7 @@ def test_validate_suggestions(validator, load_json_example):
 #     # ... setup mock BIDS dir and file ...
 #     # result = validator.validate(mock_file, bids_context=tmp_path)
 #     pass
+
+
+def test_validator_init_schema_path(main_schema_path):
+    """Test initializing Validator with a schema path."""

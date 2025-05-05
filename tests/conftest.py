@@ -2,10 +2,12 @@
 
 import json
 from pathlib import Path
+from typing import Dict, Union
 
 import pytest
-from jsonschema import RefResolver
 
+# Removed jsonschema imports as validator handles it
+# Removed RefResolver
 # Import our custom Validator
 from signaljourney_validator.validator import Validator as SignalJourneyValidator
 
@@ -19,9 +21,10 @@ EXAMPLES_DIR = PROJECT_ROOT / "tests" / "schemas" / "examples"
 
 @pytest.fixture(scope="session")
 def schema_base_uri():
-    """Return the standard base URI for resolving schema references."""
-    # Use the defined standard URI, not the local file path
-    return "https://signaljourney.neurodata.io/schema/"
+    """Return the base URI for resolving schema references using file scheme."""
+    # Use the directory containing the main schema as the base URI
+    schema_dir = SCHEMA_DIR.resolve()
+    return schema_dir.as_uri() + "/"  # Ensure trailing slash for directory URI
 
 
 @pytest.fixture(scope="session")
@@ -44,84 +47,120 @@ def main_schema(main_schema_path):
 
 
 @pytest.fixture(scope="session")
-def all_schemas(main_schema, main_schema_path, schema_base_uri):
-    """Loads all schema files into a dictionary suitable for RefResolver store.
-
-    Uses the schema's internal '$id' as the key for the store, which is the
-    standard mechanism for jsonschema resolution.
+def all_schemas(main_schema, main_schema_path):
+    """Loads all schema files into a dictionary keyed by paths relative
+    to schema dir.
     """
     store = {}
-    # Add main schema using its $id if present, otherwise fall back to base URI logic
-    if "$id" in main_schema:
-        store[main_schema["$id"]] = main_schema
-    else:
-        # Fallback if $id is missing, though it shouldn't be for the main schema
-        store[schema_base_uri + main_schema_path.name] = main_schema
+    # Key main schema by its filename
+    store[main_schema_path.name] = main_schema
 
-    def load_schemas_from_dir(directory):
+    def load_schemas_from_dir(directory, prefix):
         if not directory.exists():
             return
         for schema_file in directory.glob("*.schema.json"):
+            # Calculate the relative path key (e.g., definitions/file.schema.json)
+            relative_key = prefix + schema_file.name
             try:
                 with open(schema_file, "r", encoding="utf-8") as f:
                     schema_content = json.load(f)
-                # Use the $id within the schema file as the key
-                if "$id" in schema_content:
-                    store[schema_content["$id"]] = schema_content
-                else:
-                    # Split print statement for length
-                    print(
-                        f"Warning: Schema file {schema_file} is missing '$id'. "
-                        f"Skipping."
-                    )
+                store[relative_key] = schema_content
             except json.JSONDecodeError:
-                # Split print statement for length
                 print(f"Warning: Could not decode JSON from {schema_file}. Skipping.")
             except Exception as e:
-                # Split print statement for length
                 print(f"Warning: Could not load schema {schema_file}: {e}. Skipping.")
 
-    # Split comment and function calls for length
-    # Load top-level schemas (like signalJourney.schema.json)
-    # if needed (already added by initial logic)
-    load_schemas_from_dir(SCHEMA_DIR)
-    load_schemas_from_dir(DEFINITIONS_DIR)
-    load_schemas_from_dir(EXTENSIONS_DIR)
-
-    # Debug: Print the store keys to verify
-    # print("\\nResolver Store Keys:")
-    # for key in store.keys():
-    #     print(f"- {key}")
-    # print("\\n")
-
+    # Load definition and extension schemas using relative path prefixes
+    load_schemas_from_dir(DEFINITIONS_DIR, "definitions/")
+    load_schemas_from_dir(EXTENSIONS_DIR, "extensions/")
     return store
 
 
-@pytest.fixture(scope="session")
-def schema_resolver(schema_base_uri, main_schema, all_schemas):
-    """Create a RefResolver pre-filled with all local schemas.
+# --- Helper Function for Inlining Refs ---
+def inline_refs(
+    schema: Union[Dict, list], base_path: Path, loaded_schemas_cache: Dict[str, Dict]
+):
+    """Recursively replace $ref keys with the content of the referenced file."""
+    if isinstance(schema, dict):
+        if (
+            "$ref" in schema
+            and isinstance(schema["$ref"], str)
+            and not schema["$ref"].startswith("#")
+        ):
+            ref_path_str = schema["$ref"]
+            # Resolve relative ref path against the current base path
+            ref_path = (base_path / ref_path_str).resolve()
 
-    The resolver uses the store (keyed by $id) to find schemas.
-    The base_uri here helps if any $refs *inside* schemas are relative,
-    but primarily resolution happens via the absolute $id URIs in the store.
+            # Cache key based on resolved absolute path
+            cache_key = ref_path.as_posix()
+
+            # Check cache first
+            if cache_key in loaded_schemas_cache:
+                # Return a copy to prevent modification issues during recursion
+                return loaded_schemas_cache[cache_key].copy()
+
+            # If not cached, load the file
+            if ref_path.exists() and ref_path.is_file():
+                try:
+                    print(
+                        f"[Inline] Loading $ref: {ref_path_str} "
+                        f"(from {base_path}) -> {ref_path}"
+                    )
+                    with open(ref_path, "r", encoding="utf-8") as f:
+                        ref_content = json.load(f)
+                    # Store in cache BEFORE recursion to handle circular refs
+                    loaded_schemas_cache[cache_key] = ref_content
+                    # Recursively resolve refs *within* the loaded content
+                    # Use the directory of the *referenced* file as the new base path
+                    resolved_content = inline_refs(
+                        ref_content, ref_path.parent, loaded_schemas_cache
+                    )
+                    # Update cache with the fully resolved content
+                    loaded_schemas_cache[cache_key] = resolved_content
+                    # Return a copy of the resolved content
+                    return resolved_content.copy()
+                except Exception as e:
+                    print(
+                        f"Warning: Failed to load or parse $ref: {ref_path_str} "
+                        f"from {ref_path}. Error: {e}"
+                    )
+                    return schema  # Keep original $ref on error
+            else:
+                print(
+                    f"Warning: $ref path does not exist or is not a file: "
+                    f"{ref_path_str} -> {ref_path}"
+                )
+                return schema  # Keep original $ref if file not found
+        else:
+            # Recursively process other keys in the dictionary
+            new_schema = {}
+            for key, value in schema.items():
+                new_schema[key] = inline_refs(value, base_path, loaded_schemas_cache)
+            return new_schema
+    elif isinstance(schema, list):
+        # Recursively process items in the list
+        return [inline_refs(item, base_path, loaded_schemas_cache) for item in schema]
+    else:
+        # Return non-dict/list items as is
+        return schema
+
+
+@pytest.fixture(scope="session")
+def validator(main_schema):
+    """Provides a Validator instance initialized with the main schema content.
+    The Validator class itself handles ref inlining now.
     """
-    # The resolver uses the store (keyed by $id) to find schemas.
-    # The base_uri here helps if any $refs *inside* schemas are relative,
-    # but primarily resolution happens via the absolute $id URIs in the store.
-    return RefResolver(
-        base_uri=schema_base_uri,  # Use the standard URI
-        referrer=main_schema,
-        store=all_schemas,
-    )
-
-
-@pytest.fixture(scope="session")
-def validator(main_schema, schema_resolver):
-    """Provides a configured SignalJourneyValidator instance."""
-    # Instantiate our custom validator, passing the loaded main schema
-    # and the pre-configured resolver.
-    sj_validator = SignalJourneyValidator(schema=main_schema, resolver=schema_resolver)
-    return sj_validator
+    print("\n--- Initializing Validator for Test ---")
+    # Initialize our custom validator, passing the main schema dictionary.
+    # The Validator class will handle inlining internally.
+    try:
+        sj_validator = SignalJourneyValidator(
+            schema=main_schema,  # Pass the main schema dict
+        )
+        print("--- Validator Initialized --- \n")
+        return sj_validator
+    except Exception as e:
+        pytest.fail(f"Failed to initialize SignalJourneyValidator: {e}")
 
 
 @pytest.fixture(scope="session")

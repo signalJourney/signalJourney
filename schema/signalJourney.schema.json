@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://signaljourney.neurodata.io/schema/signalJourney.schema.json",
+  "$id": "signalJourney.schema.json",
   "title": "Signal Journey",
   "description": "Schema for documenting signal processing pipelines with detailed provenance tracking. Files should follow the naming convention: sub-<participant>_task-<taskname>_signalJourney.json and use UTF-8 encoding. Uses namespaces within the 'extensions' property for domain-specific fields (e.g., 'eeg:', 'nemar:'). Note: Namespaces are reserved; adding new ones requires a formal proposal (see documentation).",
   "type": "object",
@@ -20,7 +20,8 @@
     "schema_version": {
       "type": "string",
       "description": "Version of this schema file (Semantic Versioning MAJOR.MINOR.PATCH)",
-      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+      "pattern": "^0\\.2\\.0$",
+      "const": "0.2.0"
     },
     "description": {
       "type": "string",
@@ -28,28 +29,16 @@
     },
     "versionHistory": {
       "type": "array",
-      "description": "Tracks changes made to this schema file over time.",
+      "description": "Tracks changes made to this specific signalJourney file over time.",
       "items": {
-        "type": "object",
-        "properties": {
-          "version": {
-            "type": "string",
-            "description": "The schema version for this entry.",
-            "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
-          },
-          "date": {
-            "type": "string",
-            "description": "The release date of this schema version.",
-            "format": "date"
-          },
-          "changes": {
-            "type": "string",
-            "description": "A summary of changes introduced in this version."
-          }
-        },
-        "required": ["version", "date", "changes"]
+        "$ref": "definitions/versionHistoryEntry.schema.json"
       },
       "default": [
+        {
+          "version": "0.2.0",
+          "date": "2024-05-06",
+          "changes": "Refactored InputSource/OutputTarget into separate definitions. Added 'inlineData' targetType."
+        },
         {
           "version": "0.1.0",
           "date": "2024-05-03",
@@ -58,16 +47,13 @@
       ]
     },
     "pipelineInfo": {
-      "type": "object",
-      "description": "General pipeline information (e.g., project name, dataset details). Specific fields TBD, allows additional properties for now.",
-      "additionalProperties": true,
-      "properties": {}
+      "$ref": "definitions/pipelineInfo.schema.json"
     },
     "processingSteps": {
       "type": "array",
       "description": "An ordered list of processing steps applied.",
       "items": {
-        "$ref": "https://signaljourney.neurodata.io/schema/definitions/processingStep.schema.json"
+        "$ref": "definitions/processingStep.schema.json"
       },
       "minItems": 1
     },
@@ -75,7 +61,7 @@
       "$ref": "definitions/qualityMetricsObject.schema.json"
     },
     "extensions": {
-      "$ref": "https://signaljourney.neurodata.io/schema/extensions/extensionsContainer.schema.json"
+      "$ref": "extensions/extensionsContainer.schema.json"
     }
   }
 } 

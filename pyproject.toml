@@ -75,7 +75,10 @@ where = ["src"]
 
 [tool.ruff]
 line-length = 88
-select = ["E", "F", "W", "I"]
+# select = ["E", "F", "W", "I"] # Deprecated
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"] # Moved here
 
 [tool.mypy]
 strict = true 
