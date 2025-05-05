@@ -1,0 +1,118 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://signaljourney.neurodata.io/schema/definitions/InputSource.schema.json",
+  "title": "Input Source",
+  "description": "Describes an input source for a processing step.",
+  "type": "object",
+  "required": [
+    "sourceType"
+  ],
+  "properties": {
+    "sourceType": {
+      "description": "Type of the input source.",
+      "type": "string",
+      "enum": [
+        "file",
+        "previousStepOutput",
+        "variable",
+        "resource",
+        "userDefined"
+      ]
+    },
+    "location": {
+      "description": "Path, URL, or identifier for the input source (conditional).",
+      "type": "string"
+    },
+    "format": {
+      "description": "File format or data type (conditional).",
+      "type": "string"
+    },
+    "entityLabels": {
+      "description": "Key-value pairs representing BIDS-like entities (conditional).",
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "pipelineSource": {
+      "description": "Link to the pipeline that generated this input (conditional).",
+      "type": "object",
+      "required": [
+        "pipelineName",
+        "pipelineVersion"
+      ],
+      "properties": {
+        "pipelineName": {
+          "description": "Name of the source pipeline.",
+          "type": "string"
+        },
+        "pipelineVersion": {
+          "description": "Version of the source pipeline.",
+          "type": "string"
+        },
+        "signalJourneyFile": {
+          "description": "Relative path to the signalJourney file documenting the source pipeline.",
+          "type": "string"
+        }
+      }
+    },
+    "stepId": {
+      "description": "The stepId of the previous step that produced this input (conditional).",
+      "type": "string"
+    },
+    "outputId": {
+      "description": "The descriptive identifier of the output from the source step (conditional).",
+      "type": "string"
+    },
+    "name": {
+      "description": "Name of the in-memory variable (conditional).",
+      "type": "string"
+    },
+    "description": {
+      "description": "Description of the variable or user-defined input (conditional).",
+      "type": "string"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "sourceType": { "const": "file" } }
+      },
+      "then": {
+        "required": ["location"]
+      }
+    },
+    {
+      "if": {
+        "properties": { "sourceType": { "const": "previousStepOutput" } }
+      },
+      "then": {
+        "required": ["stepId", "outputId"]
+      }
+    },
+    {
+      "if": {
+        "properties": { "sourceType": { "const": "variable" } }
+      },
+      "then": {
+        "required": ["name"]
+      }
+    },
+    {
+      "if": {
+        "properties": { "sourceType": { "const": "resource" } }
+      },
+      "then": {
+        "required": ["location"]
+      }
+    },
+    {
+      "if": {
+        "properties": { "sourceType": { "const": "userDefined" } }
+      },
+      "then": {
+        "required": ["description"]
+      }
+    }
+  ]
+} 
