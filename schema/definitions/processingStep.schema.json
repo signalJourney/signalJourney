@@ -32,17 +32,18 @@
       "additionalProperties": true
     },
     "inputSources": {
-      "description": "List of data sources used as input for this step.",
+      "description": "An array defining the data sources used as input for this step.",
       "type": "array",
       "items": {
-        "$ref": "InputSource.schema.json"
-      }
+        "$ref": "./inputSource.schema.json"
+      },
+      "minItems": 1
     },
     "outputTargets": {
-      "description": "List of data targets produced by this step.",
+      "description": "An array defining the output targets where results of this step are stored.",
       "type": "array",
       "items": {
-        "$ref": "OutputTarget.schema.json"
+        "$ref": "./outputTarget.schema.json"
       }
     },
     "dependsOn": {

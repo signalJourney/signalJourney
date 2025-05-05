@@ -68,36 +68,64 @@ Describes the overall pipeline.
 
 ## Processing Step Object
 
-Describes a single step within the `processingSteps` array.
+A single step within the processing pipeline.
 
-*   `stepId` (string, required)
-    *   **Description:** A unique identifier for this step within the pipeline (e.g., "1", "2a", "filter_step"). Used in `dependsOn`.
-    *   **Example:** `"stepId": "filter_highpass"`
-*   `name` (string, required)
-    *   **Description:** A human-readable name for the processing step.
-    *   **Example:** `"name": "Apply High-pass Filter"`
-*   `description` (string, required)
-    *   **Description:** Detailed description of what this specific step does.
-*   `software` (object, required)
-    *   **Description:** Information about the software used for this step.
-    *   **See:** [Software Object](#software-object)
-*   `parameters` (object, optional)
-    *   **Description:** Key-value pairs detailing the parameters used for this step. Values can be strings, numbers, booleans, arrays, or nested objects.
-    *   **Example:** `"parameters": { "cutoff_freq_hz": 1.0, "filter_type": "FIR", "order": 512 }`
-*   `inputSources` (array, optional)
-    *   **Description:** List of data sources used as input for this step.
-    *   **See:** [Input Source Object](#input-source-object)
-*   `outputTargets` (array, optional)
-    *   **Description:** List of data targets produced by this step.
-    *   **See:** [Output Target Object](#output-target-object)
-*   `dependsOn` (array, optional)
-    *   **Description:** An array of `stepId` strings from previous steps that must be completed before this step can run. Defines the pipeline's execution graph.
-    *   **Example:** `"dependsOn": ["load_data", "filter_highpass"]`
-*   `executionDateTime` (string, optional, format: date-time)
-    *   **Description:** The specific date and time this step was executed.
-*   `qualityMetrics` (object, optional)
-    *   **Description:** Quality metrics specific to the output of this particular step.
-    *   **See:** [Quality Metrics Object](#quality-metrics-object)
+*   `stepId` (string, required): A unique identifier for this step within the pipeline (e.g., "01_filter", "ica_run").
+*   `name` (string, required): A human-readable name for the step (e.g., "High-pass Filter", "ICA Decomposition").
+*   `description` (string, required): A brief description of what the step does.
+*   `software` (array, required): An array of [softwareDetails](#software-details-object) objects detailing the software used.
+*   `parameters` (object, optional): Key-value pairs representing parameters specific to this step.
+*   `inputSources` (array, required): An array of [inputSource](#inputsource-object) objects defining the inputs.
+*   `outputTargets` (array, optional): An array of [outputTarget](#outputtarget-object) objects defining the outputs.
+*   `qualityMetrics` (object, optional): A [qualityMetricsObject](#qualitymetricsobject) containing metrics relevant to this step's output.
+*   `extensions` (object, optional): Container for [extensions](#extensions-object).
+
+### inputSource Object
+
+Defines a source of input data for a processing step.
+
+*   `description` (string, required): Describes the input data (e.g., "Raw EEG data", "ICA component activations").
+*   `location` (string, required): Path to the input file, relative to the dataset root or the `signalJourney.json` file itself (convention TBD, likely relative to dataset root for BIDS).
+*   `format` (string, optional): The file format (e.g., "SET", "FIF", "EDF").
+
+### outputTarget Object
+
+Defines the target location or method for storing the output of a processing step.
+
+*   `description` (string, required): Describes the output data (e.g., "Filtered EEG data", "Cleaned IC weights", "Rejected channels list").
+*   `targetType` (string, required): Specifies the storage method. Must be one of:
+    *   `file`: The output is stored in an external file.
+    *   `inlineData`: The output data is embedded directly within the JSON.
+*   `location` (string, required if `targetType` is `file`): Path to the output file, relative path convention same as `inputSource.location`.
+*   `format` (string, optional if `targetType` is `file`): The file format (e.g., "SET", "FIF", "TSV").
+*   `data` (any, required if `targetType` is `inlineData`): The embedded data itself (e.g., a list of bad channel names, an ICA weight matrix as a nested array, QC metrics as an object).
+*   `encoding` (string, optional if `targetType` is `inlineData`): Specifies how the `data` is encoded if it's binary or needs special handling (e.g., "base64", "gzip+base64"). Defaults to standard JSON types if omitted.
+*   `formatDescription` (string, required if `targetType` is `inlineData`): A human-readable description of the `data` field's format (e.g., "List of bad channel labels", "NumPy array serialized to list", "JSON object with QC scores").
+
+#### Example `inlineData` Usage:
+
+```json
+{
+  "description": "List of channels rejected during artifact removal",
+  "targetType": "inlineData",
+  "formatDescription": "List of bad channel labels",
+  "data": ["Fp1", "Oz", "T7"]
+}
+```
+
+```json
+{
+  "description": "ICA weight matrix",
+  "targetType": "inlineData",
+  "formatDescription": "ICA weights matrix (channels x components) as nested list",
+  "encoding": null, // Or omit if standard JSON types
+  "data": [
+    [0.1, 0.5, -0.2],
+    [-0.3, 0.8, 0.1],
+    // ... more rows ...
+  ]
+}
+```
 
 ---
 
@@ -118,100 +146,6 @@ Describes the software used in a processing step.
     *   **Description:** URL to the software's source code repository (e.g., GitHub link).
 *   `commitHash` (string, optional)
     *   **Description:** Specific Git commit hash of the software version used, if applicable.
-
----
-
-## Input Source Object
-
-Describes an input to a processing step, as defined in [`InputSource.schema.json`](../../schema/definitions/InputSource.schema.json).
-
-*   `sourceType` (string, required)
-    *   **Description:** Type of the input source.
-    *   **Enum:** `"file"`, `"previousStepOutput"`, `"variable"`, `"resource"`, `"userDefined"`
-*   **Conditional Fields:** Depending on the `sourceType`:
-    *   **If `sourceType` is `"file"`:**
-        *   `location` (string, required): Path, URL, or identifier for the input file.
-        *   `format` (string, optional): File format (e.g., "FIF", "SET", "EDF", "NIFTI", "JSON", "TSV").
-        *   `entityLabels` (object, optional): Key-value pairs representing BIDS-like entities (e.g., `{"sub": "01", "task": "rest"}`).
-        *   `pipelineSource` (object, optional): If the file was generated by another documented pipeline. See [Pipeline Source Object](#pipeline-source-object).
-    *   **If `sourceType` is `"previousStepOutput"`:**
-        *   `stepId` (string, required): The `stepId` of the previous step that produced this input.
-        *   `outputId` (string, required): A descriptive identifier matching the `description` field in the corresponding `outputTarget` of the source step.
-    *   **If `sourceType` is `"variable"`:**
-        *   `name` (string, required): Name of the in-memory variable.
-        *   `description` (string, optional): Description of the variable.
-    *   **If `sourceType` is `"resource"`:**
-        *   `location` (string, required): Description or identifier of the external resource (e.g., "fsaverage MRI data", URL).
-    *   **If `sourceType` is `"userDefined"`:**
-        *   `description` (string, required): Description of the user-provided input.
-
----
-
-## Output Target Object
-
-Describes an output from a processing step, as defined in [`OutputTarget.schema.json`](../../schema/definitions/OutputTarget.schema.json).
-
-*   `targetType` (string, required)
-    *   **Description:** Type of the output target.
-    *   **Enum:** `"file"`, `"in-memory"`, `"variable"`, `"report"`, `"userDefined"`, `"inlineData"`
-*   `description` (string, required)
-    *   **Description:** A descriptive identifier for this output, used by subsequent steps referencing it via `previousStepOutput` inputs.
-    *   **Example:** `"description": "Band-pass filtered data."`
-*   **Conditional Fields:** Depending on the `targetType`:
-    *   **If `targetType` is `"file"`:**
-        *   `location` (string, required): Path where the output file was saved (relative or absolute).
-        *   `format` (string, optional): File format (e.g., "FIF", "NetCDF", "HDF5").
-        *   `entityLabels` (object, optional): Key-value pairs representing BIDS-like entities.
-    *   **If `targetType` is `"in-memory"`:**
-        *   `format` (string, optional): Description of the data format/object type in memory (e.g., "mne.io.Raw", "mne.Epochs").
-    *   **If `targetType` is `"variable"`:**
-        *   `name` (string, required): Name of the variable stored.
-    *   **If `targetType` is `"report"`:**
-        *   `location` (string, optional): Path to a generated report file (e.g., HTML, PDF).
-        *   `format` (string, optional): Format of the report.
-    *   **If `targetType` is `"userDefined"`:**
-        *   `details` (string, required): Description of the output.
-    *   **If `targetType` is `"inlineData"`:**
-        *   `data` (any, required): The actual data stored inline. Can be any valid JSON type (object, array, string, number, boolean).
-        *   `encoding` (string, optional, default: "utf-8"): Encoding of the `data` (e.g., "utf-8", "base64"). Use "base64" for binary data.
-        *   `formatDescription` (string, optional): Describes the format or structure of the `data`. Useful for complex data like matrices or specific object schemas.
-            *   **Recommendation:** Use a structured format like `application/json; format=<custom-name>[; version=<version>]` for clarity.
-        *   **Purpose:** Useful for storing small results, parameters, or derived values directly within the JSON, avoiding the need for extra files. Examples include rejected channel lists, ICA component properties, or summary statistics.
-        *   **Caution:** Avoid storing large amounts of data inline, as it increases the file size significantly. Consider `targetType: "file"` for larger datasets.
-        *   **Examples:**
-            ```json
-            // Example 1: Storing rejected channels list
-            {
-              "targetType": "inlineData",
-              "description": "List of channels rejected by cleanRawData",
-              "data": ["Fp1", "F7", "O2"],
-              "formatDescription": "application/json; format=channel-names"
-            }
-
-            // Example 2: Storing ICA weight matrix (simplified)
-            {
-              "targetType": "inlineData",
-              "description": "ICA weight matrix (W)",
-              "data": [[0.1, 0.5, -0.2], [-0.3, 0.1, 0.8], [0.7, 0.3, 0.1]],
-              "formatDescription": "application/json; format=matrix; rows=components; cols=channels"
-            }
-
-            // Example 3: Storing ICLabel results
-            {
-              "targetType": "inlineData",
-              "description": "ICLabel classifications for component 3",
-              "data": {
-                "Brain": 0.85,
-                "Muscle": 0.05,
-                "Eye": 0.03,
-                "Heart": 0.01,
-                "Line Noise": 0.02,
-                "Channel Noise": 0.02,
-                "Other": 0.02
-              },
-              "formatDescription": "application/json; format=iclabel-probabilities"
-            }
-            ```
 
 ---
 

@@ -1,7 +1,8 @@
 """Unit tests for the signaljourney_validator.validator module."""
 
-import pytest
 from pathlib import Path
+
+import pytest
 
 from signaljourney_validator.errors import ValidationErrorDetail
 from signaljourney_validator.validator import SignalJourneyValidationError, Validator

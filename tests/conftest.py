@@ -2,13 +2,12 @@
 
 import json
 from pathlib import Path
-from typing import Any, Dict, Union
-from urllib.parse import urljoin
+from typing import Dict, Union
 
 import pytest
+
 # Removed jsonschema imports as validator handles it
 # Removed RefResolver
-
 # Import our custom Validator
 from signaljourney_validator.validator import Validator as SignalJourneyValidator
 
@@ -89,7 +88,7 @@ def inline_refs(schema: Union[Dict, list], base_path: Path, loaded_schemas_cache
 
             # Check cache first
             if cache_key in loaded_schemas_cache:
-                 # Return a copy to prevent modification issues during recursion
+                # Return a copy to prevent modification issues during recursion
                 return loaded_schemas_cache[cache_key].copy()
 
             # If not cached, load the file
@@ -109,10 +108,10 @@ def inline_refs(schema: Union[Dict, list], base_path: Path, loaded_schemas_cache
                     return resolved_content.copy()
                 except Exception as e:
                     print(f"Warning: Failed to load or parse $ref: {ref_path_str} from {ref_path}. Error: {e}")
-                    return schema # Keep original $ref on error
+                    return schema  # Keep original $ref on error
             else:
                 print(f"Warning: $ref path does not exist or is not a file: {ref_path_str} -> {ref_path}")
-                return schema # Keep original $ref if file not found
+                return schema  # Keep original $ref if file not found
         else:
             # Recursively process other keys in the dictionary
             new_schema = {}
