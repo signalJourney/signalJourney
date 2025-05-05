@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "file:///Users/yahya/Documents/git/signalJourney/schema/definitions/versionHistoryEntry.schema.json",
+  "$id": "versionHistoryEntry.schema.json",
   "title": "Version History Entry",
-  "description": "Describes a single entry in the top-level versionHistory array.",
+  "description": "An entry recording a change to the Signal Journey file.",
   "type": "object",
   "required": [
     "version",

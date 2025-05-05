@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "file:///Users/yahya/Documents/git/signalJourney/schema/definitions/InputSource.schema.json",
+  "$id": "InputSource.schema.json",
   "title": "Input Source",
   "description": "Describes an input source for a processing step.",
   "type": "object",

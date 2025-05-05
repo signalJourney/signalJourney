@@ -160,8 +160,6 @@ def validate(
     # Prepare results structure
     results: Dict[str, Any] = {"overall_success": True, "files": []}
     validator_instance: Optional[Validator] = None
-    main_schema_dict: Optional[JsonDict] = None
-    resolver: Optional[jsonschema.RefResolver] = None
 
     if not files_to_validate:
         if output_format == "text" and path.is_dir():
@@ -178,47 +176,20 @@ def validate(
         sys.exit(0 if path.is_dir() else 1)
 
     # --- Schema Loading and Resolver Setup (Load ONCE) ---
-    try:
-        schema_to_use = schema if schema else DEFAULT_SCHEMA_PATH
-        if not schema_to_use.exists():
-            raise FileNotFoundError(f"Schema file not found: {schema_to_use}")
-        with open(schema_to_use, "r", encoding="utf-8") as f:
-            main_schema_dict = json.load(f)
-
-        # Setup resolver similar to conftest.py
-        schema_base_uri = SCHEMA_DIR.as_uri() + "/"  # Ensure trailing slash
-        base_resolve_uri = (
-            schema_base_uri  # For resolving within definitions/extensions
-        )
-
-        store = {schema_base_uri + schema_to_use.name: main_schema_dict}
-
-        # Load definition schemas
-        if DEFINITIONS_DIR.exists():
-            for schema_file in DEFINITIONS_DIR.glob("*.schema.json"):
-                with open(schema_file, "r", encoding="utf-8") as f:
-                    schema_content = json.load(f)
-                resolved_uri = urljoin(
-                    base_resolve_uri + "definitions/", schema_file.name
-                )
-                store[resolved_uri] = schema_content
-
-        # Load extension schemas
-        if EXTENSIONS_DIR.exists():
-            for schema_file in EXTENSIONS_DIR.glob("*.schema.json"):
-                with open(schema_file, "r", encoding="utf-8") as f:
-                    schema_content = json.load(f)
-                resolved_uri = urljoin(
-                    base_resolve_uri + "extensions/", schema_file.name
-                )
-                store[resolved_uri] = schema_content
-
-        resolver = jsonschema.RefResolver(
-            base_uri=schema_base_uri, referrer=main_schema_dict, store=store
-        )
-    except Exception as e:
-        click.echo(f"Error loading schema or building resolver: {e}", err=True)
-        sys.exit(1)
+    # try:
+    #     schema_to_use = schema if schema else DEFAULT_SCHEMA_PATH
+    #     if not schema_to_use.exists():
+    #         raise FileNotFoundError(f"Schema file not found: {schema_to_use}")
+    #     with open(schema_to_use, "r", encoding="utf-8") as f:
+    #         main_schema_dict = json.load(f)
+    #
+    #     # Setup resolver similar to conftest.py - REMOVED
+    #     ...
+    #
+    #     resolver = jsonschema.RefResolver(...)
+    # except Exception as e:
+    #     click.echo(f"Error loading schema or building resolver: {e}", err=True)
+    #     sys.exit(1)
     # --- End Schema Loading ---
 
     overall_success = True
@@ -233,10 +204,27 @@ def validate(
 
         try:
             if validator_instance is None:
-                # Create validator ONCE using the loaded schema and resolver
-                validator_instance = Validator(
-                    schema=main_schema_dict, resolver=resolver
-                )
+                # Create validator ONCE using the schema path (or None for default)
+                # Validator internal __init__ now handles registry setup.
+                try:
+                    validator_instance = Validator(schema=schema) # Pass schema path/None
+                except Exception as e:
+                    # Handle potential errors during Validator initialization (e.g., schema loading)
+                    click.echo(f"CRITICAL ERROR initializing validator: {e}", err=True)
+                    # For JSON output, log the critical error at file level
+                    if output_format == "json":
+                         file_result["status"] = "critical_error"
+                         file_result["errors"] = [{"message": f"Validator init failed: {e}"}]
+                         results["files"].append(file_result)
+                         results["overall_success"] = False
+                         overall_success = False # Ensure overall failure
+                    # Exit or continue? Maybe continue to report errors for other files?
+                    # For now, let's make it a fatal error for the specific file.
+                    if output_format == "text":
+                         click.echo(" CRITICAL ERROR")
+                         click.echo(f"  - Initialization Failed: {e}")
+                    # Skip to the next file if validator init fails
+                    continue
 
             # Pass bids_root to validator if bids flag is set
             current_bids_context = bids_root if bids else None

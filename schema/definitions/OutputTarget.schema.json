@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "file:///Users/yahya/Documents/git/signalJourney/schema/definitions/OutputTarget.schema.json",
+  "$id": "OutputTarget.schema.json",
   "title": "Output Target",
   "description": "Describes an output target from a processing step.",
   "type": "object",
