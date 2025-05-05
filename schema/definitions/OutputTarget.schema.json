@@ -1,0 +1,87 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://signaljourney.neurodata.io/schema/definitions/OutputTarget.schema.json",
+  "title": "Output Target",
+  "description": "Describes an output target from a processing step.",
+  "type": "object",
+  "required": [
+    "targetType",
+    "description"
+  ],
+  "properties": {
+    "targetType": {
+      "description": "Type of the output target.",
+      "type": "string",
+      "enum": [
+        "file",
+        "in-memory",
+        "variable",
+        "report",
+        "userDefined"
+        // inlineData will be added in subtask 15.3
+      ]
+    },
+    "description": {
+      "description": "A descriptive identifier for this output, used by subsequent steps.",
+      "type": "string"
+    },
+    "location": {
+      "description": "Path where the output file or report was saved (conditional).",
+      "type": "string"
+    },
+    "format": {
+      "description": "File format, in-memory data type, or report format (conditional).",
+      "type": "string"
+    },
+    "entityLabels": {
+      "description": "Key-value pairs representing BIDS-like entities (conditional).",
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "name": {
+      "description": "Name of the variable stored (conditional).",
+      "type": "string"
+    },
+    "details": {
+      "description": "Description of the user-defined output (conditional).",
+      "type": "string"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "targetType": { "const": "file" } }
+      },
+      "then": {
+        "required": ["location"]
+      }
+    },
+    {
+      "if": {
+        "properties": { "targetType": { "const": "variable" } }
+      },
+      "then": {
+        "required": ["name"]
+      }
+    },
+    {
+      "if": {
+        "properties": { "targetType": { "const": "report" } }
+      },
+      "then": {
+        // Location is optional for reports
+      }
+    },
+    {
+      "if": {
+        "properties": { "targetType": { "const": "userDefined" } }
+      },
+      "then": {
+        "required": ["details"]
+      }
+    }
+    // Conditional logic for inlineData will be added in subtask 15.3
+  ]
+} 
