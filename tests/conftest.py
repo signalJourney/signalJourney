@@ -48,7 +48,9 @@ def main_schema(main_schema_path):
 
 @pytest.fixture(scope="session")
 def all_schemas(main_schema, main_schema_path):
-    """Loads all schema files into a dictionary keyed by paths relative to schema dir."""
+    """Loads all schema files into a dictionary keyed by paths relative
+    to schema dir.
+    """
     store = {}
     # Key main schema by its filename
     store[main_schema_path.name] = main_schema
@@ -75,10 +77,18 @@ def all_schemas(main_schema, main_schema_path):
 
 
 # --- Helper Function for Inlining Refs ---
-def inline_refs(schema: Union[Dict, list], base_path: Path, loaded_schemas_cache: Dict[str, Dict]):
+def inline_refs(
+    schema: Union[Dict, list],
+    base_path: Path,
+    loaded_schemas_cache: Dict[str, Dict]
+):
     """Recursively replace $ref keys with the content of the referenced file."""
     if isinstance(schema, dict):
-        if "$ref" in schema and isinstance(schema["$ref"], str) and not schema["$ref"].startswith("#"):
+        if (
+            "$ref" in schema
+            and isinstance(schema["$ref"], str)
+            and not schema["$ref"].startswith("#")
+        ):
             ref_path_str = schema["$ref"]
             # Resolve relative ref path against the current base path
             ref_path = (base_path / ref_path_str).resolve()
@@ -94,23 +104,34 @@ def inline_refs(schema: Union[Dict, list], base_path: Path, loaded_schemas_cache
             # If not cached, load the file
             if ref_path.exists() and ref_path.is_file():
                 try:
-                    print(f"[Inline] Loading $ref: {ref_path_str} (from {base_path}) -> {ref_path}")
+                    print(
+                        f"[Inline] Loading $ref: {ref_path_str} "
+                        f"(from {base_path}) -> {ref_path}"
+                    )
                     with open(ref_path, "r", encoding="utf-8") as f:
                         ref_content = json.load(f)
                     # Store in cache BEFORE recursion to handle circular refs
                     loaded_schemas_cache[cache_key] = ref_content
                     # Recursively resolve refs *within* the loaded content
                     # Use the directory of the *referenced* file as the new base path
-                    resolved_content = inline_refs(ref_content, ref_path.parent, loaded_schemas_cache)
+                    resolved_content = inline_refs(
+                        ref_content, ref_path.parent, loaded_schemas_cache
+                    )
                     # Update cache with the fully resolved content
                     loaded_schemas_cache[cache_key] = resolved_content
                     # Return a copy of the resolved content
                     return resolved_content.copy()
                 except Exception as e:
-                    print(f"Warning: Failed to load or parse $ref: {ref_path_str} from {ref_path}. Error: {e}")
+                    print(
+                        f"Warning: Failed to load or parse $ref: {ref_path_str} "
+                        f"from {ref_path}. Error: {e}"
+                    )
                     return schema  # Keep original $ref on error
             else:
-                print(f"Warning: $ref path does not exist or is not a file: {ref_path_str} -> {ref_path}")
+                print(
+                    f"Warning: $ref path does not exist or is not a file: "
+                    f"{ref_path_str} -> {ref_path}"
+                )
                 return schema  # Keep original $ref if file not found
         else:
             # Recursively process other keys in the dictionary

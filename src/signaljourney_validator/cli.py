@@ -204,22 +204,28 @@ def validate(
                 # Create validator ONCE using the schema path (or None for default)
                 # Validator internal __init__ now handles registry setup.
                 try:
-                    validator_instance = Validator(schema=schema) # Pass schema path/None
+                    # Pass schema path/None
+                    validator_instance = Validator(schema=schema)
                 except Exception as e:
-                    # Handle potential errors during Validator initialization (e.g., schema loading)
-                    click.echo(f"CRITICAL ERROR initializing validator: {e}", err=True)
+                    # Handle potential errors during Validator initialization
+                    # (e.g., schema loading)
+                    click.echo(
+                        f"CRITICAL ERROR initializing validator: {e}", err=True
+                    )
                     # For JSON output, log the critical error at file level
                     if output_format == "json":
-                         file_result["status"] = "critical_error"
-                         file_result["errors"] = [{"message": f"Validator init failed: {e}"}]
-                         results["files"].append(file_result)
-                         results["overall_success"] = False
-                         overall_success = False # Ensure overall failure
+                        file_result["status"] = "critical_error"
+                        file_result["errors"] = [
+                            {"message": f"Validator init failed: {e}"}
+                        ]
+                        results["files"].append(file_result)
+                        results["overall_success"] = False
+                        overall_success = False  # Ensure overall failure
                     # Exit or continue? Maybe continue to report errors for other files?
                     # For now, let's make it a fatal error for the specific file.
                     if output_format == "text":
-                         click.echo(" CRITICAL ERROR")
-                         click.echo(f"  - Initialization Failed: {e}")
+                        click.echo(" CRITICAL ERROR")
+                        click.echo(f"  - Initialization Failed: {e}")
                     # Skip to the next file if validator init fails
                     continue
 

@@ -16,14 +16,22 @@ DEFAULT_SCHEMA_PATH = (
 
 # --- Helper Function for Inlining Refs ---
 
-def inline_refs(schema: Union[Dict, list], base_path: Path, loaded_schemas_cache: Dict[str, Dict]):
+def inline_refs(
+    schema: Union[Dict, list],
+    base_path: Path,
+    loaded_schemas_cache: Dict[str, Dict]
+):
     """Recursively replace $ref keys with the content of the referenced file.
     Uses a cache (loaded_schemas_cache) to avoid infinite loops with circular refs
     and redundant file loading.
     Cache keys should be absolute POSIX paths of the schema files.
     """
     if isinstance(schema, dict):
-        if "$ref" in schema and isinstance(schema["$ref"], str) and not schema["$ref"].startswith("#"):
+        if (
+            "$ref" in schema
+            and isinstance(schema["$ref"], str)
+            and not schema["$ref"].startswith("#")
+        ):
             ref_path_str = schema["$ref"]
             # Resolve relative ref path against the current base path
             ref_path = (base_path / ref_path_str).resolve()
@@ -39,23 +47,34 @@ def inline_refs(schema: Union[Dict, list], base_path: Path, loaded_schemas_cache
             # If not cached, load the file
             if ref_path.exists() and ref_path.is_file():
                 try:
-                    # print(f"[Inline] Loading $ref: {ref_path_str} (from {base_path}) -> {ref_path}")
+                    # print(
+                    #     f"[Inline] Loading $ref: {ref_path_str} "
+                    #     f"(from {base_path}) -> {ref_path}"
+                    # )
                     with open(ref_path, "r", encoding="utf-8") as f:
                         ref_content = json.load(f)
                     # Store in cache BEFORE recursion to handle circular refs
                     loaded_schemas_cache[cache_key] = ref_content
                     # Recursively resolve refs *within* the loaded content
                     # Use the directory of the *referenced* file as the new base path
-                    resolved_content = inline_refs(ref_content, ref_path.parent, loaded_schemas_cache)
+                    resolved_content = inline_refs(
+                        ref_content, ref_path.parent, loaded_schemas_cache
+                    )
                     # Update cache with the fully resolved content
                     loaded_schemas_cache[cache_key] = resolved_content
                     # Return a copy of the resolved content
                     return resolved_content.copy()
                 except Exception as e:
-                    print(f"Warning: Failed to load or parse $ref: {ref_path_str} from {ref_path}. Error: {e}")
+                    print(
+                        f"Warning: Failed to load or parse $ref: {ref_path_str} "
+                        f"from {ref_path}. Error: {e}"
+                    )
                     return schema  # Keep original $ref on error
             else:
-                print(f"Warning: $ref path does not exist or is not a file: {ref_path_str} -> {ref_path}")
+                print(
+                    f"Warning: $ref path does not exist or is not a file: "
+                    f"{ref_path_str} -> {ref_path}"
+                )
                 return schema  # Keep original $ref if file not found
         else:
             # Recursively process other keys in the dictionary
@@ -95,11 +114,11 @@ class Validator:
         schema_path = self._get_schema_path(schema)
         initial_schema = self._load_schema_dict(schema, schema_path)
 
-        # Determine the base path for resolving relative refs
-        # If loaded from file, use its directory. If dict, maybe use CWD or default?
         # For simplicity, let's assume if it's a dict, it might not have relative refs,
         # or we use the default schema path's directory as a fallback base.
-        base_resolve_path = schema_path.parent if schema_path else DEFAULT_SCHEMA_PATH.parent
+        base_resolve_path = (
+            schema_path.parent if schema_path else DEFAULT_SCHEMA_PATH.parent
+        )
 
         # Inline external $refs
         print("\n--- Inlining schema refs within Validator ---")
@@ -121,7 +140,9 @@ class Validator:
         except jsonschema.SchemaError as e:
             raise SignalJourneyValidationError(f"Invalid schema provided: {e}") from e
 
-    def _get_schema_path(self, schema_input: Optional[Union[Path, str, JsonDict]]) -> Optional[Path]:
+    def _get_schema_path(
+        self, schema_input: Optional[Union[Path, str, JsonDict]]
+    ) -> Optional[Path]:
         """Determines the Path object if schema is given as Path or str."""
         if schema_input is None:
             return DEFAULT_SCHEMA_PATH
@@ -132,7 +153,9 @@ class Validator:
         return None
 
     def _load_schema_dict(
-        self, schema_input: Optional[Union[Path, str, JsonDict]], schema_path: Optional[Path]
+        self,
+        schema_input: Optional[Union[Path, str, JsonDict]],
+        schema_path: Optional[Path]
     ) -> JsonDict:
         """Loads the schema into a dictionary."""
         if isinstance(schema_input, dict):
@@ -229,14 +252,18 @@ class Validator:
             print(f"DEBUG: Unexpected RefResolutionError: {e}")
             failed_ref = getattr(e, 'ref', '[unknown ref]')
             raise SignalJourneyValidationError(
-                f"Schema validation failed: Unexpectedly could not resolve reference '{failed_ref}'"
+                f"Schema validation failed: Unexpectedly could not resolve "
+                f"reference '{failed_ref}'"
             ) from e
         except jsonschema.SchemaError as e:
             # Catch schema errors separately from resolution errors
             raise SignalJourneyValidationError(f"Invalid schema: {e}") from e
         except Exception as e:
             # Capture the actual exception type for better debugging
-            print(f"DEBUG: Unexpected validation error type: {type(e).__name__}, Error: {e}")
+            print(
+                f"DEBUG: Unexpected validation error type: "
+                f"{type(e).__name__}, Error: {e}"
+            )
             # Reraise or wrap depending on desired behavior
             raise SignalJourneyValidationError(
                 f"An unexpected error occurred during schema validation: {e}"
