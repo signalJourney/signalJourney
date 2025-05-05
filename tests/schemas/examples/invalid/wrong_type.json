@@ -1,10 +1,11 @@
 {
   "sj_version": 0.1,
-  "schema_version": "0.1.0",
-  "description": "Invalid: sj_version wrong type",
+  "schema_version": "0.2.0",
+  "description": "Invalid: sj_version wrong type (schema v0.2.0)",
   "pipelineInfo": {
-    "projectName": "ExampleProject",
-    "datasetId": "ds000000"
+    "name": "ExampleInvalidPipeline",
+    "description": "Pipeline for testing invalid sj_version type.",
+    "version": "1.0.0"
   },
   "processingSteps": [
     {
@@ -15,15 +16,22 @@
         "name": "MATLAB",
         "version": "R2023b"
       },
-      "parameters": [
+      "parameters": {
+        "cutoff_hz": 1.0
+      },
+      "inputSources": [
         {
-          "name": "cutoff",
-          "value": 1,
-          "unit": "Hz"
+          "sourceType": "file",
+          "location": "raw_data.set"
         }
       ],
-      "inputSources": ["raw_data.set"],
-      "outputTargets": ["filtered_data.set"]
+      "outputTargets": [
+        {
+          "targetType": "file",
+          "description": "filtered data",
+          "location": "filtered_data.set"
+        }
+      ]
     }
   ]
 } 

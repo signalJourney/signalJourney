@@ -38,3 +38,10 @@ The optional top-level `versionHistory` array allows tracking changes made to th
 *   `author` (string, optional): Who made the changes.
 
 This provides an audit trail for modifications to the provenance record itself. 
+
+### Version History
+
+| Version | Date       | Changes Summary                                                                                  |
+| :------ | :--------- | :----------------------------------------------------------------------------------------------- |
+| 0.2.0   | 2024-05-06 | Refactored `InputSource`/`OutputTarget` into definitions. Added `inlineData` targetType.        |
+| 0.1.0   | 2024-05-03 | Initial schema structure definition. Basic fields for pipeline, steps, software, parameters. | 

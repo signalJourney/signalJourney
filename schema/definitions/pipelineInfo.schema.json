@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "pipelineInfo.schema.json",
+  "title": "Pipeline Information",
+  "description": "Metadata about the overall processing pipeline.",
+  "type": "object",
+  "required": [
+    "name",
+    "description",
+    "version"
+  ],
+  "properties": {
+    "name": {
+      "description": "A descriptive name for the pipeline.",
+      "type": "string"
+    },
+    "description": {
+      "description": "A more detailed description of the pipeline's purpose and methods.",
+      "type": "string"
+    },
+    "version": {
+      "description": "The version of this specific pipeline script/implementation (distinct from sj_version).",
+      "type": "string"
+    },
+    "pipelineType": {
+      "description": "A category describing the pipeline's main function (e.g., \"preprocessing\", \"ica\").",
+      "type": "string"
+    },
+    "executionDate": {
+      "description": "The date and time when the pipeline was executed (ISO 8601 format).",
+      "type": "string",
+      "format": "date-time"
+    },
+    "institution": {
+      "description": "The institution where the pipeline was run.",
+      "type": "string"
+    },
+    "references": {
+      "description": "List of relevant publications or resources related to the pipeline methods.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["doi"],
+        "properties": {
+          "doi": {
+            "description": "Digital Object Identifier (DOI) of the reference.",
+            "type": "string"
+          },
+          "citation": {
+            "description": "Full citation string (optional).",
+            "type": "string"
+          }
+        }
+      }
+    }
+  },
+  "additionalProperties": false
+} 
