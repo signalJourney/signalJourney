@@ -84,7 +84,7 @@
         "properties": { "targetType": { "const": "report" } }
       },
       "then": {
-        // Location is optional for reports
+
       }
     },
     {
