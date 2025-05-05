@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "InputSource.schema.json",
+  "$id": "inputSource.schema.json",
   "title": "Input Source",
-  "description": "Describes an input source for a processing step.",
+  "description": "Defines the source of input data for a processing step. Can be a file path or potentially reference an output from a previous step (if extending the schema).",
   "type": "object",
   "required": [
     "sourceType"

@@ -21,8 +21,12 @@ def test_validator_init_default_schema(main_schema):
     expected_schema = main_schema.copy()
     # Determine the expected absolute URI based on the default path
     default_schema_path = (
-        Path(__file__).parent.parent / "src/signaljourney_validator/validator.py"
-    ).parent.parent.parent / "schema" / "signalJourney.schema.json"
+        (
+            Path(__file__).parent.parent / "src/signaljourney_validator/validator.py"
+        ).parent.parent.parent
+        / "schema"
+        / "signalJourney.schema.json"
+    )
     if default_schema_path.exists():
         expected_schema["$id"] = default_schema_path.resolve().as_uri()
     else:
@@ -114,6 +118,7 @@ def test_validate_suggestions(validator, load_json_example):
 #     # ... setup mock BIDS dir and file ...
 #     # result = validator.validate(mock_file, bids_context=tmp_path)
 #     pass
+
 
 def test_validator_init_schema_path(main_schema_path):
     """Test initializing Validator with a schema path."""

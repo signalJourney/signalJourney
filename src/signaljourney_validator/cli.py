@@ -209,9 +209,7 @@ def validate(
                 except Exception as e:
                     # Handle potential errors during Validator initialization
                     # (e.g., schema loading)
-                    click.echo(
-                        f"CRITICAL ERROR initializing validator: {e}", err=True
-                    )
+                    click.echo(f"CRITICAL ERROR initializing validator: {e}", err=True)
                     # For JSON output, log the critical error at file level
                     if output_format == "json":
                         file_result["status"] = "critical_error"

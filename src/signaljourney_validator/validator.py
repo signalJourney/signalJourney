@@ -16,10 +16,9 @@ DEFAULT_SCHEMA_PATH = (
 
 # --- Helper Function for Inlining Refs ---
 
+
 def inline_refs(
-    schema: Union[Dict, list],
-    base_path: Path,
-    loaded_schemas_cache: Dict[str, Dict]
+    schema: Union[Dict, list], base_path: Path, loaded_schemas_cache: Dict[str, Dict]
 ):
     """Recursively replace $ref keys with the content of the referenced file.
     Uses a cache (loaded_schemas_cache) to avoid infinite loops with circular refs
@@ -155,7 +154,7 @@ class Validator:
     def _load_schema_dict(
         self,
         schema_input: Optional[Union[Path, str, JsonDict]],
-        schema_path: Optional[Path]
+        schema_path: Optional[Path],
     ) -> JsonDict:
         """Loads the schema into a dictionary."""
         if isinstance(schema_input, dict):
@@ -250,7 +249,7 @@ class Validator:
         except jsonschema.RefResolutionError as e:
             # This shouldn't happen if schema is fully resolved, but handle defensively
             print(f"DEBUG: Unexpected RefResolutionError: {e}")
-            failed_ref = getattr(e, 'ref', '[unknown ref]')
+            failed_ref = getattr(e, "ref", "[unknown ref]")
             raise SignalJourneyValidationError(
                 f"Schema validation failed: Unexpectedly could not resolve "
                 f"reference '{failed_ref}'"
