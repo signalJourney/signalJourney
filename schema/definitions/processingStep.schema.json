@@ -27,7 +27,9 @@
       "$ref": "./softwareDetails.schema.json"
     },
     "parameters": {
-      "$ref": "./parameter.schema.json"
+      "description": "Key-value pairs detailing the parameters used for this step. Values can be strings, numbers, booleans, arrays, or nested objects.",
+      "type": "object",
+      "additionalProperties": true
     },
     "inputSources": {
       "description": "List of data sources used as input for this step.",

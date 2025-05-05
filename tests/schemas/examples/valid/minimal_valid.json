@@ -1,7 +1,7 @@
 {
   "sj_version": "0.1.0",
-  "schema_version": "0.1.0",
-  "description": "Minimal valid Signal Journey file",
+  "schema_version": "0.2.0",
+  "description": "Minimal valid Signal Journey file (schema v0.2.0)",
   "pipelineInfo": {
     "projectName": "ExampleProject",
     "datasetId": "ds000000"
@@ -15,15 +15,25 @@
         "name": "MATLAB",
         "version": "R2023b"
       },
-      "parameters": [
+      "parameters": {
+        "cutoff_hz": 1.0,
+        "filter_type": "butterworth"
+      },
+      "inputSources": [
         {
-          "name": "cutoff",
-          "value": 1,
-          "unit": "Hz"
+          "sourceType": "file",
+          "location": "raw_data.set",
+          "format": "SET"
         }
       ],
-      "inputSources": ["raw_data.set"],
-      "outputTargets": ["filtered_data.set"]
+      "outputTargets": [
+        {
+          "targetType": "file",
+          "description": "Filtered EEG data",
+          "location": "derivatives/filtered_data.set",
+          "format": "SET"
+        }
+      ]
     }
   ]
 } 
