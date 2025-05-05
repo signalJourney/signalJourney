@@ -17,8 +17,8 @@
         "in-memory",
         "variable",
         "report",
-        "userDefined"
-        // inlineData will be added in subtask 15.3
+        "userDefined",
+        "inlineData"
       ]
     },
     "description": {
@@ -46,6 +46,19 @@
     },
     "details": {
       "description": "Description of the user-defined output (conditional).",
+      "type": "string"
+    },
+    "data": {
+      "description": "The actual data stored inline (conditional).",
+      "type": ["object", "array", "string", "number", "boolean"]
+    },
+    "encoding": {
+      "description": "Encoding of the inline data (e.g., utf-8, base64) (conditional).",
+      "type": "string",
+      "default": "utf-8"
+    },
+    "formatDescription": {
+      "description": "Describes the format or structure of the inline data (conditional).",
       "type": "string"
     }
   },
@@ -81,7 +94,14 @@
       "then": {
         "required": ["details"]
       }
+    },
+    {
+      "if": {
+        "properties": { "targetType": { "const": "inlineData" } }
+      },
+      "then": {
+        "required": ["data"]
+      }
     }
-    // Conditional logic for inlineData will be added in subtask 15.3
   ]
 } 
