@@ -27,7 +27,7 @@ node_modules/
 
 # Task files
 tasks/
-scripts/
+.scripts/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
