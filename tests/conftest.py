@@ -78,9 +78,7 @@ def all_schemas(main_schema, main_schema_path):
 
 # --- Helper Function for Inlining Refs ---
 def inline_refs(
-    schema: Union[Dict, list],
-    base_path: Path,
-    loaded_schemas_cache: Dict[str, Dict]
+    schema: Union[Dict, list], base_path: Path, loaded_schemas_cache: Dict[str, Dict]
 ):
     """Recursively replace $ref keys with the content of the referenced file."""
     if isinstance(schema, dict):

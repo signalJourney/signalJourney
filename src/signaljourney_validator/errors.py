@@ -185,10 +185,9 @@ class ValidationErrorDetail:
 
 class SignalJourneyValidationError(Exception):
     """Custom exception for validation errors."""
+
     def __init__(
-        self,
-        message: str,
-        errors: Optional[List[ValidationErrorDetail]] = None
+        self, message: str, errors: Optional[List[ValidationErrorDetail]] = None
     ):
         super().__init__(message)
         self.errors = errors or []
