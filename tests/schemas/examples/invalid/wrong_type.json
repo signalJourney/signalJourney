@@ -3,8 +3,9 @@
   "schema_version": "0.2.0",
   "description": "Invalid: sj_version wrong type (schema v0.2.0)",
   "pipelineInfo": {
-    "projectName": "ExampleProject",
-    "datasetId": "ds000000"
+    "name": "ExampleInvalidPipeline",
+    "description": "Pipeline for testing invalid sj_version type.",
+    "version": "1.0.0"
   },
   "processingSteps": [
     {

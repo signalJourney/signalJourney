@@ -3,8 +3,9 @@
   "schema_version": "0.2.0",
   "description": "Invalid: sj_version bad pattern (schema v0.2.0)",
   "pipelineInfo": {
-    "projectName": "ExampleProject",
-    "datasetId": "ds000000"
+    "name": "ExampleInvalidPatternPipeline",
+    "description": "Pipeline for testing invalid sj_version pattern.",
+    "version": "1.0.0"
   },
   "processingSteps": [
     {

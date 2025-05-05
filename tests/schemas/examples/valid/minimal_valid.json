@@ -3,8 +3,9 @@
   "schema_version": "0.2.0",
   "description": "Minimal valid Signal Journey file (schema v0.2.0)",
   "pipelineInfo": {
-    "projectName": "ExampleProject",
-    "datasetId": "ds000000"
+    "name": "ExampleMinimalPipeline",
+    "description": "A minimal example pipeline for testing.",
+    "version": "1.0.0"
   },
   "processingSteps": [
     {

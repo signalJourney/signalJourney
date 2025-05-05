@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "./qualityMetricsObject.schema.json",
+  "$id": "file:///Users/yahya/Documents/git/signalJourney/schema/definitions/qualityMetricsObject.schema.json",
   "title": "Quality Metrics Object",
   "description": "A container for quality metrics. Keys are metric names (potentially namespaced, e.g., 'eeg:percentBadChannels'). Values can be simple types or objects containing fields like 'value', 'unit', 'threshold'.",
   "type": "object",

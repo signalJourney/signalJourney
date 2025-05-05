@@ -1,10 +1,11 @@
 {
   "sj_version": "0.1.0",
-  "schema_version": "0.1.0",
+  "schema_version": "0.2.0",
   "description": "Invalid: processingSteps empty",
   "pipelineInfo": {
-    "projectName": "ExampleProject",
-    "datasetId": "ds000000"
+    "name": "ExampleEmptyStepsPipeline",
+    "description": "Pipeline for testing empty processingSteps array.",
+    "version": "1.0.0"
   },
   "processingSteps": []
 } 

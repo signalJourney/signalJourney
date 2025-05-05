@@ -173,3 +173,14 @@ class ValidationErrorDetail:
         # TODO: Add more specific suggestions based on common
         #       signalJourney patterns later
         # e.g., based on error.schema_path or specific known field constraints
+
+# --- Custom Exception ---
+
+# Make sure List and Optional are imported if not already
+from typing import List, Optional
+
+class SignalJourneyValidationError(Exception):
+    """Custom exception for validation errors."""
+    def __init__(self, message: str, errors: Optional[List[ValidationErrorDetail]] = None):
+        super().__init__(message)
+        self.errors = errors or []

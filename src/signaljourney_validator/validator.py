@@ -1,11 +1,12 @@
 import json
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
+from urllib.parse import urlparse, urljoin
 
 import jsonschema
-from jsonschema import Draft7Validator
+from jsonschema import Draft202012Validator
 
-from .errors import ValidationErrorDetail
+from .errors import ValidationErrorDetail, SignalJourneyValidationError
 
 # Type alias for JSON dictionary
 JsonDict = Dict[str, Any]
@@ -14,15 +15,61 @@ DEFAULT_SCHEMA_PATH = (
     Path(__file__).parent.parent.parent / "schema" / "signalJourney.schema.json"
 )
 
+# --- Helper Function for Inlining Refs ---
 
-class SignalJourneyValidationError(Exception):
-    """Custom exception for validation errors."""
+def inline_refs(schema: Union[Dict, list], base_path: Path, loaded_schemas_cache: Dict[str, Dict]):
+    """Recursively replace $ref keys with the content of the referenced file.
+    Uses a cache (loaded_schemas_cache) to avoid infinite loops with circular refs
+    and redundant file loading.
+    Cache keys should be absolute POSIX paths of the schema files.
+    """
+    if isinstance(schema, dict):
+        if "$ref" in schema and isinstance(schema["$ref"], str) and not schema["$ref"].startswith("#"):
+            ref_path_str = schema["$ref"]
+            # Resolve relative ref path against the current base path
+            ref_path = (base_path / ref_path_str).resolve()
 
-    def __init__(
-        self, message: str, errors: Optional[List[ValidationErrorDetail]] = None
-    ):
-        super().__init__(message)
-        self.errors = errors or []
+            # Cache key based on resolved absolute path
+            cache_key = ref_path.as_posix()
+
+            # Check cache first
+            if cache_key in loaded_schemas_cache:
+                 # Return a copy to prevent modification issues during recursion
+                return loaded_schemas_cache[cache_key].copy()
+
+            # If not cached, load the file
+            if ref_path.exists() and ref_path.is_file():
+                try:
+                    # print(f"[Inline] Loading $ref: {ref_path_str} (from {base_path}) -> {ref_path}")
+                    with open(ref_path, "r", encoding="utf-8") as f:
+                        ref_content = json.load(f)
+                    # Store in cache BEFORE recursion to handle circular refs
+                    loaded_schemas_cache[cache_key] = ref_content
+                    # Recursively resolve refs *within* the loaded content
+                    # Use the directory of the *referenced* file as the new base path
+                    resolved_content = inline_refs(ref_content, ref_path.parent, loaded_schemas_cache)
+                    # Update cache with the fully resolved content
+                    loaded_schemas_cache[cache_key] = resolved_content
+                    # Return a copy of the resolved content
+                    return resolved_content.copy()
+                except Exception as e:
+                    print(f"Warning: Failed to load or parse $ref: {ref_path_str} from {ref_path}. Error: {e}")
+                    return schema # Keep original $ref on error
+            else:
+                print(f"Warning: $ref path does not exist or is not a file: {ref_path_str} -> {ref_path}")
+                return schema # Keep original $ref if file not found
+        else:
+            # Recursively process other keys in the dictionary
+            new_schema = {}
+            for key, value in schema.items():
+                new_schema[key] = inline_refs(value, base_path, loaded_schemas_cache)
+            return new_schema
+    elif isinstance(schema, list):
+        # Recursively process items in the list
+        return [inline_refs(item, base_path, loaded_schemas_cache) for item in schema]
+    else:
+        # Return non-dict/list items as is
+        return schema
 
 
 class Validator:
@@ -31,64 +78,77 @@ class Validator:
     Optionally performs BIDS context validation.
     """
 
+    _schema: JsonDict
+    _validator: Draft202012Validator
+
     def __init__(
         self,
         schema: Optional[Union[Path, str, JsonDict]] = None,
-        resolver: Optional[jsonschema.RefResolver] = None,
     ):
         """
         Initializes the Validator.
 
         Args:
             schema: Path to the schema file, the schema dictionary, or None
-                    to use the default schema.
-            resolver: An optional pre-configured RefResolver instance.
+                    to use the default schema. External file $refs will be
+                    automatically inlined during initialization.
         """
-        self._schema = self._load_schema(schema)
-        # Pass the resolver during Draft7Validator instantiation
-        self._validator = Draft7Validator(self._schema, resolver=resolver)
+        schema_path = self._get_schema_path(schema)
+        initial_schema = self._load_schema_dict(schema, schema_path)
 
-    def _load_schema(
-        self, schema_input: Optional[Union[Path, str, JsonDict]]
-    ) -> JsonDict:
-        """Loads the JSON schema from a file or uses the provided dictionary."""
+        # Determine the base path for resolving relative refs
+        # If loaded from file, use its directory. If dict, maybe use CWD or default?
+        # For simplicity, let's assume if it's a dict, it might not have relative refs,
+        # or we use the default schema path's directory as a fallback base.
+        base_resolve_path = schema_path.parent if schema_path else DEFAULT_SCHEMA_PATH.parent
+
+        # Inline external $refs
+        print("\n--- Inlining schema refs within Validator ---")
+        loaded_cache = {}
+        self._schema = inline_refs(initial_schema, base_resolve_path, loaded_cache)
+        print("--- Inlining complete --- \n")
+
+        # Debug: Check if refs are actually gone (optional)
+        # import pprint
+        # pprint.pprint(self._schema)
+
+        # Initialize the validator with the resolved schema.
+        try:
+            # Check if schema is valid before creating validator
+            Draft202012Validator.check_schema(self._schema)
+            self._validator = Draft202012Validator(
+                schema=self._schema,
+            )
+        except jsonschema.SchemaError as e:
+            raise SignalJourneyValidationError(f"Invalid schema provided: {e}") from e
+
+    def _get_schema_path(self, schema_input: Optional[Union[Path, str, JsonDict]]) -> Optional[Path]:
+        """Determines the Path object if schema is given as Path or str."""
         if schema_input is None:
-            schema_path = DEFAULT_SCHEMA_PATH
-            if not schema_path.exists():
-                raise FileNotFoundError(
-                    f"Default schema file not found at {schema_path}"
-                )
-            try:
-                with open(schema_path, "r", encoding="utf-8") as f:
-                    return json.load(f)
-            except json.JSONDecodeError as e:
-                raise SignalJourneyValidationError(
-                    f"Error decoding default schema JSON: {e}"
-                ) from e
-            except Exception as e:
-                raise SignalJourneyValidationError(
-                    f"Error loading default schema file: {e}"
-                ) from e
-        elif isinstance(schema_input, (Path, str)):
-            schema_path = Path(schema_input)
-            if not schema_path.exists():
-                raise FileNotFoundError(f"Schema file not found: {schema_path}")
-            try:
-                with open(schema_path, "r", encoding="utf-8") as f:
-                    return json.load(f)
-            except json.JSONDecodeError as e:
-                raise SignalJourneyValidationError(
-                    f"Error decoding schema JSON from {schema_path}: {e}"
-                ) from e
-            except Exception as e:
-                raise SignalJourneyValidationError(
-                    f"Error loading schema file from {schema_path}: {e}"
-                ) from e
-        elif isinstance(schema_input, dict):
-            # TODO: Add basic validation to ensure it looks like a schema?
+            return DEFAULT_SCHEMA_PATH
+        if isinstance(schema_input, Path):
             return schema_input
-        else:
-            raise TypeError("Schema input must be a Path, string, dictionary, or None.")
+        if isinstance(schema_input, str):
+            return Path(schema_input)
+        return None
+
+    def _load_schema_dict(
+        self, schema_input: Optional[Union[Path, str, JsonDict]], schema_path: Optional[Path]
+    ) -> JsonDict:
+        """Loads the schema into a dictionary."""
+        if isinstance(schema_input, dict):
+            return schema_input.copy()  # Return a copy
+
+        # Determine path to load from
+        load_path = schema_path if schema_path else DEFAULT_SCHEMA_PATH
+
+        if not load_path or not load_path.exists():
+            raise FileNotFoundError(f"Schema file not found: {load_path}")
+        try:
+            with open(load_path, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception as e:
+            raise IOError(f"Error reading schema file {load_path}: {e}") from e
 
     def validate(
         self,
@@ -122,6 +182,7 @@ class Validator:
         instance: JsonDict
         file_path_context: Optional[Path] = None  # For BIDS checks
 
+        # --- Load Instance --- 
         if isinstance(data, (Path, str)):
             file_path = Path(data)
             file_path_context = file_path  # Store for BIDS checks
@@ -147,10 +208,13 @@ class Validator:
         bids_errors: List[ValidationErrorDetail] = []
 
         # --- Schema Validation ---
+        # Use the internal validator's iter_errors method
         try:
+            # The validator now uses the registry passed during __init__
             errors = sorted(self._validator.iter_errors(instance), key=lambda e: e.path)
             if errors:
                 for error in errors:
+                    # Convert jsonschema error to our custom format
                     detail = ValidationErrorDetail(
                         message=error.message,
                         path=list(error.path),
@@ -158,26 +222,23 @@ class Validator:
                         validator=error.validator,
                         validator_value=error.validator_value,
                         instance_value=error.instance,
-                        context=[  # Recursively convert context errors
-                            ValidationErrorDetail(
-                                message=sub_error.message,
-                                path=list(sub_error.path),
-                                schema_path=list(sub_error.schema_path),
-                                validator=sub_error.validator,
-                                validator_value=sub_error.validator_value,
-                                instance_value=sub_error.instance,
-                            )
-                            for sub_error in error.context
-                        ],
+                        # suggestion is added by ValidationErrorDetail constructor
                     )
-                    # Suggestion generated in __post_init__
                     schema_errors.append(detail)
-
+        except jsonschema.RefResolutionError as e:
+            # This shouldn't happen if schema is fully resolved, but handle defensively
+            print(f"DEBUG: Unexpected RefResolutionError: {e}")
+            failed_ref = getattr(e, 'ref', '[unknown ref]')
+            raise SignalJourneyValidationError(
+                f"Schema validation failed: Unexpectedly could not resolve reference '{failed_ref}'"
+            ) from e
         except jsonschema.SchemaError as e:
-            # Indicates a problem with the schema itself
+            # Catch schema errors separately from resolution errors
             raise SignalJourneyValidationError(f"Invalid schema: {e}") from e
         except Exception as e:
-            # Catch other unexpected errors during validation
+            # Capture the actual exception type for better debugging
+            print(f"DEBUG: Unexpected validation error type: {type(e).__name__}, Error: {e}")
+            # Reraise or wrap depending on desired behavior
             raise SignalJourneyValidationError(
                 f"An unexpected error occurred during schema validation: {e}"
             ) from e
