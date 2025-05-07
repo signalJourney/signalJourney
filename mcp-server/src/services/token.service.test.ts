@@ -1,5 +1,6 @@
-import tokenService from '@/services/token.service';
 import jwt from 'jsonwebtoken';
+
+import tokenService from '@/services/token.service';
 import config from '@/config'; // Added config import
 import { AuthPayload } from '@/middleware/auth.middleware';
 

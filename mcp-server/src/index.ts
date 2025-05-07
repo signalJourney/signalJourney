@@ -1,9 +1,16 @@
+import { randomUUID } from 'crypto';
+
 import express, { Request, Response, NextFunction } from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { ServerRequest } from '@modelcontextprotocol/sdk/types.js';
+import morgan from 'morgan';
+import rateLimit from 'express-rate-limit';
+import { ZodError } from 'zod';
+import dotenv from 'dotenv';
+
 import config from '@/config';
 import logger, { stream as morganStream } from '@/utils/logger';
 import { initializeMcpServer, getMcpServer } from '@/core/server';
@@ -11,11 +18,6 @@ import { jwtAuthMiddleware, AuthenticatedRequest } from '@/middleware/auth.middl
 import { requestIdMiddleware } from '@/middleware/requestId.middleware';
 import authRoutes from '@/routes/auth.routes';
 import { McpApplicationError, McpErrorPayload } from '@/core/mcp-types'; 
-import morgan from 'morgan'; 
-import rateLimit from 'express-rate-limit';
-import { randomUUID } from 'crypto';
-import { ZodError } from 'zod';
-import dotenv from 'dotenv';
 
 let serverInstance: any; // To hold the http.Server instance for graceful shutdown
 export let app: express.Express; // Export app for testing

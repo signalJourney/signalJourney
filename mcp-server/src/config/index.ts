@@ -1,7 +1,10 @@
-import dotenv from 'dotenv';
 import path from 'path';
-import logger from '@/utils/logger'; // Assuming alias @ is set up for src
+
+import dotenv from 'dotenv';
 import { z } from 'zod';
+
+import logger from '@/utils/logger'; // Assuming alias @ is set up for src
+
 
 // Load .env file from the project root where mcp-server is located
 // Adjust the path if your .env file is located elsewhere relative to this config file's execution.

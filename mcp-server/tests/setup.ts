@@ -1,6 +1,7 @@
 // tests/setup.ts
-import dotenv from 'dotenv';
 import path from 'path';
+
+import dotenv from 'dotenv';
 
 // Load environment variables from .env.test or .env.example for tests
 // This ensures that tests run with a consistent and isolated environment
