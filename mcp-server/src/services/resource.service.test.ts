@@ -1,4 +1,5 @@
-import resourceService, { Resource } from './resource.service';
+import resourceService from './resource.service';
+// import { Resource } from './resource.service'; // Removed Resource
 import { randomUUID } from 'crypto'; // Ensure this is mocked or controlled if IDs need to be predictable
 
 // Mock logger to prevent console output during tests and allow assertions

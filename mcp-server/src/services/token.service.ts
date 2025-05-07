@@ -23,6 +23,7 @@ class TokenService {
   constructor() {
     this.cleanupInterval = setInterval(() => this.cleanupExpiredBlacklistedJtis(), 60 * 60 * 1000); // Clean up every hour
     logger.info('TokenService initialized with blacklist cleanup interval.');
+    setInterval(() => this.pruneBlacklist(), config.security.blacklistPruneInterval); 
   }
 
   public generateToken(payload: Omit<AuthPayload, 'jti' | 'iat' | 'exp'>, expiresIn?: string): string {
@@ -32,11 +33,12 @@ class TokenService {
       jti,
     };
     const effectiveExpiresIn = expiresIn || config.security.jwtExpiresIn;
-    logger.debug(`Generating token for userId: ${payload.userId} with jti: ${jti}, expires_in: ${effectiveExpiresIn}`);
+    logger.debug(`Generating token for sub: ${payload.sub} with jti: ${jti}, expires_in: ${effectiveExpiresIn}`);
     const secret: jwt.Secret = config.security.jwtSecret;
     // Cast effectiveExpiresIn to 'any' as a workaround for potential @types/jsonwebtoken issue
     const options: jwt.SignOptions = { expiresIn: effectiveExpiresIn as any };
-    return jwt.sign(tokenPayload, secret, options);
+    const token = jwt.sign(tokenPayload, secret, options);
+    return token;
   }
 
   public verifyToken(token: string): AuthPayload | null {
@@ -103,6 +105,10 @@ class TokenService {
   public stopCleanup(): void {
     clearInterval(this.cleanupInterval);
     logger.info('TokenService blacklist cleanup interval stopped.');
+  }
+
+  private pruneBlacklist(): void {
+    // Implementation of pruneBlacklist method
   }
 }
 

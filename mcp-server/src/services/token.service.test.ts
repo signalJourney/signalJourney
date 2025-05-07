@@ -1,6 +1,6 @@
-import tokenService from './token.service';
+import tokenService from '@/services/token.service';
 import jwt from 'jsonwebtoken';
-import config from '@/config';
+import config from '@/config'; // Added config import
 import { AuthPayload } from '@/middleware/auth.middleware';
 
 // Mock the dependencies
@@ -12,33 +12,45 @@ jest.mock('@/config', () => ({
   },
 }));
 
+// Mock the logger to prevent console output during tests
+// jest.mock('@/utils/logger', () => ({
+//   info: jest.fn(),
+//   warn: jest.fn(),
+//   error: jest.fn(),
+//   debug: jest.fn(),
+// }));
+
 // Helper to advance Jest timers
 const advanceTimersByTime = (timeToAdvance: number) => {
   jest.advanceTimersByTime(timeToAdvance);
 };
 
 describe('TokenService', () => {
+  let mockUserPayload: Omit<AuthPayload, 'jti' | 'iat' | 'exp'>;
+
   beforeEach(() => {
     // Clear all instances and calls to constructor and all methods:
     jest.clearAllMocks();
     tokenService_clearBlacklist(); // Custom function to clear internal blacklist for fresh test state
     jest.useFakeTimers(); // Use fake timers for testing expirations
+    mockUserPayload = {
+      sub: 'user-123',
+      username: 'testuser',
+      scopes: ['read'],
+    };
+    // Clear blacklist manually if needed for tests, or add a dedicated test helper method to the service
+    (tokenService as any).blacklist.clear(); // Example: Accessing private map for testing
   });
 
   afterEach(() => {
     jest.useRealTimers(); // Restore real timers
+    jest.restoreAllMocks();
   });
   
   // Access the internal blacklist for clearing (this is a bit of a hack for testing)
   // In a real scenario, you might expose a test-only method or re-instantiate the service.
   const tokenService_clearBlacklist = () => {
     (tokenService as any).blacklistedJtis.clear();
-  };
-
-  const mockUserPayload: Omit<AuthPayload, 'jti' | 'iat' | 'exp'> = {
-    userId: 'user-123',
-    username: 'testuser',
-    scopes: ['read', 'write'],
   };
 
   describe('generateToken', () => {
@@ -51,7 +63,7 @@ describe('TokenService', () => {
       expect(jwt.sign).toHaveBeenCalledTimes(1);
       expect(jwt.sign).toHaveBeenCalledWith(
         expect.objectContaining({
-          userId: mockUserPayload.userId,
+          userId: mockUserPayload.sub,
           username: mockUserPayload.username,
           scopes: mockUserPayload.scopes,
           jti: expect.any(String),
@@ -69,6 +81,17 @@ describe('TokenService', () => {
         'test-secret',
         { expiresIn: '30m' }
       );
+    });
+
+    it('should generate a valid JWT token', () => {
+      const token = tokenService.generateToken(mockUserPayload);
+      expect(token).toBeDefined();
+      const decoded = jwt.verify(token, config.security.jwtSecret) as AuthPayload;
+      expect(decoded.sub).toBe(mockUserPayload.sub);
+      expect(decoded.username).toBe(mockUserPayload.username);
+      expect(decoded.scopes).toEqual(mockUserPayload.scopes);
+      expect(decoded.jti).toBeDefined();
+      expect(decoded.exp).toBeDefined();
     });
   });
 
@@ -107,6 +130,14 @@ describe('TokenService', () => {
       tokenService.blacklistToken(mockDecodedPayload.jti, mockDecodedPayload.exp! );
       const payload = tokenService.verifyToken('blacklisted-token');
       expect(payload).toBeNull();
+    });
+
+    it('should verify a valid token and return its payload', () => {
+      const token = tokenService.generateToken(mockUserPayload);
+      const payload = tokenService.verifyToken(token);
+      expect(payload).toBeDefined();
+      expect(payload?.sub).toBe(mockUserPayload.sub);
+      expect(payload?.jti).toBeDefined();
     });
   });
 

@@ -1,6 +1,5 @@
 import { randomUUID } from 'crypto';
 import logger from '@/utils/logger';
-import { McpNotFoundError } from '@/core/mcp-types';
 
 export interface Resource {
   id: string;
@@ -83,7 +82,7 @@ class ResourceService {
   }
 
   async listByType(type: string, ownerId?: string): Promise<Resource[]> {
-    let results: Resource[] = [];
+    const results: Resource[] = [];
     this.resources.forEach(resource => {
       if (resource.type === type) {
         if (ownerId && resource.ownerId !== ownerId) {
@@ -98,7 +97,7 @@ class ResourceService {
   }
 
   async listByOwner(ownerId: string): Promise<Resource[]> {
-    let results: Resource[] = [];
+    const results: Resource[] = [];
     this.resources.forEach(resource => {
       if (resource.ownerId === ownerId) {
         results.push(resource);

@@ -2,10 +2,8 @@ import { Router, Request, Response, NextFunction } from 'express';
 import { z, ZodError, ZodSchema } from 'zod';
 import tokenService from '@/services/token.service';
 import { AuthPayload, AuthenticatedRequest, jwtAuthMiddleware } from '@/middleware/auth.middleware';
-import config from '@/config';
 import logger from '@/utils/logger';
 import { McpApplicationError, McpValidationError, McpInternalError } from '@/core/mcp-types';
-import { randomUUID } from 'crypto';
 
 const router = Router();
 
@@ -55,7 +53,7 @@ router.post('/login', validate(LoginSchema), async (req: Request, res: Response,
       const scopes = ['read:resource', 'write:resource', 'read:pipeline', 'execute:pipeline']; // Example scopes
       
       const tokenPayload: Omit<AuthPayload, 'jti' | 'iat' | 'exp'> = {
-        userId,
+        sub: userId,
         username,
         scopes,
       };
@@ -67,7 +65,7 @@ router.post('/login', validate(LoginSchema), async (req: Request, res: Response,
         accessToken,
         tokenType: 'Bearer',
         expiresIn: decoded?.exp ? (decoded.exp - Math.floor(Date.now() / 1000)) : undefined,
-        userId,
+        sub: userId,
         username,
         scopes,
       });
@@ -93,11 +91,11 @@ router.post('/validate-token', validate(ValidateTokenSchema), async (req: Reques
   try {
     const payload = tokenService.verifyToken(token);
     if (payload) {
-      logger.info(`Token validated successfully for user: ${payload.userId}. jti: ${payload.jti}, requestId: ${requestId}`);
+      logger.info(`Token validated successfully for user: ${payload.sub}. jti: ${payload.jti}, requestId: ${requestId}`);
       return res.json({ 
         valid: true, 
         payload: {
-            userId: payload.userId,
+            sub: payload.sub,
             username: payload.username,
             scopes: payload.scopes,
             jti: payload.jti,
@@ -126,7 +124,7 @@ router.post('/logout', jwtAuthMiddleware, async (req: AuthenticatedRequest, res:
   try {
     if (req.authInfo && req.authInfo.jti && req.authInfo.exp) {
       await tokenService.blacklistToken(req.authInfo.jti, req.authInfo.exp);
-      logger.info(`User ${req.authInfo.userId} logged out. Token jti: ${req.authInfo.jti} blacklisted. requestId: ${requestId}`);
+      logger.info(`User ${req.authInfo.sub} logged out. Token jti: ${req.authInfo.jti} blacklisted. requestId: ${requestId}`);
       return res.status(200).json({ message: 'Successfully logged out.' });
     } else {
       logger.warn(`Logout attempt without valid authInfo or jti/exp. requestId: ${requestId}`);

@@ -1,7 +1,7 @@
 import request from 'supertest';
 import { app } from '@/index'; // Import the conditionally started Express app
-import tokenService from '@/services/token.service';
-import config from '@/config';
+import tokenServiceInstance from '@/services/token.service'; // Import the actual instance
+// import config from '@/config'; // config seems unused in this file now
 
 // Ensure the server is fully initialized before tests run if it's not already.
 // This is a bit of a hack; ideally, app would be a promise or an async getter.
@@ -13,17 +13,16 @@ import config from '@/config';
 let mockBlacklist = new Set<string>();
 
 jest.mock('@/services/token.service', () => {
-  const originalTokenService = jest.requireActual('@/services/token.service');
+  const originalTokenService = jest.requireActual('@/services/token.service').default; // Access the singleton instance
   return {
-    ...originalTokenService.default, // Spread the actual implementation
     __esModule: true,
-    default: {
-      ...originalTokenService.default,
-      generateToken: jest.fn(originalTokenService.default.generateToken),
-      verifyToken: jest.fn((token: string) => { // Override verifyToken to check mockBlacklist
-        const decoded = originalTokenService.default.verifyToken(token);
+    default: { // Keep the .default structure if that's how the original is exported and used
+      ...originalTokenService,
+      generateToken: jest.fn(originalTokenService.generateToken),
+      verifyToken: jest.fn((token: string) => { 
+        const decoded = originalTokenService.verifyToken(token);
         if (decoded && decoded.jti && mockBlacklist.has(decoded.jti)) {
-          return null; // Simulate blacklisted token
+          return null; 
         }
         return decoded;
       }),
@@ -33,7 +32,6 @@ jest.mock('@/services/token.service', () => {
         }
       }),
       isJtiBlacklisted: jest.fn((jti: string) => mockBlacklist.has(jti)), 
-      // We don't need to mock cleanup or stopCleanup for these route tests specifically
     },
   };
 });
@@ -57,7 +55,8 @@ describe('/auth routes', () => {
     
     if (loginRes.body.accessToken) {
       validUserToken = loginRes.body.accessToken;
-      const decoded = tokenService.default.verifyToken(validUserToken); // Use the mocked verify
+      // Use the imported instance for direct calls if mock doesn't fully cover or if pre-mock logic needed
+      const decoded = tokenServiceInstance.verifyToken(validUserToken); 
       if (decoded && decoded.jti) {
         validUserJti = decoded.jti;
       }
@@ -70,9 +69,9 @@ describe('/auth routes', () => {
   beforeEach(() => {
     mockBlacklist.clear(); // Clear blacklist before each auth test
     // Reset mocks that track calls, if generateToken was also part of the mock above that needs reset for call counts
-    (tokenService.default.generateToken as jest.Mock).mockClear();
-    (tokenService.default.verifyToken as jest.Mock).mockClear();
-    (tokenService.default.blacklistToken as jest.Mock).mockClear();
+    (tokenServiceInstance.generateToken as jest.Mock).mockClear();
+    (tokenServiceInstance.verifyToken as jest.Mock).mockClear();
+    (tokenServiceInstance.blacklistToken as jest.Mock).mockClear();
   });
 
   describe('POST /auth/login', () => {
@@ -132,23 +131,22 @@ describe('/auth routes', () => {
     });
 
     it('should return valid:false for a blacklisted token', async () => {
-        // First, ensure the token is not blacklisted for this test, then blacklist it
         mockBlacklist.clear();
         const loginResponse = await request(app).post('/auth/login').send({ username: 'testuser', password: 'password123' });
         const tokenToBlacklist = loginResponse.body.accessToken;
-        const decodedToken = tokenService.default.verifyToken(tokenToBlacklist);
+        const decodedToken = tokenServiceInstance.verifyToken(tokenToBlacklist); // Use instance
         
         expect(decodedToken).not.toBeNull();
         if (!decodedToken || !decodedToken.jti || !decodedToken.exp) throw new Error('Test setup error: could not decode token for blacklisting')
 
-        await tokenService.default.blacklistToken(decodedToken.jti, decodedToken.exp); // Use mocked blacklist
-        expect(mockBlacklist.has(decodedToken.jti)).toBe(true); // Verify it's in our mock blacklist
+        await tokenServiceInstance.blacklistToken(decodedToken.jti, decodedToken.exp); // Use instance
+        expect(mockBlacklist.has(decodedToken.jti)).toBe(true); 
 
         const res = await request(app)
             .post('/auth/validate-token')
             .send({ token: tokenToBlacklist });
 
-        expect(res.statusCode).toEqual(400); // Or 401
+        expect(res.statusCode).toEqual(400);
         expect(res.body.code).toBe('TOKEN_VALIDATION_FAILED'); 
     });
   });

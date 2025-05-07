@@ -1,17 +1,15 @@
-import { McpServer, AuthenticationContext, McpServerTool } from '@modelcontextprotocol/sdk';
-import { ZodError } from 'zod';
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { ServerOptions } from '@modelcontextprotocol/sdk/server/index.js';
+import { ToolAnnotations, CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import config from '@/config';
 import logger from '@/utils/logger';
 import {
-  GetServerStatusArgsSchema,
-  GetServerVersionArgsSchema,
   handleGetServerStatus,
   handleGetServerVersion,
   GetServerStatusParamsSchema,
   GetServerVersionParamsSchema
 } from '@/handlers/system.handlers';
-import { McpExecutionContext, McpApplicationError, McpErrorPayload } from '@/core/mcp-types';
-import { randomUUID } from 'crypto'; // For generating requestId
+import { McpApplicationError, McpErrorPayload } from '@/core/mcp-types';
 import {
   handleCreateResource, CreateResourceParamsSchema,
   handleGetResource, GetResourceParamsSchema,
@@ -19,7 +17,6 @@ import {
   handleDeleteResource, DeleteResourceParamsSchema,
   handleListResources, ListResourcesParamsSchema
 } from '@/handlers/resource.handlers';
-import { AuthPayload } from '@/middleware/auth.middleware'; // For casting authInfo
 
 let mcpServerInstance: McpServer;
 
@@ -40,64 +37,75 @@ export async function initializeMcpServer(): Promise<McpServer> {
     return mcpServerInstance;
   }
 
-  mcpServerInstance = new McpServer({
-    serverName: config.server.mcpServerName,
-    serverVersion: config.server.mcpServerVersion,
-    logger: logger, // Use your Winston logger instance
-    serializeError: serializeError, // Register custom error serializer
-    // executionContextBuilder: buildExecutionContext // Register custom context builder
-  });
+  mcpServerInstance = new McpServer(
+    {
+      name: config.server.mcpServerName,
+      version: config.server.mcpServerVersion,
+    },
+    {
+      logger: logger,
+      serializeError: serializeError,
+    } as ServerOptions
+  );
 
   logger.info('MCP Server instance created.');
 
   // --- Register System Tools ---
-  mcpServerInstance.tool('system.getServerStatus', {
-    description: 'Get the current status of the MCP server.',
-    handler: handleGetServerStatus,
-    paramSchema: GetServerStatusArgsSchema, // Corrected to ArgsSchema
-  });
+  mcpServerInstance.tool(
+    'system.getServerStatus',
+    'Get the current status of the MCP server.',
+    handleGetServerStatus
+  );
 
-  mcpServerInstance.tool('system.getServerVersion', {
-    description: 'Get the version of the MCP server.',
-    handler: handleGetServerVersion,
-    paramSchema: GetServerVersionArgsSchema, // Corrected to ArgsSchema
-  });
+  mcpServerInstance.tool(
+    'system.getServerVersion',
+    'Get the version of the MCP server.',
+    handleGetServerVersion
+  );
 
   // --- Register Resource Management Tools ---
-  mcpServerInstance.tool('resource.create', {
-    description: 'Create a new resource.',
-    handler: handleCreateResource,
-    paramSchema: CreateResourceParamsSchema,
-    requiredScopes: ['write:resource'] // Example scope requirement
-  });
+  const resourceWriteAnnotations: ToolAnnotations = { requiredScopes: ['write:resource'] };
+  const resourceReadAnnotations: ToolAnnotations = { requiredScopes: ['read:resource'] };
 
-  mcpServerInstance.tool('resource.get', {
-    description: 'Get a resource by its ID.',
-    handler: handleGetResource,
-    paramSchema: GetResourceParamsSchema,
-    requiredScopes: ['read:resource']
-  });
+  mcpServerInstance.tool(
+    'resource.create',
+    'Create a new resource.',
+    CreateResourceParamsSchema.shape,
+    resourceWriteAnnotations,
+    handleCreateResource
+  );
 
-  mcpServerInstance.tool('resource.update', {
-    description: 'Update an existing resource.',
-    handler: handleUpdateResource,
-    paramSchema: UpdateResourceParamsSchema,
-    requiredScopes: ['write:resource']
-  });
+  mcpServerInstance.tool(
+    'resource.get',
+    'Get a resource by its ID.',
+    GetResourceParamsSchema.shape,
+    resourceReadAnnotations,
+    handleGetResource
+  );
 
-  mcpServerInstance.tool('resource.delete', {
-    description: 'Delete a resource by its ID.',
-    handler: handleDeleteResource,
-    paramSchema: DeleteResourceParamsSchema,
-    requiredScopes: ['write:resource'] // Or a more specific 'delete:resource'
-  });
+  mcpServerInstance.tool(
+    'resource.update',
+    'Update an existing resource.',
+    UpdateResourceParamsSchema.shape,
+    resourceWriteAnnotations,
+    handleUpdateResource
+  );
 
-  mcpServerInstance.tool('resource.list', {
-    description: 'List resources, optionally filtered by type (owned by the authenticated user).',
-    handler: handleListResources,
-    paramSchema: ListResourcesParamsSchema,
-    requiredScopes: ['read:resource']
-  });
+  mcpServerInstance.tool(
+    'resource.delete',
+    'Delete a resource by its ID.',
+    DeleteResourceParamsSchema.shape,
+    resourceWriteAnnotations,
+    handleDeleteResource
+  );
+
+  mcpServerInstance.tool(
+    'resource.list',
+    'List resources, optionally filtered by type (owned by the authenticated user).',
+    ListResourcesParamsSchema.shape,
+    resourceReadAnnotations,
+    handleListResources
+  );
 
   logger.info('All MCP tools registered.');
   return mcpServerInstance;

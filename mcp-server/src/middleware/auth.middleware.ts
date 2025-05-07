@@ -7,7 +7,7 @@ import tokenService from '@/services/token.service';
 
 // Define a structure for the JWT payload
 export interface AuthPayload {
-  userId: string;
+  sub: string;
   username: string;
   scopes: string[]; // e.g., ['read:pipeline', 'write:docs']
   jti: string; // JWT ID, added for blacklisting
@@ -64,7 +64,7 @@ export const jwtAuthMiddleware = (
     }
 
     req.authInfo = decoded;
-    logger.debug(`JWT verified for user: ${decoded.userId}, jti: ${decoded.jti}, requestId: ${requestId}`);
+    logger.debug(`JWT verified for user: ${decoded.sub}, jti: ${decoded.jti}, requestId: ${requestId}`);
     next();
   } catch (error: any) {
     logger.warn(`JWT verification failed: ${error.message}, requestId: ${requestId}`);
@@ -97,7 +97,7 @@ export const requireScope = (requiredScopes: string | string[]) => {
 
     if (!hasAllRequiredScopes) {
       logger.warn(
-        `Authorization failed: User ${req.authInfo.userId} missing required scopes. Required: ${scopes.join(',')}, User has: ${userScopes.join(',')}, requestId: ${requestId}`
+        `Authorization failed: User ${req.authInfo.sub} missing required scopes. Required: ${scopes.join(',')}, User has: ${userScopes.join(',')}, requestId: ${requestId}`
       );
       return next(
         new McpApplicationError(
@@ -106,7 +106,7 @@ export const requireScope = (requiredScopes: string | string[]) => {
         )
       );
     }
-    logger.debug(`Authorization successful for user: ${req.authInfo.userId}, scopes: ${scopes.join(',')}, requestId: ${requestId}`);
+    logger.debug(`Authorization successful for user: ${req.authInfo.sub}, scopes: ${scopes.join(',')}, requestId: ${requestId}`);
     next();
   };
 }; 

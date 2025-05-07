@@ -1,74 +1,91 @@
 import dotenv from 'dotenv';
 import path from 'path';
 import logger from '@/utils/logger'; // Assuming alias @ is set up for src
+import { z } from 'zod';
 
 // Load .env file from the project root where mcp-server is located
 // Adjust the path if your .env file is located elsewhere relative to this config file's execution.
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 
-// Helper function to validate and parse environment variables
-const getEnvVar = (key: string, defaultValue?: string, isRequired = true): string => {
-  const value = process.env[key];
-  if (!value && isRequired && defaultValue === undefined) {
-    logger.error(`Missing required environment variable: ${key}`);
-    process.exit(1); // Exit if required variable is missing
-  }
-  return value || defaultValue || '';
-};
+const envSchema = z.object({
+  NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
+  PORT: z.coerce.number().default(8080),
+  MCP_SERVER_NAME: z.string().default('MCP Server'),
+  MCP_SERVER_VERSION: z.string().default('0.1.0'),
+  ENABLE_STDIO_TRANSPORT: z.string().transform(val => val === 'true').default('false'),
+  CORS_ORIGIN: z.string().default('*'),
 
-const getEnvVarAsInt = (key: string, defaultValue?: number, isRequired = true): number => {
-  const valueStr = getEnvVar(key, defaultValue?.toString(), isRequired);
-  const valueInt = parseInt(valueStr, 10);
-  if (isNaN(valueInt)) {
-    logger.error(`Invalid integer value for environment variable: ${key}. Received: ${valueStr}`);
-    if (isRequired && defaultValue === undefined) {
-        process.exit(1);
+  // Logging
+  LOG_LEVEL: z.string().default('info'),
+  LOG_DIR: z.string().default('./logs'),
+
+  // Security
+  JWT_SECRET: z.string(),
+  JWT_EXPIRES_IN: z.string().default('1h'), 
+  RATE_LIMIT_WINDOW_MS: z.coerce.number().default(15 * 60 * 1000),
+  RATE_LIMIT_MAX_REQUESTS: z.coerce.number().default(100),
+  BLACKLIST_PRUNE_INTERVAL: z.coerce.number().default(60 * 60 * 1000),
+
+  // Mock Auth
+  MOCK_AUTH_USERNAME: z.string().optional(),
+  MOCK_AUTH_PASSWORD: z.string().optional(),
+});
+
+// Load environment variables
+dotenv.config();
+
+let config: z.infer<typeof envSchema>;
+
+try {
+  config = envSchema.parse(process.env);
+  console.log('Configuration loaded successfully:', 
+    {
+        NODE_ENV: config.NODE_ENV,
+        PORT: config.PORT,
+        MCP_SERVER_NAME: config.MCP_SERVER_NAME,
+        LOG_LEVEL: config.LOG_LEVEL
+        // Avoid logging secrets
     }
-    return defaultValue as number; // This might be undefined if no defaultValue and not required
+  );
+} catch (error) {
+  if (error instanceof z.ZodError) {
+    console.error('Configuration validation failed:', error.errors);
+  } else {
+    console.error('Failed to load configuration:', error);
   }
-  return valueInt;
-};
-
-const getEnvVarAsArray = (key: string, defaultValue?: string[], isRequired = true): string[] => {
-  const valueStr = getEnvVar(key, defaultValue?.join(','), isRequired);
-  if (!valueStr) return defaultValue || [];
-  return valueStr.split(',').map(item => item.trim()).filter(item => item.length > 0);
-};
-
-
-// Define and export the configuration object
-const config = {
-  server: {
-    port: getEnvVarAsInt('PORT', 3000),
-    nodeEnv: getEnvVar('NODE_ENV', 'development'),
-    mcpServerName: getEnvVar('MCP_SERVER_NAME', 'SignalJourney Analyzer'),
-    mcpServerVersion: getEnvVar('MCP_SERVER_VERSION', '0.1.0'),
-  },
-  logging: {
-    level: getEnvVar('LOG_LEVEL', 'info'),
-    dir: getEnvVar('LOG_DIR', path.join(process.cwd(), 'logs')),
-  },
-  security: {
-    corsAllowedOrigins: getEnvVarAsArray('CORS_ALLOWED_ORIGINS', ['http://localhost:3001', 'http://localhost:8080']),
-    jwtSecret: getEnvVar('JWT_SECRET', 'your-very-strong-and-secret-jwt-key'), // Ensure this is strong in production!
-    jwtExpiresIn: getEnvVar('JWT_EXPIRES_IN', '1h'),
-    rateLimitWindowMs: getEnvVarAsInt('RATE_LIMIT_WINDOW_MS', 15 * 60 * 1000, false), // 15 minutes
-    rateLimitMax: getEnvVarAsInt('RATE_LIMIT_MAX', 100, false), // Max 100 requests per window per IP
-  },
-  // Optional API keys - these are not required to run the server
-  perplexity: {
-    apiKey: getEnvVar('PERPLEXITY_API_KEY', '', false),
-    model: getEnvVar('PERPLEXITY_MODEL', 'sonar-medium-online', false),
-  },
-  anthropic: {
-    apiKey: getEnvVar('ANTHROPIC_API_KEY', '', false),
-    model: getEnvVar('ANTHROPIC_MODEL', 'claude-3-opus-20240229', false),
-  }
-};
-
-// Validate critical configurations post-load if necessary
-if (config.server.nodeEnv === 'production' && config.security.jwtSecret === 'your-very-strong-and-secret-jwt-key') {
-  logger.warn('CRITICAL SECURITY WARNING: JWT_SECRET is not set to a strong secret in production!');
+  process.exit(1);
 }
 
-export default config; 
+export default {
+  env: config.NODE_ENV,
+  server: {
+    port: config.PORT,
+    mcpServerName: config.MCP_SERVER_NAME,
+    mcpServerVersion: config.MCP_SERVER_VERSION,
+    enableStdioTransport: config.ENABLE_STDIO_TRANSPORT,
+    corsOptions: {
+        origin: config.CORS_ORIGIN === '*' ? '*' : config.CORS_ORIGIN.split(','),
+        methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+        allowedHeaders: ['Content-Type', 'Authorization', 'Mcp-Session-Id'],
+        credentials: true,
+    },
+    nodeEnv: config.NODE_ENV,
+  },
+  logging: {
+    level: config.LOG_LEVEL,
+    logDir: config.LOG_DIR,
+  },
+  security: {
+    jwtSecret: config.JWT_SECRET,
+    jwtExpiresIn: config.JWT_EXPIRES_IN,
+    rateLimitWindowMs: config.RATE_LIMIT_WINDOW_MS,
+    rateLimitMaxRequests: config.RATE_LIMIT_MAX_REQUESTS,
+    blacklistPruneInterval: config.BLACKLIST_PRUNE_INTERVAL,
+  },
+  auth: {
+    mockUser: {
+      username: config.MOCK_AUTH_USERNAME,
+      password: config.MOCK_AUTH_PASSWORD,
+    }
+  }
+}; 
