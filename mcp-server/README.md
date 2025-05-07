@@ -1,274 +1,105 @@
 # SignalJourney MCP Server
 
-This server implements the Model Context Protocol (MCP) to provide tools for analyzing biosignal processing pipelines and generating SignalJourney documentation.
+This directory contains the Node.js/TypeScript implementation of the Model Context Protocol (MCP) server for the SignalJourney project. This server provides tools for analyzing biosignal processing pipelines and generating standardized documentation.
 
-## Table of Contents
+## Features
 
-- [Overview](#overview)
-- [Prerequisites](#prerequisites)
-- [Setup](#setup)
-- [Environment Configuration](#environment-configuration)
-- [Running the Server](#running-the-server)
-  - [Development Mode](#development-mode)
-  - [Production Mode](#production-mode)
-  - [Stdio Transport](#stdio-transport)
-- [Running Tests](#running-tests)
-- [Available MCP Tools](#available-mcp-tools)
-  - [System Tools](#system-tools)
-  - [Authentication Tools (via HTTP Endpoints)](#authentication-tools-via-http-endpoints)
-  - [Resource Management Tools](#resource-management-tools)
-- [Transports](#transports)
-- [Project Structure](#project-structure)
-- [Future Work & TODOs](#future-work--todos)
-
-## Overview
-
-The SignalJourney MCP Server provides a backend for analyzing code repositories (e.g., MATLAB/Python biosignal processing pipelines), extracting metadata, processing steps, parameters, and data flow information. This data is then used to generate SignalJourney compliant documentation.
-
-It utilizes the `@modelcontextprotocol/sdk` and exposes functionality through MCP tools accessible via various transports.
+*   **MCP Compliant:** Implements the Model Context Protocol standard.
+*   **Transports:** Supports StreamableHTTP and stdio transports.
+*   **Authentication:** JWT-based authentication via `/auth` endpoints.
+*   **Resource Management:** Basic CRUD operations for managing generic resources via MCP tools.
+*   **System Tools:** Provides basic server status and version information.
 
 ## Prerequisites
 
-- Node.js (v18+ recommended, as per `package.json` engines)
-- npm (usually comes with Node.js)
+*   Node.js (v18 or higher)
+*   npm
 
 ## Setup
 
-1.  **Clone the repository (if not already done):**
+1.  **Clone the Repository:**
     ```bash
-    git clone <repository-url>
+    # If you haven't already cloned the main SignalJourney repo
+    git clone <repository_url>
     cd signalJourney/mcp-server
     ```
 
-2.  **Install dependencies:**
+2.  **Install Dependencies:**
     ```bash
     npm install
     ```
 
-## Environment Configuration
-
-The server uses a `.env` file in the `mcp-server` root directory for configuration. Copy the example file and customize it:
-
-```bash
-cp .env.example .env
-```
-
-Key environment variables (see `.env.example` for a full list and defaults):
-
--   `PORT`: Port for the HTTP server (default: `3000`).
--   `NODE_ENV`: Environment mode (`development`, `test`, `production`).
--   `MCP_SERVER_NAME`: Name of the MCP server.
--   `MCP_SERVER_VERSION`: Version of the MCP server.
--   `LOG_LEVEL`: Logging verbosity (`info`, `debug`, `warn`, `error`).
--   `LOG_DIR`: Directory to store log files.
--   `CORS_ALLOWED_ORIGINS`: Comma-separated list of allowed origins for CORS.
--   `JWT_SECRET`: A strong, random secret key for signing JWTs (critical for production).
--   `JWT_EXPIRES_IN`: JWT expiration time (e.g., `1h`, `15m`).
--   `RATE_LIMIT_WINDOW_MS`: Window for rate limiting in milliseconds.
--   `RATE_LIMIT_MAX`: Max requests per window per IP for rate limiting.
+3.  **Configure Environment:**
+    *   Copy the example environment file:
+        ```bash
+        cp .env.example .env
+        ```
+    *   Edit the `.env` file and provide the necessary values, especially:
+        *   `JWT_SECRET`: A strong, unique secret key for signing JWTs.
+        *   `MOCK_AUTH_USERNAME`/`MOCK_AUTH_PASSWORD`: Credentials for the mock login (for development).
+    *   Review other variables like `PORT`, `LOG_LEVEL`, etc.
 
 ## Running the Server
 
-### Development Mode
-
-For development with hot-reloading (uses `nodemon` and `ts-node`):
-
-```bash
-npm run dev
-```
-
-The server will typically start on `http://localhost:3000` (or the port specified in `.env`).
-
-### Production Mode
-
-For production, first build the TypeScript source:
-
-```bash
-npm run build
-```
-
-Then start the server:
-
-```bash
-npm start 
-# or directly: NODE_ENV=production node dist/index.js
-```
-
-### Stdio Transport
-
-To run the server with the Stdio transport enabled (in addition to HTTP if configured):
-Ensure `ENABLE_STDIO_TRANSPORT=true` in your `.env` file or pass the `--stdio` flag when running (the latter is not explicitly handled by npm scripts by default but can be added).
-
-If `ENABLE_STDIO_TRANSPORT` is true in `.env`:
-```bash
-npm run dev
-# or
-npm start
-```
-
-## Running Tests
-
--   Run all tests (unit and integration - current integration tests for auth are blocked):
+*   **Development Mode (with hot-reloading):**
     ```bash
-    npm test
+    npm run dev
     ```
--   Run tests in watch mode:
-    ```bash
-    npm run test:watch
-    ```
--   Run tests with coverage report:
-    ```bash
-    npm run test:cov
-    ```
+    This uses `nodemon` to automatically restart the server on file changes.
 
-**Note:** Integration tests requiring the `@modelcontextprotocol/sdk` are currently blocked due to a Jest module resolution issue. Unit tests for services are passing.
-
-## Available MCP Tools
-
-The server exposes the following tools. They can be called using an MCP client via the configured transports (e.g., HTTP POST to `/mcp`).
-
-*(This section will be populated with details of each tool, its parameters, and example calls. Parameter details can be derived from the Zod schemas in the `*.handlers.ts` files.)*
-
-### System Tools
-
--   **`system.getServerStatus`**
-    -   Description: Get the current status of the MCP server.
-    -   Parameters: None (empty object `{}`)
-    -   Handler: `handleGetServerStatus`
-    -   Example MCP Request (HTTP):
-        ```json
-        POST /mcp
-        Content-Type: application/json
-
-        {
-          "command": "system.getServerStatus",
-          "args": {},
-          "metadata": { "requestId": "client-req-123" }
-        }
+*   **Production Mode:**
+    1.  Build the TypeScript code:
+        ```bash
+        npm run build
+        ```
+    2.  Start the server:
+        ```bash
+        npm run start
         ```
 
--   **`system.getServerVersion`**
-    -   Description: Get the version of the MCP server.
-    -   Parameters: None (empty object `{}`)
-    -   Handler: `handleGetServerVersion`
+## Available MCP Tools (via HTTP/stdio)
 
-### Authentication Tools (via HTTP Endpoints)
+The server exposes the following tools through its MCP transports:
 
-While not strictly MCP tools, these HTTP endpoints provide authentication functionality crucial for securing MCP tool access.
+*   **System Tools:**
+    *   `system.getServerStatus`: Retrieves server status information.
+    *   `system.getServerVersion`: Retrieves server name and version.
+*   **Resource Management Tools (Require Authentication & Scopes):**
+    *   `resource.create`: Creates a new resource (requires `write:resource` scope).
+        *   Params: `type` (string), `content` (any), `metadata` (object, optional)
+    *   `resource.get`: Retrieves a resource by ID (requires `read:resource` scope).
+        *   Params: `id` (string)
+    *   `resource.update`: Updates a resource by ID (requires `write:resource` scope).
+        *   Params: `id` (string), `type` (string, optional), `content` (any, optional), `metadata` (object, optional)
+    *   `resource.delete`: Deletes a resource by ID (requires `write:resource` scope).
+        *   Params: `id` (string)
+    *   `resource.list`: Lists resources owned by the authenticated user, optionally filtered by type (requires `read:resource` scope).
+        *   Params: `type` (string, optional)
 
--   **`POST /auth/login`**
-    -   Description: Authenticate a user and receive a JWT.
-    -   Request Body Schema (`LoginSchema`):
-        -   `username` (string, required)
-        -   `password` (string, required)
-    -   Response: JWT `accessToken`, `tokenType`, `expiresIn`, `userId`, `username`, `scopes`.
+## Authentication (HTTP Only)
 
--   **`POST /auth/validate-token`**
-    -   Description: Validate an existing JWT.
-    -   Request Body Schema (`ValidateTokenSchema`):
-        -   `token` (string, required)
-    -   Response: `{ valid: boolean, payload?: AuthPayload }` on success, error on failure.
+The server provides standard HTTP endpoints for JWT authentication:
 
--   **`POST /auth/logout`**
-    -   Description: Logout a user by blacklisting their current token.
-    -   Requires: `Authorization: Bearer <token>` header.
-    -   Response: Success message or error.
+*   **`POST /auth/login`**: Authenticate with username/password (uses mock credentials defined in `.env`). Returns an `accessToken`.
+    *   Request Body: `{ "username": "...", "password": "..." }`
+*   **`POST /auth/validate-token`**: Validates an existing access token.
+    *   Request Body: `{ "token": "..." }`
+*   **`POST /auth/logout`**: Logs out the user by blacklisting the provided token (requires Bearer token in Authorization header).
 
-### Resource Management Tools
+**Note:** Use the obtained `accessToken` in the `Authorization: Bearer <token>` header when calling scope-protected MCP tools via the HTTP transport. Authentication via the stdio transport is not currently implemented.
 
-These tools require authentication and specific scopes (defined in `server.ts`).
+## Configuration Variables
 
--   **`resource.create`**
-    -   Description: Create a new resource.
-    -   Handler: `handleCreateResource`
-    -   Required Scope: `write:resource`
-    -   Parameters (`CreateResourceParamsSchema`):
-        -   `type` (string, required): Type of resource (e.g., 'document', 'pipeline_config').
-        -   `content` (any, required): The resource content.
-        -   `metadata` (object, optional): Key-value metadata.
+See `.env.example` for a full list of environment variables and their descriptions.
 
--   **`resource.get`**
-    -   Description: Get a resource by its ID.
-    -   Handler: `handleGetResource`
-    -   Required Scope: `read:resource`
-    -   Parameters (`GetResourceParamsSchema`):
-        -   `id` (string, UUID, required): The ID of the resource.
+## TODO
 
--   **`resource.update`**
-    -   Description: Update an existing resource.
-    -   Handler: `handleUpdateResource`
-    -   Required Scope: `write:resource`
-    -   Parameters (`UpdateResourceParamsSchema`):
-        -   `id` (string, UUID, required): The ID of the resource to update.
-        -   `type` (string, optional): New type for the resource.
-        -   `content` (any, optional): New content for the resource.
-        -   `metadata` (object, optional): New metadata (will be merged or replaced based on service logic - currently replaces).
-
--   **`resource.delete`**
-    -   Description: Delete a resource by its ID.
-    -   Handler: `handleDeleteResource`
-    -   Required Scope: `write:resource` (or a more specific `delete:resource`)
-    -   Parameters (`DeleteResourceParamsSchema`):
-        -   `id` (string, UUID, required): The ID of the resource to delete.
-
--   **`resource.list`**
-    -   Description: List resources, optionally filtered by type (owned by the authenticated user).
-    -   Handler: `handleListResources`
-    -   Required Scope: `read:resource`
-    -   Parameters (`ListResourcesParamsSchema`):
-        -   `type` (string, optional): Filter resources by this type.
-
-## Transports
-
-Currently supported transports:
-
--   **StreamableHTTP**: Accessible via HTTP POST requests to the `/mcp` endpoint.
--   **Stdio**: Can be enabled for communication over standard input/output, typically for direct integration with other processes.
-
-## Project Structure
-
-```
-mcp-server/
-├── coverage/       # Test coverage reports
-├── dist/           # Compiled JavaScript output
-├── logs/           # Log files
-├── node_modules/   # Dependencies
-├── src/
-│   ├── config/       # Environment configuration (index.ts, .env handling)
-│   ├── core/         # Core MCP server logic (server.ts, mcp-types.ts)
-│   ├── handlers/     # MCP tool handlers (system.handlers.ts, resource.handlers.ts)
-│   ├── middleware/   # Express middleware (auth.middleware.ts, requestId.middleware.ts)
-│   ├── routes/       # Express routes (auth.routes.ts)
-│   ├── services/     # Business logic services (token.service.ts, resource.service.ts)
-│   ├── transports/   # (Future: if custom transport logic beyond SDK needed)
-│   └── utils/        # Utility functions (logger.ts)
-├── tests/
-│   ├── integration/  # Integration tests (auth.routes.test.ts)
-│   └── setup.ts      # Global Jest setup
-├── .env            # Local environment variables (gitignored)
-├── .env.example    # Example environment variables
-├── .env.test       # Environment variables for tests
-├── .eslintignore
-├── .eslintrc.js
-├── .gitignore
-├── .prettierignore
-├── .prettierrc.js
-├── jest.config.js  # Jest configuration
-├── package.json
-├── package-lock.json
-└── tsconfig.json   # TypeScript configuration
-```
-
-## Future Work & TODOs
-
--   Resolve Jest module resolution issue for `@modelcontextprotocol/sdk` to enable integration tests for MCP tools and full coverage.
--   Implement remaining MCP tools as per `mcp-plan.txt` (pipeline analysis, documentation generation).
--   Add more robust persistence for resources and token blacklist (e.g., database) instead of in-memory.
--   Enhance authorization with more granular scopes/roles.
--   Complete documentation for all tools with detailed examples.
--   Expand test coverage, especially integration tests for MCP tools.
--   Implement client-side SDK or examples for interacting with the MCP server.
--   Consider adding OpenAPI/Swagger documentation for HTTP-exposed parts.
+*   Implement actual database for users and resources instead of mock/in-memory stores.
+*   Implement `executionContextBuilder` for cleaner context propagation.
+*   Add more sophisticated authorization logic if needed.
+*   Implement the core SignalJourney analysis tools.
+*   Expand test coverage.
+*   Add detailed API documentation (e.g., using Swagger/OpenAPI for HTTP routes).
 
 
 </rewritten_file> 
