@@ -25,7 +25,7 @@
     "pipeline",
     "analysis"
   ],
-  "author": "Your Name/Organization",
+  "author": "neuromechanist",
   "license": "MIT",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.11.0",
