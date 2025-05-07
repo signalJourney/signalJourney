@@ -12,6 +12,13 @@ export interface TraversalOptions {
   followSymlinks?: boolean; 
 }
 
+// Added CodeMetadata interface
+export interface CodeMetadata {
+  imports?: string[];
+  functions?: string[];
+  classes?: string[];
+}
+
 export interface TraversedFile {
   path: string; // Absolute path
   relativePath: string; // Path relative to initial directory
@@ -25,6 +32,7 @@ export interface TraversedFile {
   createdAt?: Date;
   modifiedAt?: Date;
   accessedAt?: Date;
+  codeMetadata?: CodeMetadata | null; // Added
 }
 
 // Basic file type mapping by extension
@@ -158,6 +166,52 @@ class RepositoryScannerService {
     return { fileType, fileCategory };
   }
 
+  // Added basic Python parser
+  private async parsePythonFile(filePath: string): Promise<CodeMetadata | null> {
+    try {
+      const content = await fs.readFile(filePath, 'utf-8');
+      const imports: string[] = [];
+      const functions: string[] = [];
+      const classes: string[] = [];
+      // Basic regex, not a full AST parse
+      const importRegex = /^\s*(?:from\s+([\w.]+)\s+import\s+(.+)|import\s+(.+))/gm;
+      const functionRegex = /^\s*def\s+([a-zA-Z_]\w*)\s*\(/gm;
+      const classRegex = /^\s*class\s+([a-zA-Z_]\w*)[\(:]/gm;
+      let match;
+      while ((match = importRegex.exec(content)) !== null) {
+        if (match[3]) imports.push(...match[3].split(',').map(m => m.trim())); // import a, b
+        else if (match[1] && match[2]) imports.push(`${match[1]}.${match[2].split(',').map(m => m.trim()).join(', ')}`); // from x import y, z
+      }
+      while ((match = functionRegex.exec(content)) !== null) functions.push(match[1]);
+      while ((match = classRegex.exec(content)) !== null) classes.push(match[1]);
+      if (imports.length || functions.length || classes.length) return { imports, functions, classes };
+      return null;
+    } catch (error: any) {
+      logger.warn(`Failed to parse Python file ${filePath}: ${error.message}`);
+      return null;
+    }
+  }
+
+  // Added basic MATLAB parser
+  private async parseMatlabFile(filePath: string): Promise<CodeMetadata | null> {
+    try {
+      const content = await fs.readFile(filePath, 'utf-8');
+      const functions: string[] = [];
+      const classes: string[] = [];
+      // Basic regex for function and class definitions
+      const functionRegex = /^\s*function(?:\s*\[[^\]]*\])?\s*=?\s*([a-zA-Z_]\w*)\s*\(/gm;
+      const classRegex = /^\s*classdef\s+([a-zA-Z_]\w*)/gm;
+      let match;
+      while ((match = functionRegex.exec(content)) !== null) functions.push(match[1]);
+      while ((match = classRegex.exec(content)) !== null) classes.push(match[1]);
+      if (functions.length || classes.length) return { functions, classes }; // Imports for MATLAB are harder with regex, skip for now
+      return null;
+    } catch (error: any) {
+      logger.warn(`Failed to parse MATLAB file ${filePath}: ${error.message}`);
+      return null;
+    }
+  }
+
   private async traverseDirectoryRecursive(
     dirPath: string,
     initialPath: string,
@@ -240,6 +294,9 @@ class RepositoryScannerService {
                 // OR, if we decide to represent the target file *through* the symlink path:
                 const fileExt = path.extname(realPath); // ext of the target file
                 const { fileType, fileCategory } = await this.detectFileTypeAndCategory(realPath, path.basename(realPath), fileExt);
+                let codeMetadata: CodeMetadata | null = null;
+                if (fileType === 'PYTHON') codeMetadata = await this.parsePythonFile(realPath);
+                else if (fileType === 'MATLAB') codeMetadata = await this.parseMatlabFile(realPath);
                 accumulatedFiles.push({
                     path: realPath, // Path of the target file
                     relativePath: path.relative(initialPath, realPath),
@@ -253,6 +310,7 @@ class RepositoryScannerService {
                     createdAt: linkTargetStat.birthtime,
                     modifiedAt: linkTargetStat.mtime,
                     accessedAt: linkTargetStat.atime,
+                    codeMetadata
                 });
             }
           } catch (symlinkError: any) {
@@ -286,6 +344,9 @@ class RepositoryScannerService {
         } else if (entry.isFile()) {
           const fileExt = path.extname(entry.name);
           const { fileType, fileCategory } = await this.detectFileTypeAndCategory(entryPath, entry.name, fileExt);
+          let codeMetadata: CodeMetadata | null = null;
+          if (fileType === 'PYTHON') codeMetadata = await this.parsePythonFile(entryPath);
+          else if (fileType === 'MATLAB') codeMetadata = await this.parseMatlabFile(entryPath);
           accumulatedFiles.push({
             path: entryPath,
             relativePath: path.relative(initialPath, entryPath),
@@ -299,6 +360,7 @@ class RepositoryScannerService {
             createdAt: stat.birthtime,
             modifiedAt: stat.mtime,
             accessedAt: stat.atime,
+            codeMetadata
           });
         }
       }
