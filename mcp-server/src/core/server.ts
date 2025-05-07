@@ -75,7 +75,7 @@ export function initializeMcpServer(): McpServer {
       const executionContext: McpExecutionContext = {
         requestId: sdkContext.requestId || randomUUID(), // Use SDK requestId or generate one
         logger: logger.child({ requestId: sdkContext.requestId || 'unknown' }),
-        // auth: sdkContext.auth, // Pass along auth context from SDK if available and needed
+        authInfo: sdkContext.auth as AuthPayload | undefined, // Pass along auth context from SDK
       };
       return handleGetServerStatus(args, executionContext);
     },
@@ -89,6 +89,7 @@ export function initializeMcpServer(): McpServer {
       const executionContext: McpExecutionContext = {
         requestId: sdkContext.requestId || randomUUID(),
         logger: logger.child({ requestId: sdkContext.requestId || 'unknown' }),
+        authInfo: sdkContext.auth as AuthPayload | undefined, // Pass along auth context from SDK
       };
       return handleGetServerVersion(args, executionContext);
     },

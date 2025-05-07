@@ -1,6 +1,7 @@
 import { ZodSchema } from 'zod';
 import { McpExecutionInput, McpExecutionOutput, McpToolDefinition } from '@modelcontextprotocol/sdk';
 import logger from '@/utils/logger';
+import { AuthPayload } from '@/middleware/auth.middleware';
 
 // --- Re-exporting core SDK types for convenience and potential future extension ---
 export type { McpExecutionInput, McpExecutionOutput, McpToolDefinition };
@@ -13,6 +14,7 @@ export type { McpExecutionInput, McpExecutionOutput, McpToolDefinition };
 export interface McpExecutionContext {
   readonly requestId: string;
   readonly logger: typeof logger; // Instance of our application logger, pre-configured with requestId if possible
+  readonly authInfo?: AuthPayload;
   // readonly auth?: AuthContext; // Example: decoded JWT payload or user session
   // readonly db?: any; // Example: database client
 }
