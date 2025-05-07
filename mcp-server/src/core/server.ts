@@ -18,6 +18,10 @@ import {
   handleDeleteResource, DeleteResourceParamsSchema,
   handleListResources, ListResourcesParamsSchema
 } from '@/handlers/resource.handlers';
+import {
+  handleScanRepository,
+  scanRepositoryParamsSchema
+} from '@/handlers/scanner.handlers';
 
 let mcpServerInstance: McpServer;
 
@@ -51,64 +55,31 @@ export async function initializeMcpServer(): Promise<McpServer> {
 
   logger.info('MCP Server instance created.');
 
+  logger.info('Registering MCP tools...');
+
   // --- Register System Tools ---
+  mcpServerInstance.tool('get_server_status', 'Get server health and status.', handleGetServerStatus);
+  mcpServerInstance.tool('get_server_version', 'Get server version information.', handleGetServerVersion);
+
+  // --- Register Resource Tools ---
+  const resourceAnnotations: ToolAnnotations = { category: 'resource_management' };
+  mcpServerInstance.tool('create_resource', 'Create a new generic resource.', CreateResourceParamsSchema.shape, resourceAnnotations, handleCreateResource);
+  mcpServerInstance.tool('get_resource', 'Retrieve a resource by its ID.', GetResourceParamsSchema.shape, resourceAnnotations, handleGetResource);
+  mcpServerInstance.tool('update_resource', 'Update an existing resource.', UpdateResourceParamsSchema.shape, resourceAnnotations, handleUpdateResource);
+  mcpServerInstance.tool('delete_resource', 'Delete a resource by its ID.', DeleteResourceParamsSchema.shape, resourceAnnotations, handleDeleteResource);
+  mcpServerInstance.tool('list_resources', 'List available resources, optionally filtering by type.', ListResourcesParamsSchema.shape, resourceAnnotations, handleListResources);
+
+  // --- Register Scanner Tool ---
+  const scannerAnnotations: ToolAnnotations = { category: 'repository_analysis' };
   mcpServerInstance.tool(
-    'system.getServerStatus',
-    'Get the current status of the MCP server.',
-    handleGetServerStatus
+    'scan_repository', 
+    'Scans a local repository directory, returning structured file information.',
+    scanRepositoryParamsSchema.shape, 
+    scannerAnnotations, 
+    handleScanRepository
   );
 
-  mcpServerInstance.tool(
-    'system.getServerVersion',
-    'Get the version of the MCP server.',
-    handleGetServerVersion
-  );
-
-  // --- Register Resource Management Tools ---
-  const resourceWriteAnnotations: ToolAnnotations = { requiredScopes: ['write:resource'] };
-  const resourceReadAnnotations: ToolAnnotations = { requiredScopes: ['read:resource'] };
-
-  mcpServerInstance.tool(
-    'resource.create',
-    'Create a new resource.',
-    CreateResourceParamsSchema.shape,
-    resourceWriteAnnotations,
-    handleCreateResource
-  );
-
-  mcpServerInstance.tool(
-    'resource.get',
-    'Get a resource by its ID.',
-    GetResourceParamsSchema.shape,
-    resourceReadAnnotations,
-    handleGetResource
-  );
-
-  mcpServerInstance.tool(
-    'resource.update',
-    'Update an existing resource.',
-    UpdateResourceParamsSchema.shape,
-    resourceWriteAnnotations,
-    handleUpdateResource
-  );
-
-  mcpServerInstance.tool(
-    'resource.delete',
-    'Delete a resource by its ID.',
-    DeleteResourceParamsSchema.shape,
-    resourceWriteAnnotations,
-    handleDeleteResource
-  );
-
-  mcpServerInstance.tool(
-    'resource.list',
-    'List resources, optionally filtered by type (owned by the authenticated user).',
-    ListResourcesParamsSchema.shape,
-    resourceReadAnnotations,
-    handleListResources
-  );
-
-  logger.info('All MCP tools registered.');
+  logger.info('MCP tools registered successfully.');
   return mcpServerInstance;
 }
 
