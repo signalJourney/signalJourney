@@ -1,11 +1,12 @@
 import { z } from 'zod';
 import { RequestHandlerExtra, ServerRequest, ServerNotification } from '@modelcontextprotocol/sdk/types.js';
 
-import repositoryScannerService, { TraversalOptions, TraversedFile } from '@/services/repositoryScanner.service';
-import scanPersistenceService from '@/services/scanPersistence.service';
+// Import the class, not the default
+import { RepositoryScannerService, TraversalOptions, TraversedFile } from '@/services/repositoryScanner.service';
 import { McpExecutionContext, CallToolResult, McpApplicationError } from '@/core/mcp-types';
 import { AuthPayload } from '@/middleware/auth.middleware';
 import logger from '@/utils/logger';
+import { ScanRepositoryParams } from '@/schemas/scanner.schemas';
 
 // Define Zod Schema for the tool parameters
 export const scanRepositoryParamsSchema = z.object({
@@ -19,62 +20,75 @@ export const scanRepositoryParamsSchema = z.object({
 // Infer TypeScript type from the Zod schema
 export type ScanRepositoryParams = z.infer<typeof scanRepositoryParamsSchema>;
 
+// Instantiate the service
+const repositoryScannerService = new RepositoryScannerService();
+
 // MCP Tool Handler function
 export async function handleScanRepository(
   args: ScanRepositoryParams,
-  extra: RequestHandlerExtra<ServerRequest, ServerNotification>
+  extra: RequestHandlerExtra
 ): Promise<CallToolResult> {
-  const mcpContext: McpExecutionContext = {
-    requestId: extra.requestId.toString(),
-    logger: logger.child({ requestId: extra.requestId.toString(), tool: 'scan_repository' }),
-    authInfo: extra.authInfo as AuthPayload | undefined,
-  };
-
-  mcpContext.logger.info(`Initiating repository scan for path: ${args.repoPath}`);
+  const scanId = extra.requestId || `scan-${Date.now()}`;
+  logger.info(`[${scanId}] Received scan_repository request`, { repoPath: args.repoPath });
 
   try {
-    // Prepare options for the service
-    const options: TraversalOptions = {
+    const scanOptions: TraversalOptions = {
       excludePatterns: args.excludePatterns,
       maxDepth: args.maxDepth,
       followSymlinks: args.followSymlinks,
       parseCode: args.parseCode,
     };
 
-    const result: TraversedFile[] = await repositoryScannerService.scanRepository(args.repoPath, options);
+    const startTime = Date.now();
+    // Use the instantiated service
+    const files = await repositoryScannerService.scanRepository(args.repoPath, scanOptions);
+    const scanDuration = Date.now() - startTime;
 
-    mcpContext.logger.info(`Scan completed. Found ${result.length} files.`);
+    logger.info(`[${scanId}] Scan completed in ${scanDuration}ms. Found ${files.length} items.`);
 
-    // Save the result to the database asynchronously (don't wait for it)
-    scanPersistenceService.saveScanResult(args.repoPath, options, result)
-      .then(scanId => mcpContext.logger.info(`Scan result saved with ID: ${scanId}`))
-      .catch(err => mcpContext.logger.error(`Failed to save scan result asynchronously: ${err.message}`));
+    // Persist results (optional, depends on if persistence service is ready/refactored)
+    // try {
+    //   await scanPersistenceService.saveScanResult(
+    //     scanId,
+    //     args.repoPath,
+    //     scanOptions,
+    //     files,
+    //     scanDuration
+    //   );
+    //   logger.info(`[${scanId}] Scan results persisted.`);
+    // } catch (persistError: any) {
+    //   logger.error(`[${scanId}] Failed to persist scan results: ${persistError.message}`);
+    //   // Decide if this should cause the tool to fail
+    // }
 
-    // Return successful result immediately
+    // Limit the response size if necessary
+    const maxResponseItems = 1000; // Example limit
+    const limitedFiles = files.slice(0, maxResponseItems);
+
     return {
-      content: [{ type: 'json', data: result }]
+      status: 'success',
+      content: [{ type: 'json', data: { scanId, count: files.length, durationMs: scanDuration, items: limitedFiles } }]
     };
-
   } catch (error: any) {
-    mcpContext.logger.error(`Repository scan failed: ${error.message}`, { error });
-    
-    // Handle known application errors specifically
+    logger.error(`[${scanId}] Repository scan failed: ${error.message}`, { stack: error.stack });
     if (error instanceof McpApplicationError) {
       return {
+        status: 'error',
         error: {
-          code: error.code || 'SCAN_FAILED',
           message: error.message,
-          data: error.details,
-        }
+          code: error.code || 'SCAN_ERROR',
+          details: error.details,
+        },
       };
     }
 
-    // Handle generic errors
+    // For unexpected errors
     return {
+      status: 'error',
       error: {
-        code: 'INTERNAL_SERVER_ERROR',
-        message: `An unexpected error occurred during repository scan: ${error.message}`,
-      }
+        message: 'Failed to scan repository due to an unexpected error.',
+        code: 'SCAN_UNEXPECTED_ERROR',
+      },
     };
   }
 } 

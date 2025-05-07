@@ -1,12 +1,11 @@
 import * as fs from 'fs';
 import * as path from 'path';
 
-import { minimatch } from 'minimatch';
+import minimatch from 'minimatch';
+import { z } from 'zod';
 
-import { getLogger } from '@/utils/logger';
+import logger from '@/utils/logger';
 import { McpApplicationError } from '@/core/mcp-types';
-
-const logger = getLogger('RepositoryScannerService');
 
 // Define interfaces within the service file for now
 // Consider moving to a dedicated types file later (e.g., src/types/repository.types.ts)
@@ -44,7 +43,8 @@ const DEFAULT_MAX_DEPTH = 20;
 export class RepositoryScannerService {
 
   constructor() {
-    // Dependencies like config service could be injected here later
+    // If logging needs context, use logger.child() or pass logger instance
+    logger.info('RepositoryScannerService initialized');
   }
 
   private shouldExclude(relativePath: string, patterns: string[] = []): boolean {
@@ -131,7 +131,7 @@ export class RepositoryScannerService {
     try {
       dirents = await fs.promises.readdir(currentPath, { withFileTypes: true });
     } catch (error: any) {
-      logger.warn(`Could not read directory ${currentPath}: ${error.message}`);
+      logger.error(`Error reading directory ${currentPath}:`, error);
       return; // Cannot proceed if directory is unreadable
     }
 
@@ -211,5 +211,9 @@ export class RepositoryScannerService {
   }
 }
 
-const repositoryScannerService = new RepositoryScannerService();
-export default repositoryScannerService; 
+// Remove singleton export
+// const repositoryScannerService = new RepositoryScannerService();
+// export default repositoryScannerService;
+
+// Export the class directly
+// No default export needed if only exporting the class 

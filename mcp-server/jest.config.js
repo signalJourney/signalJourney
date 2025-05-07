@@ -4,7 +4,7 @@ module.exports = {
   roots: ['<rootDir>/src', '<rootDir>/tests'], // Look for tests in src and a dedicated tests folder
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1', // For resolving @/ path alias
-    // Removed explicit SDK mapping for now to test ts-jest globals
+    // SDK mappings removed to allow standard Node resolution via SDK's 'exports' map
   },
   transform: {
     '^.+\\.tsx?$': [
