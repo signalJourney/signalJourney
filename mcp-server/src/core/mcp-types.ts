@@ -42,9 +42,11 @@ export interface McpToolErrorResponse {
  * Represents the output of an MCP tool, which can be either a success or an error.
  * This aligns with how the McpServer in the SDK expects tool execution results.
  */
-export type McpToolOutput<TResult = any> =
-  | McpToolSuccessResponse<TResult>
-  | McpToolErrorResponse;
+export interface McpToolOutput<T = any> {
+  success: boolean;
+  data?: T;
+  error?: McpErrorPayload;
+}
 
 /**
  * Type for a tool handler function.

@@ -54,13 +54,13 @@ export async function initializeMcpServer(): Promise<McpServer> {
   mcpServerInstance.tool('system.getServerStatus', {
     description: 'Get the current status of the MCP server.',
     handler: handleGetServerStatus,
-    paramSchema: GetServerStatusParamsSchema, // Zod schema for params
+    paramSchema: GetServerStatusArgsSchema, // Corrected to ArgsSchema
   });
 
   mcpServerInstance.tool('system.getServerVersion', {
     description: 'Get the version of the MCP server.',
     handler: handleGetServerVersion,
-    paramSchema: GetServerVersionParamsSchema,
+    paramSchema: GetServerVersionArgsSchema, // Corrected to ArgsSchema
   });
 
   // --- Register Resource Management Tools ---
@@ -93,7 +93,7 @@ export async function initializeMcpServer(): Promise<McpServer> {
   });
 
   mcpServerInstance.tool('resource.list', {
-    description: 'List resources, optionally filtered by type (owned by the authenticated user).'
+    description: 'List resources, optionally filtered by type (owned by the authenticated user).',
     handler: handleListResources,
     paramSchema: ListResourcesParamsSchema,
     requiredScopes: ['read:resource']
