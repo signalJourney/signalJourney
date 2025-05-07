@@ -1,7 +1,8 @@
+import { randomUUID } from 'crypto';
+
 import { RepositoryScanModel, IRepositoryScan } from '@/models/RepositoryScan.model';
 import { TraversedFile, TraversalOptions } from '@/services/repositoryScanner.service';
 import logger from '@/utils/logger';
-import { randomUUID } from 'crypto';
 
 class ScanPersistenceService {
 

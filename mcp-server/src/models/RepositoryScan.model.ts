@@ -1,5 +1,6 @@
-import mongoose, { Schema, Document } from 'mongoose';
-import { TraversedFile, CodeMetadata } from '@/services/repositoryScanner.service'; // Assuming interfaces are exported
+import mongoose, { Schema, Document /*, Model*/ } from 'mongoose';
+
+// import { TraversedFile, CodeMetadata } from '@/services/repositoryScanner.service'; // Removed unused import
 
 // Define interface for CodeMetadata document part
 interface ICodeMetadata extends Document {

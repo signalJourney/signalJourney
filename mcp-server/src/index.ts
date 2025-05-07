@@ -5,7 +5,7 @@ import helmet from 'helmet';
 import cors from 'cors';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import { ServerRequest } from '@modelcontextprotocol/sdk/types.js';
+import { ServerRequest, AuthenticationContext } from '@modelcontextprotocol/sdk/types.js';
 import morgan from 'morgan';
 import rateLimit from 'express-rate-limit';
 import { ZodError } from 'zod';
@@ -13,14 +13,13 @@ import dotenv from 'dotenv';
 
 import config from '@/config';
 import logger, { stream as morganStream } from '@/utils/logger';
-import { initializeMcpServer, getMcpServer } from '@/core/server';
+import { createMcpServer, getMcpServer } from '@/core/server';
 import { jwtAuthMiddleware, AuthenticatedRequest } from '@/middleware/auth.middleware';
 import { requestIdMiddleware } from '@/middleware/requestId.middleware';
 import authRoutes from '@/routes/auth.routes';
-import { McpApplicationError, McpErrorPayload } from '@/core/mcp-types';
+import { McpApplicationError } from '@/core/mcp-types';
 import { connectDB, disconnectDB } from '@/core/db';
-import { tokenService } from '@/core/tokenService';
-import { AuthenticationContext } from '@modelcontextprotocol/sdk/types.js';
+import tokenService from '@/services/token.service';
 
 let serverInstance: any; // To hold the http.Server instance for graceful shutdown
 export let app: express.Express; // Export app for testing
@@ -31,7 +30,7 @@ async function startServer() {
     await connectDB();
 
     // Initialize MCP Server
-    const mcpServer = await initializeMcpServer();
+    const mcpServer = await createMcpServer();
 
     app = express();
 

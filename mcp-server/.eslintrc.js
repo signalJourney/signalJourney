@@ -15,7 +15,7 @@ module.exports = {
   parserOptions: {
     ecmaVersion: 'latest',
     sourceType: 'module',
-    project: './tsconfig.json', // Point to your tsconfig.json for type-aware linting
+    project: require('path').join(__dirname, 'tsconfig.json'),
   },
   plugins: [
     '@typescript-eslint',
@@ -24,8 +24,11 @@ module.exports = {
   ],
   settings: {
     'import/resolver': {
+      node: {}, // Added node resolver
       typescript: { // Use the typescript resolver
-        project: './tsconfig.json' // Point to your tsconfig again if needed, usually inherited
+        project: './tsconfig.json',
+        alwaysTryTypes: true,
+        extensions: ['.ts', '.tsx', '.js', '.jsx', '.json', '.node'] // Added default extensions explicitly
       }
     }
   },

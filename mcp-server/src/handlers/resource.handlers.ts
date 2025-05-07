@@ -1,12 +1,14 @@
+// eslint-disable-next-line import/no-unresolved
+import { McpRequest, McpResponse, ToolContext } from '@modelcontextprotocol/sdk';
 import { z } from 'zod';
 import { ServerRequest, ServerNotification } from '@modelcontextprotocol/sdk/types.js';
 import { RequestHandlerExtra } from '@modelcontextprotocol/sdk/shared/protocol.js';
-import { McpRequest, McpResponse, ToolContext } from '@modelcontextprotocol/sdk';
 
-import { McpExecutionContext, McpNotFoundError, McpApplicationError, CallToolResult } from '@/core/mcp-types';
-import resourceService, { Resource } from '@/services/resource.service';
+import { McpExecutionContext, McpApplicationError, CallToolResult } from '@/core/mcp-types';
+import resourceService from '@/services/resource.service';
 import { AuthPayload } from '@/middleware/auth.middleware';
 import logger from '@/utils/logger';
+import { Resource } from '@/models/resource.model';
 
 // --- Zod Schemas for Tool Parameters ---
 
