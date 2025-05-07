@@ -13,11 +13,14 @@ import morgan from 'morgan';
 import rateLimit from 'express-rate-limit';
 import { randomUUID } from 'crypto'; // Imported randomUUID
 
+let serverInstance: any; // To hold the http.Server instance for graceful shutdown
+export let app: express.Express; // Export app for testing
+
 async function startServer() {
   await initializeMcpServer();
   const mcpServerInstance = getMcpServer();
 
-  const app = express();
+  app = express(); // Assign to the exported app
 
   // --- Core Middleware ---
   app.use(helmet());
@@ -144,33 +147,43 @@ async function startServer() {
 
   // --- Start HTTP Server ---
   const port = config.server.port;
-  const server = app.listen(port, () => {
-    logger.info(`MCP Server '${config.server.mcpServerName}' v${config.server.mcpServerVersion} started.`);
-    logger.info(`HTTP transport listening on http://localhost:${port}/mcp`);
-    if (config.server.enableStdioTransport) {
-      logger.info('STDIO transport also active.');
-    }
-  });
+  
+  // Only start listening if not in test environment or if explicitly told to listen
+  // This prevents EADDRINUSE errors when supertest starts its own server instance.
+  if (config.server.nodeEnv !== 'test') {
+    serverInstance = app.listen(port, () => {
+      logger.info(`MCP Server '${config.server.mcpServerName}' v${config.server.mcpServerVersion} started.`);
+      logger.info(`HTTP transport listening on http://localhost:${port}/mcp`);
+      if (config.server.enableStdioTransport) {
+        logger.info('STDIO transport also active.');
+      }
+    });
+  } else {
+    logger.info('Server configured for testing, HTTP listener not started by default.');
+  }
 
-  // Graceful shutdown
+  // Graceful shutdown (modified to handle serverInstance potentially not being set if in test and not listening)
   const signals: NodeJS.Signals[] = ['SIGINT', 'SIGTERM'];
   signals.forEach(signal => {
     process.on(signal, async () => {
       logger.info(`Received ${signal}, shutting down gracefully...`);
-      server.close(() => {
-        logger.info('HTTP server closed.');
-        // Add any other cleanup here (e.g., close StdioTransport if it has a close method)
-        if (config.server.enableStdioTransport && (getMcpServer() as any).stdioTransport?.close) {
-            // (getMcpServer() as any).stdioTransport.close(); // Assuming a close method
-            logger.info('Stdio transport closed.');
-        }
+      if (serverInstance) {
+        serverInstance.close(() => {
+          logger.info('HTTP server closed.');
+          if (config.server.enableStdioTransport && (getMcpServer() as any).stdioTransport?.close) {
+              logger.info('Stdio transport closed.');
+          }
+          process.exit(0);
+        });
+        setTimeout(() => {
+          logger.warn('Graceful shutdown timed out, forcing exit.');
+          process.exit(1);
+        }, 10000);
+      } else {
+        // If serverInstance is not defined (e.g., in test mode without listen), exit directly
+        logger.info('No active HTTP server to close. Exiting.');
         process.exit(0);
-      });
-      // Force shutdown if server hasn't closed in time
-      setTimeout(() => {
-        logger.warn('Graceful shutdown timed out, forcing exit.');
-        process.exit(1);
-      }, 10000); // 10 seconds timeout
+      }
     });
   });
 
@@ -179,4 +192,9 @@ async function startServer() {
 startServer().catch(error => {
   logger.error('Failed to start MCP server:', error);
   process.exit(1);
-}); 
+});
+
+// Export the app instance for testing purposes after it's initialized
+// This is a bit tricky with async startServer. A better way might be to have startServer return the app.
+// For now, tests will import this and it should be populated after startServer() resolves in the main execution.
+// Alternatively, tests can call startServer and then use the app. 

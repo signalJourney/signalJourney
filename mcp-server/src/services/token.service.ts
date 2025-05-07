@@ -34,7 +34,8 @@ class TokenService {
     const effectiveExpiresIn = expiresIn || config.security.jwtExpiresIn;
     logger.debug(`Generating token for userId: ${payload.userId} with jti: ${jti}, expires_in: ${effectiveExpiresIn}`);
     const secret: jwt.Secret = config.security.jwtSecret;
-    const options: jwt.SignOptions = { expiresIn: effectiveExpiresIn };
+    // Cast effectiveExpiresIn to 'any' as a workaround for potential @types/jsonwebtoken issue
+    const options: jwt.SignOptions = { expiresIn: effectiveExpiresIn as any };
     return jwt.sign(tokenPayload, secret, options);
   }
 
