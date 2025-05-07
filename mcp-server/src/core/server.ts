@@ -1,113 +1,156 @@
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { ServerOptions } from '@modelcontextprotocol/sdk/server/index.js';
-import { ToolAnnotations, CallToolResult } from '@modelcontextprotocol/sdk/types.js';
-
-import config from '@/config';
-import logger from '@/utils/logger';
+import { McpServer, McpServerOptions, Transport } from '@modelcontextprotocol/sdk';
+import { AuthenticatedRequest } from '@/middleware/auth.middleware';
+import { getLogger } from '@/utils/logger';
 import {
-  handleGetServerStatus,
-  handleGetServerVersion,
-  GetServerStatusParamsSchema,
-  GetServerVersionParamsSchema
+  handleGetStatus,
+  handleGetVersion,
 } from '@/handlers/system.handlers';
-import { McpApplicationError, McpErrorPayload } from '@/core/mcp-types';
 import {
-  handleCreateResource, CreateResourceParamsSchema,
-  handleGetResource, GetResourceParamsSchema,
-  handleUpdateResource, UpdateResourceParamsSchema,
-  handleDeleteResource, DeleteResourceParamsSchema,
-  handleListResources, ListResourcesParamsSchema
+  handleCreateResource,
+  handleGetResource,
+  handleUpdateResource,
+  handleDeleteResource,
+  // handleListResources, // Assuming ListResources is not yet implemented or needed based on previous handlers
 } from '@/handlers/resource.handlers';
-import {
-  handleScanRepository,
-  scanRepositoryParamsSchema
-} from '@/handlers/scanner.handlers';
+import { handleScanRepository } from '@/handlers/scanner.handlers';
+import { McpApplicationError, McpErrorPayload } from '@/core/mcp-types';
 
-let mcpServerInstance: McpServer;
+let mcpServerInstance: McpServer<AuthenticatedRequest> | null = null;
 
-// Custom error serializer for MCP Server
-const serializeError = (error: any): McpErrorPayload => {
-  if (error instanceof McpApplicationError) {
-    return { code: error.code, message: error.message, details: error.details };
-  }
-  if (error instanceof Error) {
-    return { code: 'UNHANDLED_TOOL_ERROR', message: error.message };
-  }
-  return { code: 'UNKNOWN_TOOL_ERROR', message: 'An unknown error occurred in the tool' };
-};
+/**
+ * Creates and configures an McpServer instance with specified tools and options.
+ * This function is the primary way to instantiate the server, ensuring all tools
+ * and error handling are set up correctly via constructor options.
+ *
+ * @param options Optional partial configuration for McpServer, useful for testing or custom setups.
+ * @returns The newly created McpServer instance.
+ */
+export function createMcpServer(options?: Partial<McpServerOptions<AuthenticatedRequest>>): McpServer<AuthenticatedRequest> {
+  const logger = getLogger('McpServerCore');
+  logger.info('Creating MCP Server instance via createMcpServer...');
 
-export async function initializeMcpServer(): Promise<McpServer> {
-  if (mcpServerInstance) {
-    logger.warn('MCP Server already initialized.');
-    return mcpServerInstance;
-  }
-
-  mcpServerInstance = new McpServer(
-    {
-      name: config.server.mcpServerName,
-      version: config.server.mcpServerVersion,
+  const defaultOptions: McpServerOptions<AuthenticatedRequest> = {
+    logger: getLogger('MCP_SDK_Server'), // Logger for the SDK itself
+    // Defines all tools available on the server.
+    // Each tool has a name (e.g., 'namespace.method'), a description,
+    // the handler function, and can optionally include input/output schemas (e.g., Zod schemas).
+    tools: [
+      // System Tools
+      {
+        name: 'system.getStatus',
+        description: 'Get the operational status of the MCP server.',
+        handler: handleGetStatus,
+      },
+      {
+        name: 'system.getVersion',
+        description: 'Get the version of the MCP server application.',
+        handler: handleGetVersion,
+      },
+      // Resource Management Tools
+      {
+        name: 'resource.create',
+        description: 'Create a new resource.',
+        handler: handleCreateResource,
+      },
+      {
+        name: 'resource.get',
+        description: 'Get a resource by its ID.',
+        handler: handleGetResource,
+      },
+      {
+        name: 'resource.update',
+        description: 'Update an existing resource by its ID.',
+        handler: handleUpdateResource,
+      },
+      {
+        name: 'resource.delete',
+        description: 'Delete a resource by its ID.',
+        handler: handleDeleteResource,
+      },
+      // Potentially: handleListResources if it was defined and imported
+      // {
+      //   name: 'resource.list',
+      //   description: 'List available resources.',
+      //   handler: handleListResources,
+      // },
+      // Scanner Tools
+      {
+        name: 'scanner.scanRepository',
+        description: 'Scans a repository based on provided path and options, returning structured data about its contents.',
+        handler: handleScanRepository,
+      }
+    ],
+    // Custom error serialization to ensure McpApplicationError details are propagated correctly.
+    serializeError: (err: any): McpErrorPayload => {
+      if (err instanceof McpApplicationError) {
+        return err.toJson(); // Uses the custom toJson method of McpApplicationError
+      }
+      // Default error serialization for unexpected errors
+      const defaultErrorPayload: McpErrorPayload = {
+        code: -32000, // Generic server error code based on JSON-RPC spec
+        message: 'An unexpected error occurred on the server.',
+      };
+      if (err instanceof Error) {
+        defaultErrorPayload.message = err.message; // Prefer specific error message if available
+        // Include stack trace in non-production environments for easier debugging.
+        if (process.env.NODE_ENV !== 'production' && err.stack) {
+          defaultErrorPayload.data = { stack: err.stack, originalErrorType: err.constructor.name };
+        }
+      }
+      logger.error('Unhandled error in McpServer, serialized to default error format:', { originalError: err });
+      return defaultErrorPayload;
     },
-    {
-      logger: logger,
-      serializeError: serializeError,
-    } as ServerOptions
-  );
+    // Other McpServerOptions can be added here if needed (e.g., custom buildExecutionContext)
+  };
 
-  logger.info('MCP Server instance created.');
+  // Merge default options with any custom options passed to the function.
+  // This allows overriding defaults for specific use cases (e.g., testing).
+  const serverOptions = { ...defaultOptions, ...options };
 
-  logger.info('Registering MCP tools...');
+  const serverInstance = new McpServer<AuthenticatedRequest>(serverOptions);
+  logger.info('MCP Server instance created successfully with configured tools and error serialization.');
 
-  // --- Register System Tools ---
-  mcpServerInstance.tool('get_server_status', 'Get server health and status.', handleGetServerStatus);
-  mcpServerInstance.tool('get_server_version', 'Get server version information.', handleGetServerVersion);
+  return serverInstance;
+}
 
-  // --- Register Resource Tools ---
-  const resourceAnnotations: ToolAnnotations = { category: 'resource_management' };
-  mcpServerInstance.tool('create_resource', 'Create a new generic resource.', CreateResourceParamsSchema.shape, resourceAnnotations, handleCreateResource);
-  mcpServerInstance.tool('get_resource', 'Retrieve a resource by its ID.', GetResourceParamsSchema.shape, resourceAnnotations, handleGetResource);
-  mcpServerInstance.tool('update_resource', 'Update an existing resource.', UpdateResourceParamsSchema.shape, resourceAnnotations, handleUpdateResource);
-  mcpServerInstance.tool('delete_resource', 'Delete a resource by its ID.', DeleteResourceParamsSchema.shape, resourceAnnotations, handleDeleteResource);
-  mcpServerInstance.tool('list_resources', 'List available resources, optionally filtering by type.', ListResourcesParamsSchema.shape, resourceAnnotations, handleListResources);
-
-  // --- Register Scanner Tool ---
-  const scannerAnnotations: ToolAnnotations = { category: 'repository_analysis' };
-  mcpServerInstance.tool(
-    'scan_repository', 
-    'Scans a local repository directory, returning structured file information.',
-    scanRepositoryParamsSchema.shape, 
-    scannerAnnotations, 
-    handleScanRepository
-  );
-
-  logger.info('MCP tools registered successfully.');
+/**
+ * Retrieves the singleton McpServer instance. If it doesn\'t already exist,
+ * it creates one using `createMcpServer` with default options.
+ * This ensures that the same server instance is used throughout the application.
+ *
+ * @param transport Optional transport to attach if creating the server for the first time.
+ *                  This is useful for immediately making the server available via a specific transport.
+ * @returns The singleton McpServer instance.
+ */
+export function getMcpServer(transport?: Transport<AuthenticatedRequest>): McpServer<AuthenticatedRequest> {
+  const logger = getLogger('McpServerSingleton');
+  if (!mcpServerInstance) {
+    logger.info('Singleton McpServer instance not found, creating a new one...');
+    mcpServerInstance = createMcpServer(); // Create with default options
+    logger.info('Singleton McpServer instance created.');
+    if (transport) {
+      mcpServerInstance.addTransport(transport);
+      logger.info(`Initial transport of type '${transport.constructor.name}' attached to new McpServer instance.`);
+    }
+  } else {
+    logger.debug('Returning existing singleton McpServer instance.');
+  }
   return mcpServerInstance;
 }
 
-// Custom Execution Context Builder
-// This function is called by the McpServer before each tool execution.
-// It allows you to enrich the context passed to your tool handlers.
-// McpServer.prototype.buildExecutionContext = function (
-//     rawContext?: Partial<AuthenticationContext>
-// ): McpExecutionContext {
-//     const requestId = (rawContext?.http?.res?.locals?.requestId) || randomUUID(); 
-//     const authInfo = rawContext?.auth as AuthPayload | undefined;
-
-//     logger.debug('Building execution context', { requestId, userId: authInfo?.userId });
-
-//     // Basic context provided by SDK (like rawContext.auth)
-//     // Plus, anything custom you want to add, like a transaction ID, specific user permissions, etc.
-//     return {
-//         requestId,
-//         authInfo,
-//         // dbClient: getDbClient(), // Example: if you want to pass a db client to tools
-//     };
-// };
-
-export function getMcpServer(): McpServer {
-  if (!mcpServerInstance) {
-    logger.error('MCP Server has not been initialized. Call initializeMcpServer first.');
-    process.exit(1);
-    // throw new Error('MCP Server has not been initialized. Call initializeMcpServer first.');
-  }
-  return mcpServerInstance;
+/**
+ * Utility function to initialize the McpServer (ensuring it\'s created via getMcpServer)
+ * and attach multiple transports to it.
+ *
+ * @param transports An array of transports to attach to the server.
+ */
+export function initializeMcpServerWithTransports(transports: Transport<AuthenticatedRequest>[]) {
+    const server = getMcpServer(); // Ensures server is created if it doesn't exist.
+    const logger = getLogger('McpServerInit');
+    logger.info(`Initializing McpServer with ${transports.length} transport(s)...`);
+    transports.forEach(transportToAttach => {
+        server.addTransport(transportToAttach);
+        logger.info(`Transport of type '${transportToAttach.constructor.name}' attached.`);
+    });
+    logger.info('All provided transports attached to McpServer.');
 } 
