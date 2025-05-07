@@ -1,6 +1,8 @@
 import * as fs from 'fs';
 import * as path from 'path';
+
 import { minimatch } from 'minimatch';
+
 import { getLogger } from '@/utils/logger';
 import { McpApplicationError } from '@/core/mcp-types';
 
@@ -149,8 +151,8 @@ export class RepositoryScannerService {
       }
 
       let stats: fs.Stats | null = null;
-      let isSymlink = dirent.isSymbolicLink();
-      let targetPath = entryPath; // Path to stat (could be symlink target)
+      const isSymlink = dirent.isSymbolicLink();
+      const targetPath = entryPath; // Path to stat (could be symlink target)
 
       try {
         if (isSymlink) {
