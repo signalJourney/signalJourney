@@ -10,6 +10,7 @@ export interface TraversalOptions {
   excludePatterns?: string[]; // Glob patterns for exclusion
   maxDepth?: number;
   followSymlinks?: boolean; 
+  parseCode?: boolean; // Option to enable/disable code parsing
 }
 
 // Added CodeMetadata interface
@@ -17,6 +18,7 @@ export interface CodeMetadata {
   imports?: string[];
   functions?: string[];
   classes?: string[];
+  hasMainGuard?: boolean; // Specifically for Python __main__ check
 }
 
 export interface TraversedFile {
@@ -33,6 +35,8 @@ export interface TraversedFile {
   modifiedAt?: Date;
   accessedAt?: Date;
   codeMetadata?: CodeMetadata | null; // Added
+  isEntryPoint?: boolean; // Added
+  detectedPatterns?: string[]; // Added
 }
 
 // Basic file type mapping by extension
@@ -177,6 +181,7 @@ class RepositoryScannerService {
       const importRegex = /^\s*(?:from\s+([\w.]+)\s+import\s+(.+)|import\s+(.+))/gm;
       const functionRegex = /^\s*def\s+([a-zA-Z_]\w*)\s*\(/gm;
       const classRegex = /^\s*class\s+([a-zA-Z_]\w*)[\(:]/gm;
+      const mainGuardRegex = /^if\s+__name__\s*==\s*['\"]__main__['\"]:/m;
       let match;
       while ((match = importRegex.exec(content)) !== null) {
         if (match[3]) imports.push(...match[3].split(',').map(m => m.trim())); // import a, b
@@ -184,7 +189,8 @@ class RepositoryScannerService {
       }
       while ((match = functionRegex.exec(content)) !== null) functions.push(match[1]);
       while ((match = classRegex.exec(content)) !== null) classes.push(match[1]);
-      if (imports.length || functions.length || classes.length) return { imports, functions, classes };
+      const hasMainGuard = mainGuardRegex.test(content);
+      if (imports.length || functions.length || classes.length || hasMainGuard) return { imports, functions, classes, hasMainGuard };
       return null;
     } catch (error: any) {
       logger.warn(`Failed to parse Python file ${filePath}: ${error.message}`);
@@ -210,6 +216,59 @@ class RepositoryScannerService {
       logger.warn(`Failed to parse MATLAB file ${filePath}: ${error.message}`);
       return null;
     }
+  }
+
+  // Added pattern and entry point detection logic
+  private detectPatternsAndEntryPoints(file: TraversedFile): { isEntryPoint?: boolean; detectedPatterns?: string[] } {
+    const patterns: string[] = [];
+    let isEntryPoint = false;
+    const lowerName = file.name.toLowerCase();
+    const lowerPath = file.relativePath.toLowerCase(); // Use relative path for checks
+
+    // Category-based patterns
+    if (file.fileCategory === 'test') patterns.push('TEST_SUITE');
+    if (file.fileCategory === 'config') patterns.push('CONFIG_FILE');
+    if (file.fileCategory === 'docs') patterns.push('DOCS_FILE');
+    if (file.fileCategory === 'notebook') patterns.push('NOTEBOOK');
+    if (file.fileCategory === 'asset') patterns.push('ASSET');
+
+    // Name/Convention-based patterns
+    if (file.fileCategory === 'source' && (lowerName.includes('util') || lowerName.includes('helper') || lowerName.includes('common'))) {
+      patterns.push('UTIL_MODULE');
+    }
+    if (file.fileCategory === 'source' && lowerName.includes('controller') && file.codeMetadata?.classes?.length) {
+      patterns.push('MVC_CONTROLLER');
+    }
+    if (file.fileCategory === 'source' && lowerName.includes('model') && file.codeMetadata?.classes?.length) {
+      patterns.push('MVC_MODEL');
+    }
+    if (file.fileCategory === 'source' && lowerName.includes('service') && file.codeMetadata?.classes?.length) {
+      patterns.push('SERVICE_CLASS');
+    }
+    if (file.fileCategory === 'source' && (lowerName.includes('interface') || lowerName.includes('types'))) {
+      patterns.push('TYPE_DEFINITION');
+    }
+
+    // Entry Point Detection
+    if (file.fileType === 'PYTHON') {
+      if (lowerName === '__main__.py' || lowerName === 'manage.py' || lowerName === 'app.py' || file.codeMetadata?.hasMainGuard) {
+        isEntryPoint = true;
+      }
+    } else if (file.fileType === 'MATLAB') {
+      // Script if no functions defined (or only one matching file name) and not in test/private path
+      const isScript = !file.codeMetadata?.functions || file.codeMetadata.functions.length === 0 || 
+                       (file.codeMetadata.functions.length === 1 && file.codeMetadata.functions[0] === file.name.replace('.m',''));
+      if (isScript && !lowerPath.includes('test') && !lowerPath.includes('private') && (lowerName.startsWith('run_') || lowerName.startsWith('main_'))) {
+        isEntryPoint = true;
+      }
+    } else if (['JAVASCRIPT', 'TYPESCRIPT', 'SHELL'].includes(file.fileType)) {
+      if ((lowerName === 'main' || lowerName === 'index' || lowerName === 'app' || lowerName === 'server') && file.depth <= 1) { // Simple check for top-level scripts
+          isEntryPoint = true;
+      }
+    }
+    // Add checks for package.json main/bin fields if needed later
+    
+    return { isEntryPoint: isEntryPoint || undefined, detectedPatterns: patterns.length ? patterns : undefined };
   }
 
   private async traverseDirectoryRecursive(
@@ -295,8 +354,10 @@ class RepositoryScannerService {
                 const fileExt = path.extname(realPath); // ext of the target file
                 const { fileType, fileCategory } = await this.detectFileTypeAndCategory(realPath, path.basename(realPath), fileExt);
                 let codeMetadata: CodeMetadata | null = null;
-                if (fileType === 'PYTHON') codeMetadata = await this.parsePythonFile(realPath);
-                else if (fileType === 'MATLAB') codeMetadata = await this.parseMatlabFile(realPath);
+                if (options.parseCode) { // Check option before parsing
+                  if (fileType === 'PYTHON') codeMetadata = await this.parsePythonFile(realPath);
+                  else if (fileType === 'MATLAB') codeMetadata = await this.parseMatlabFile(realPath);
+                }
                 accumulatedFiles.push({
                     path: realPath, // Path of the target file
                     relativePath: path.relative(initialPath, realPath),
@@ -345,8 +406,10 @@ class RepositoryScannerService {
           const fileExt = path.extname(entry.name);
           const { fileType, fileCategory } = await this.detectFileTypeAndCategory(entryPath, entry.name, fileExt);
           let codeMetadata: CodeMetadata | null = null;
-          if (fileType === 'PYTHON') codeMetadata = await this.parsePythonFile(entryPath);
-          else if (fileType === 'MATLAB') codeMetadata = await this.parseMatlabFile(entryPath);
+          if (options.parseCode) { // Check option before parsing
+             if (fileType === 'PYTHON') codeMetadata = await this.parsePythonFile(entryPath);
+             else if (fileType === 'MATLAB') codeMetadata = await this.parseMatlabFile(entryPath);
+          }
           accumulatedFiles.push({
             path: entryPath,
             relativePath: path.relative(initialPath, entryPath),
@@ -394,7 +457,16 @@ class RepositoryScannerService {
     const initialVisited = options.followSymlinks ? new Set<string>() : new Set(); // Always init set
     if(options.followSymlinks) initialVisited.add(absoluteRepoPath); 
 
+    // Step 1: Traverse and collect basic file info + code metadata (if enabled)
     await this.traverseDirectoryRecursive(absoluteRepoPath, absoluteRepoPath, 0, options, files, initialVisited);
+
+    // Step 2: Post-process to detect patterns and entry points
+    for (const file of files) {
+        const { isEntryPoint, detectedPatterns } = this.detectPatternsAndEntryPoints(file);
+        file.isEntryPoint = isEntryPoint;
+        file.detectedPatterns = detectedPatterns;
+    }
+
     logger.info(`Repository scan completed. Found ${files.length} files.`);
     return files;
   }
