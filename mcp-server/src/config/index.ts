@@ -30,8 +30,11 @@ const envSchema = z.object({
   BLACKLIST_PRUNE_INTERVAL: z.coerce.number().default(60 * 60 * 1000),
 
   // Mock Auth
-  MOCK_AUTH_USERNAME: z.string().optional(),
-  MOCK_AUTH_PASSWORD: z.string().optional(),
+  MOCK_AUTH_USERNAME: z.string().default('testuser'),
+  MOCK_AUTH_PASSWORD: z.string().default('password'),
+
+  // Database
+  MONGO_URI: z.string().url().default('mongodb://localhost:27017/signaljourney_mcp'),
 });
 
 // Load environment variables
@@ -90,5 +93,8 @@ export default {
       username: config.MOCK_AUTH_USERNAME,
       password: config.MOCK_AUTH_PASSWORD,
     }
+  },
+  db: {
+    mongoUri: config.MONGO_URI,
   }
 }; 

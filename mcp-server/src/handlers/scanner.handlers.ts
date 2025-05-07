@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import repositoryScannerService, { TraversalOptions, TraversedFile } from '@/services/repositoryScanner.service';
+import scanPersistenceService from '@/services/scanPersistence.service';
 import { McpExecutionContext, CallToolResult, McpApplicationError } from '@/core/mcp-types';
 import { RequestHandlerExtra, ServerRequest, ServerNotification } from '@modelcontextprotocol/sdk/types.js';
 import { AuthPayload } from '@/middleware/auth.middleware';
@@ -43,7 +44,12 @@ export async function handleScanRepository(
 
     mcpContext.logger.info(`Scan completed. Found ${result.length} files.`);
 
-    // Return successful result, packaging the array as JSON data
+    // Save the result to the database asynchronously (don't wait for it)
+    scanPersistenceService.saveScanResult(args.repoPath, options, result)
+      .then(scanId => mcpContext.logger.info(`Scan result saved with ID: ${scanId}`))
+      .catch(err => mcpContext.logger.error(`Failed to save scan result asynchronously: ${err.message}`));
+
+    // Return successful result immediately
     return {
       content: [{ type: 'json', data: result }]
     };

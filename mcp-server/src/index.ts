@@ -17,194 +17,181 @@ import { initializeMcpServer, getMcpServer } from '@/core/server';
 import { jwtAuthMiddleware, AuthenticatedRequest } from '@/middleware/auth.middleware';
 import { requestIdMiddleware } from '@/middleware/requestId.middleware';
 import authRoutes from '@/routes/auth.routes';
-import { McpApplicationError, McpErrorPayload } from '@/core/mcp-types'; 
+import { McpApplicationError, McpErrorPayload } from '@/core/mcp-types';
+import { connectDB, disconnectDB } from '@/core/db';
+import { tokenService } from '@/core/tokenService';
+import { AuthenticationContext } from '@modelcontextprotocol/sdk/types.js';
 
 let serverInstance: any; // To hold the http.Server instance for graceful shutdown
 export let app: express.Express; // Export app for testing
 
 async function startServer() {
-  await initializeMcpServer();
-  const mcpServerInstance = getMcpServer();
+  try {
+    // Connect to Database first
+    await connectDB();
 
-  app = express();
+    // Initialize MCP Server
+    const mcpServer = await initializeMcpServer();
 
-  // --- Core Middleware ---
-  app.use(helmet());
-  app.use(cors(config.server.corsOptions)); // Use CORS options from config
-  app.use(express.json());
-  app.use(express.urlencoded({ extended: true }));
-  app.use(requestIdMiddleware); // Add request ID to res.locals
+    app = express();
 
-  // Morgan logging - uses res.locals.requestId set by requestIdMiddleware
-  // const morganFormat = config.server.nodeEnv === 'production' ? 'combined' : 'dev'; // Removed morganFormat
-  // Morgan token for requestId. Morgan's req is http.IncomingMessage, res is http.ServerResponse.
-  morgan.token('id', (req: Request, res: Response) => res.locals.requestId || '-'); 
-  app.use(morgan(`:id :remote-addr - :remote-user [:date[clf]] ":method :url HTTP/:http-version" :status :res[content-length] ":referrer" ":user-agent"`, { stream: morganStream }));
+    // --- Core Middleware ---
+    app.use(helmet());
+    app.use(cors(config.server.corsOptions)); // Use CORS options from config
+    app.use(express.json());
+    app.use(express.urlencoded({ extended: true }));
+    app.use(requestIdMiddleware); // Add request ID to res.locals
 
-  // Apply JWT authentication middleware globally. It populates req.authInfo if token is valid.
-  app.use(jwtAuthMiddleware);
+    // Morgan logging - uses res.locals.requestId set by requestIdMiddleware
+    // const morganFormat = config.server.nodeEnv === 'production' ? 'combined' : 'dev'; // Removed morganFormat
+    // Morgan token for requestId. Morgan's req is http.IncomingMessage, res is http.ServerResponse.
+    morgan.token('id', (req: Request, res: Response) => res.locals.requestId || '-'); 
+    app.use(morgan(`:id :remote-addr - :remote-user [:date[clf]] ":method :url HTTP/:http-version" :status :res[content-length] ":referrer" ":user-agent"`, { stream: morganStream }));
 
-  // Rate Limiting Middleware
-  const apiLimiter = rateLimit({
-    windowMs: config.security.rateLimitWindowMs, 
-    max: config.security.rateLimitMaxRequests,
-    standardHeaders: true,
-    legacyHeaders: false,
-    handler: (req: Request, res: Response, next: NextFunction, options) => {
-      // Pass a structured error to the global error handler
-      next(new McpApplicationError(
-        options.message || 'Too many requests, please try again later.',
-        'RATE_LIMIT_EXCEEDED',
-        { currentRate: options.max, window: `${options.windowMs / 1000}s` },
-        options.statusCode
-      ));
-    },
-    keyGenerator: (req: Request) => req.ip || randomUUID(), // Use base Request type
-  });
-  app.use('/mcp', apiLimiter);
-  app.use('/auth', apiLimiter, authRoutes);
+    // Apply JWT authentication middleware globally. It populates req.authInfo if token is valid.
+    app.use(jwtAuthMiddleware);
 
-  // MCP StreamableHTTP Transport Endpoint
-  app.all('/mcp', async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      // The transport is created per request or session, then connected.
-      // For resumability, an eventStore would be used here, and session ID managed.
-      // For simplicity now, creating a new one. Refer to SDK examples for session management.
-      const transport = new StreamableHTTPServerTransport({
-        // Basic options; refer to SDK examples for session ID generation, event store for resumability
-        sessionIdGenerator: randomUUID, // Example generator
-        // onsessioninitialized: (sessionId) => { logger.info(`HTTP Session initialized: ${sessionId}`); },
-        // eventStore: myEventStore, // For resumability
-      });
-
-      // The AuthenticationContext is built by the transport or passed to connect if needed.
-      // For StreamableHTTPServerTransport, it often derives it from req/res.
-      // We pass authInfo from our middleware via the `connect` method's second arg if supported,
-      // or ensure the transport can access it (e.g. if it uses req.authInfo itself).
-      // The MCP server connect method takes the transport.
-      // Authentication context is more about what the McpServer passes to tools.
-      await mcpServerInstance.connect(transport); 
-      
-      // Pass the raw request body to handleRequest if it expects it
-      // The `req.body` should already be parsed by `express.json()`
-      await transport.handleRequest(req as express.Request, res as express.Response, req.body as ServerRequest);
-    } catch (error: any) {
-      logger.error('Error in MCP HTTP transport handler:', { error, requestId: res.locals.requestId });
-      // Pass error to the global Express error handler
-      next(error); // Changed to use next(error)
-    }
-  });
-
-  // Basic health check endpoint
-  app.get('/health', (req: Request, res: Response) => { // Use base Request type
-    res.status(200).json({
-      status: 'UP',
-      serverName: config.server.mcpServerName,
-      version: config.server.mcpServerVersion,
-      timestamp: new Date().toISOString(),
-      nodeVersion: process.version,
-      platform: process.platform,
-      memoryUsage: process.memoryUsage(),
+    // Rate Limiting Middleware
+    const apiLimiter = rateLimit({
+      windowMs: config.security.rateLimitWindowMs, 
+      max: config.security.rateLimitMaxRequests,
+      standardHeaders: true,
+      legacyHeaders: false,
+      handler: (req: Request, res: Response, next: NextFunction, options) => {
+        // Pass a structured error to the global error handler
+        next(new McpApplicationError(
+          options.message || 'Too many requests, please try again later.',
+          'RATE_LIMIT_EXCEEDED',
+          { currentRate: options.max, window: `${options.windowMs / 1000}s` },
+          options.statusCode
+        ));
+      },
+      keyGenerator: (req: Request) => req.ip || randomUUID(), // Use base Request type
     });
-  });
+    app.use('/mcp', apiLimiter);
+    app.use('/auth', apiLimiter, authRoutes);
 
-  // Global Error Handler Middleware
-  app.use((err: any, req: Request, res: Response, next: NextFunction) => { // Use base Request, Response, NextFunction
-    const requestId = res.locals.requestId || 'unknown';
-    logger.error(
-      `Unhandled Express error: ${err.message}`,
-      { 
-        stack: config.server.nodeEnv === 'development' ? err.stack : undefined, 
-        requestPath: (req as AuthenticatedRequest).path, // req.path should be available on base Request too
-        requestId, 
-        errorCode: err.code, 
-        errorDetails: err.details 
-      }
-    );
-
-    if (res.headersSent) {
-      // If headers already sent, delegate to the default Express error handler
-      // This is important for streaming responses or if an error occurs mid-stream
-      return next(err);
-    }
-
-    let statusCode = 500;
-    let responseBody: McpErrorPayload = {
-      code: 'INTERNAL_SERVER_ERROR',
-      message: 'An unexpected error occurred.',
-    };
-
-    if (err instanceof McpApplicationError) {
-      statusCode = err.statusCode || 500;
-      responseBody = { code: err.code, message: err.message, details: err.details };
-    } else if (err instanceof ZodError) { // Handle ZodErrors directly if they weren't wrapped
-      statusCode = 400;
-      responseBody = { 
-        code: 'VALIDATION_ERROR', 
-        message: 'Request validation failed', 
-        details: err.issues 
-      };
-    } else if (err.name === 'UnauthorizedError') { // Example for express-jwt errors
-        statusCode = 401;
-        responseBody = { code: 'UNAUTHORIZED', message: err.message };
-    }
-    // Add more specific error type checks here if needed
-
-    res.status(statusCode).json(responseBody);
-  });
-
-  // --- Start Stdio Transport if enabled ---
-  if (config.server.enableStdioTransport) {
-    logger.info('Starting StdioServerTransport...');
-    // StdioServerTransport constructor takes optional stdin/stdout, not server instance or options object directly.
-    const stdioTransport = new StdioServerTransport(/* process.stdin, process.stdout */);
-    await mcpServerInstance.connect(stdioTransport); // Connect server to transport
-    await stdioTransport.start(); // Call start() method
-    logger.info('StdioServerTransport is listening (started).');
-  }
-
-  // --- Start HTTP Server ---
-  const port = config.server.port;
-  
-  // Only start listening if not in test environment or if explicitly told to listen
-  // This prevents EADDRINUSE errors when supertest starts its own server instance.
-  if (config.server.nodeEnv !== 'test') {
-    serverInstance = app.listen(port, () => {
-      logger.info(`MCP Server '${config.server.mcpServerName}' v${config.server.mcpServerVersion} started.`);
-      logger.info(`HTTP transport listening on http://localhost:${port}/mcp`);
-      if (config.server.enableStdioTransport) {
-        logger.info('STDIO transport also active.');
-      }
-    });
-  } else {
-    logger.info('Server configured for testing, HTTP listener not started by default.');
-  }
-
-  // Graceful shutdown (modified to handle serverInstance potentially not being set if in test and not listening)
-  const signals: NodeJS.Signals[] = ['SIGINT', 'SIGTERM'];
-  signals.forEach(signal => {
-    process.on(signal, async () => {
-      logger.info(`Received ${signal}, shutting down gracefully...`);
-      if (serverInstance) {
-        serverInstance.close(() => {
-          logger.info('HTTP server closed.');
-          if (config.server.enableStdioTransport && (getMcpServer() as any).stdioTransport?.close) {
-              logger.info('Stdio transport closed.');
+    // --- Setup Transports --- 
+    const transports: any[] = [];
+    // ... (StreamableHTTP Transport Setup)
+    const httpTransport = new StreamableHTTPServerTransport({
+      serverInfoProvider: () => ({
+          name: config.server.mcpServerName,
+          version: config.server.mcpServerVersion,
+          // capabilities: mcpServer.capabilities // Expose server capabilities
+      }),
+      authenticationProvider: async (token: string | undefined, request?: ServerRequest) => {
+          if (!token) return { isAuthenticated: false };
+          try {
+              const decoded = tokenService.verifyToken(token);
+              const authInfo: AuthenticationContext = {
+                  isAuthenticated: true,
+                  token: token,
+                  scopes: decoded.scopes,
+                  extra: decoded // Pass the full decoded payload as extra
+              };
+              return authInfo;
+          } catch (error) {
+              return { isAuthenticated: false };
           }
-          process.exit(0);
-        });
-        setTimeout(() => {
-          logger.warn('Graceful shutdown timed out, forcing exit.');
-          process.exit(1);
-        }, 10000);
-      } else {
-        // If serverInstance is not defined (e.g., in test mode without listen), exit directly
-        logger.info('No active HTTP server to close. Exiting.');
-        process.exit(0);
+      },
+      // sessionIdGenerator, onsessioninitialized if needed
+    });
+    transports.push(httpTransport);
+
+    // --- MCP Endpoint ---
+    app.post('/mcp', jwtAuthMiddleware, async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+      const requestBody = req.body as ServerRequest;
+      const mcpSessionId = req.headers['mcp-session-id'] as string | undefined;
+      const authContext: AuthenticationContext = req.authInfo ? {
+          isAuthenticated: true,
+          token: req.headers.authorization?.split(' ')?.[1],
+          scopes: req.authInfo.scopes,
+          extra: req.authInfo 
+      } : { isAuthenticated: false };
+
+      try {
+          await httpTransport.handleRequest(requestBody, res, { 
+              authContext,
+              requestId: req.id, 
+              sessionId: mcpSessionId 
+          });
+      } catch (error) {
+          next(error); 
       }
     });
-  });
 
+    // ... (Auth routes) ...
+    app.use('/auth', authRoutes);
+
+    // ... (Stdio Transport setup)
+    if (config.server.enableStdioTransport) {
+      const stdioTransport = new StdioServerTransport(process.stdin, process.stderr); // Use stderr for logs
+      transports.push(stdioTransport);
+      logger.info('Stdio transport enabled.');
+    }
+
+    // Connect transports to the server
+    await mcpServer.connect(...transports);
+    logger.info('MCP transports connected.');
+
+    // --- Start Stdio Transport if enabled ---
+    if (config.server.enableStdioTransport) {
+      logger.info('Starting StdioServerTransport...');
+      // StdioServerTransport constructor takes optional stdin/stdout, not server instance or options object directly.
+      const stdioTransport = new StdioServerTransport(/* process.stdin, process.stdout */);
+      await mcpServer.connect(stdioTransport); // Connect server to transport
+      await stdioTransport.start(); // Call start() method
+      logger.info('StdioServerTransport is listening (started).');
+    }
+
+    // --- Start HTTP Server ---
+    const port = config.server.port;
+    
+    // Only start listening if not in test environment or if explicitly told to listen
+    // This prevents EADDRINUSE errors when supertest starts its own server instance.
+    if (config.server.nodeEnv !== 'test') {
+      serverInstance = app.listen(port, () => {
+        logger.info(`MCP Server '${config.server.mcpServerName}' v${config.server.mcpServerVersion} started.`);
+        logger.info(`HTTP transport listening on http://localhost:${port}/mcp`);
+        if (config.server.enableStdioTransport) {
+          logger.info('STDIO transport also active.');
+        }
+      });
+    } else {
+      logger.info('Server configured for testing, HTTP listener not started by default.');
+    }
+
+    // Graceful shutdown (modified to handle serverInstance potentially not being set if in test and not listening)
+    const signals: NodeJS.Signals[] = ['SIGINT', 'SIGTERM'];
+    signals.forEach(signal => {
+      process.on(signal, async () => {
+        logger.info(`Received ${signal}, shutting down gracefully...`);
+        if (serverInstance) {
+          serverInstance.close(() => {
+            logger.info('HTTP server closed.');
+            if (config.server.enableStdioTransport && (getMcpServer() as any).stdioTransport?.close) {
+                logger.info('Stdio transport closed.');
+            }
+            process.exit(0);
+          });
+          setTimeout(() => {
+            logger.warn('Graceful shutdown timed out, forcing exit.');
+            process.exit(1);
+          }, 10000);
+        } else {
+          // If serverInstance is not defined (e.g., in test mode without listen), exit directly
+          logger.info('No active HTTP server to close. Exiting.');
+          process.exit(0);
+        }
+      });
+    });
+
+  } catch (error) {
+    logger.error('Failed to start server:', error);
+    await disconnectDB(); // Ensure DB disconnects on startup failure
+    process.exit(1);
+  }
 }
 
 startServer().catch(error => {
