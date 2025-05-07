@@ -22,6 +22,9 @@ export interface TraversedFile {
   fileType: string;
   fileCategory: string;
   size: number;
+  createdAt?: Date;
+  modifiedAt?: Date;
+  accessedAt?: Date;
 }
 
 // Basic file type mapping by extension
@@ -184,6 +187,14 @@ class RepositoryScannerService {
           continue;
         }
 
+        let stat;
+        try {
+          stat = await fs.lstat(entryPath); // Use lstat to get info about the entry itself (symlink or actual file/dir)
+        } catch (statError: any) {
+          logger.warn(`Could not stat ${entryPath}: ${statError.message}`);
+          continue; // Skip if we can't stat
+        }
+
         if (entry.isSymbolicLink() && options.followSymlinks) {
           try {
             const realPath = await fs.realpath(entryPath);
@@ -196,23 +207,25 @@ class RepositoryScannerService {
             const nextVisited = new Set(visitedSymlinks);
             nextVisited.add(realPath);
             
-            const linkStats = await fs.lstat(realPath); // Use lstat on realpath to check what it points to
+            const linkTargetStat = await fs.stat(realPath); // stat the target of the symlink
             
-            // Record the symlink itself
-            accumulatedFiles.push({ 
-              path: entryPath,
+            // Record the symlink itself with its own stats (from lstat)
+            accumulatedFiles.push({
+              path: entryPath, // Path of the symlink itself
               relativePath: path.relative(initialPath, entryPath),
               name: entry.name,
-              ext: '', // Symlinks don't have extensions themselves
+              ext: '', 
               depth: currentDepth,
               isSymlink: true,
-              fileType: '',
-              fileCategory: '',
-              size: 0,
+              fileType: 'SYMLINK', // Special type for symlinks
+              fileCategory: 'system',
+              size: stat.size, // Size of the symlink file itself
+              createdAt: stat.birthtime,
+              modifiedAt: stat.mtime,
+              accessedAt: stat.atime,
             });
 
-            // If the link points to a directory, traverse it
-            if (linkStats.isDirectory()) {
+            if (linkTargetStat.isDirectory()) {
                 await this.traverseDirectoryRecursive(
                     realPath, 
                     initialPath,
@@ -221,23 +234,43 @@ class RepositoryScannerService {
                     accumulatedFiles,
                     nextVisited 
                 );
-            } 
-            // Note: If it points to a file, we've already recorded the symlink. We don't double-add the file itself here.
-            // If specific behaviour is needed for symlinks-to-files, add it here.
-
+            } else if (linkTargetStat.isFile()) {
+                // If symlink points to a file, it will be picked up if not excluded
+                // No need to explicitly add it here as the main loop handles files
+                // OR, if we decide to represent the target file *through* the symlink path:
+                const fileExt = path.extname(realPath); // ext of the target file
+                const { fileType, fileCategory } = await this.detectFileTypeAndCategory(realPath, path.basename(realPath), fileExt);
+                accumulatedFiles.push({
+                    path: realPath, // Path of the target file
+                    relativePath: path.relative(initialPath, realPath),
+                    name: path.basename(realPath), // Name of the target file
+                    ext: fileExt,
+                    depth: currentDepth +1, // Depth of target can be considered deeper
+                    isSymlink: false, // This entry represents the target file
+                    fileType,
+                    fileCategory,
+                    size: linkTargetStat.size,
+                    createdAt: linkTargetStat.birthtime,
+                    modifiedAt: linkTargetStat.mtime,
+                    accessedAt: linkTargetStat.atime,
+                });
+            }
           } catch (symlinkError: any) {
-            logger.warn(`Could not resolve or stat symlink ${entryPath}: ${symlinkError.message}`);
-            // Record the broken symlink maybe? Or just skip.
-             accumulatedFiles.push({ 
+            logger.warn(`Could not resolve or process symlink ${entryPath}: ${symlinkError.message}`);
+            // Record the broken/unfollowable symlink itself
+            accumulatedFiles.push({
               path: entryPath,
               relativePath: path.relative(initialPath, entryPath),
               name: entry.name,
               ext: '',
               depth: currentDepth,
-              isSymlink: true, // Mark as symlink even if broken
-              fileType: '',
-              fileCategory: '',
-              size: 0,
+              isSymlink: true,
+              fileType: 'SYMLINK_BROKEN',
+              fileCategory: 'system',
+              size: stat.size,
+              createdAt: stat.birthtime,
+              modifiedAt: stat.mtime,
+              accessedAt: stat.atime,
             });
           }
         } else if (entry.isDirectory()) {
@@ -252,7 +285,6 @@ class RepositoryScannerService {
           );
         } else if (entry.isFile()) {
           const fileExt = path.extname(entry.name);
-          const stat = await fs.stat(entryPath);
           const { fileType, fileCategory } = await this.detectFileTypeAndCategory(entryPath, entry.name, fileExt);
           accumulatedFiles.push({
             path: entryPath,
@@ -264,6 +296,9 @@ class RepositoryScannerService {
             fileType,
             fileCategory,
             size: stat.size,
+            createdAt: stat.birthtime,
+            modifiedAt: stat.mtime,
+            accessedAt: stat.atime,
           });
         }
       }
@@ -294,8 +329,8 @@ class RepositoryScannerService {
       );
     }
     
-    const initialVisited = options.followSymlinks ? new Set<string>() : undefined;
-    if(initialVisited) initialVisited.add(absoluteRepoPath); // Add root to prevent loops if symlink points back to root
+    const initialVisited = options.followSymlinks ? new Set<string>() : new Set(); // Always init set
+    if(options.followSymlinks) initialVisited.add(absoluteRepoPath); 
 
     await this.traverseDirectoryRecursive(absoluteRepoPath, absoluteRepoPath, 0, options, files, initialVisited);
     logger.info(`Repository scan completed. Found ${files.length} files.`);
