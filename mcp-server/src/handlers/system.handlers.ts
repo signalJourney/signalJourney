@@ -1,11 +1,12 @@
-import { randomUUID } from 'crypto';
-
+// import { randomUUID } from 'crypto'; // Removed unused import
 import { z } from 'zod';
 import { CallToolResult, ServerRequest, ServerNotification } from '@modelcontextprotocol/sdk/types.js';
 import { RequestHandlerExtra } from '@modelcontextprotocol/sdk/shared/protocol.js';
+// eslint-disable-next-line import/no-unresolved
+// import { McpRequest, McpResponse, ToolContext } from '@modelcontextprotocol/sdk'; // Removed unused imports
 
 import config from '@/config';
-import { McpExecutionContext, McpApplicationError } from '@/core/mcp-types';
+// import { McpApplicationError } from '@/core/mcp-types'; // Removed unused import
 import logger from '@/utils/logger';
 import { AuthPayload } from '@/middleware/auth.middleware'; // To cast extra.authInfo
 

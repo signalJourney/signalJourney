@@ -1,4 +1,6 @@
+// eslint-disable-next-line import/no-unresolved
 import { McpServer, McpServerOptions, Transport } from '@modelcontextprotocol/sdk';
+
 import { AuthenticatedRequest } from '@/middleware/auth.middleware';
 import { getLogger } from '@/utils/logger';
 import {

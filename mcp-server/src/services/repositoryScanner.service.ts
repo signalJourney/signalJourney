@@ -1,474 +1,211 @@
-import fs from 'fs/promises';
-import path from 'path';
-
+import * as fs from 'fs';
+import * as path from 'path';
 import { minimatch } from 'minimatch';
-
-import logger from '@/utils/logger';
+import { getLogger } from '@/utils/logger';
 import { McpApplicationError } from '@/core/mcp-types';
 
-export interface TraversalOptions {
-  excludePatterns?: string[]; // Glob patterns for exclusion
-  maxDepth?: number;
-  followSymlinks?: boolean; 
-  parseCode?: boolean; // Option to enable/disable code parsing
-}
+const logger = getLogger('RepositoryScannerService');
 
-// Added CodeMetadata interface
-export interface CodeMetadata {
-  imports?: string[];
-  functions?: string[];
-  classes?: string[];
-  hasMainGuard?: boolean; // Specifically for Python __main__ check
+// Define interfaces within the service file for now
+// Consider moving to a dedicated types file later (e.g., src/types/repository.types.ts)
+export interface TraversalOptions {
+  maxDepth?: number;
+  excludePatterns?: string[];
+  followSymlinks?: boolean;
+  includeHidden?: boolean;
+  // Concurrency, gitAwareMode, onProgress etc. to be added later
 }
 
 export interface TraversedFile {
-  path: string; // Absolute path
-  relativePath: string; // Path relative to initial directory
-  name: string;
-  ext: string;
-  depth: number;
-  isSymlink?: boolean; 
-  fileType: string;
-  fileCategory: string;
-  size: number;
-  createdAt?: Date;
-  modifiedAt?: Date;
-  accessedAt?: Date;
-  codeMetadata?: CodeMetadata | null; // Added
-  isEntryPoint?: boolean; // Added
-  detectedPatterns?: string[]; // Added
+  path: string;         // Full path
+  relativePath: string; // Path relative to the scanned root
+  name: string;         // File/directory name
+  ext: string;          // File extension (including dot)
+  depth: number;        // Directory depth relative to root
+  size?: number;        // Size in bytes
+  isSymlink?: boolean;  // Is it a symbolic link?
+  isDirectory?: boolean;// Is it a directory?
+  isFile?: boolean;     // Is it a file?
+  lastModified?: Date; // Last modification time
 }
 
-// Basic file type mapping by extension
-const EXTENSION_TYPE_MAP: Record<string, string> = {
-  '.m': 'MATLAB',
-  '.py': 'PYTHON',
-  '.json': 'JSON',
-  '.md': 'MARKDOWN',
-  '.txt': 'TEXT',
-  '.R': 'R',
-  '.java': 'JAVA',
-  '.js': 'JAVASCRIPT',
-  '.ts': 'TYPESCRIPT',
-  '.c': 'C',
-  '.cpp': 'CPP',
-  '.h': 'C_HEADER',
-  '.hpp': 'CPP_HEADER',
-  '.cs': 'CSHARP',
-  '.php': 'PHP',
-  '.rb': 'RUBY',
-  '.go': 'GO',
-  '.swift': 'SWIFT',
-  '.kt': 'KOTLIN',
-  '.rs': 'RUST',
-  '.sh': 'SHELL',
-  '.bat': 'BATCH',
-  '.ps1': 'POWERSHELL',
-  '.html': 'HTML',
-  '.css': 'CSS',
-  '.xml': 'XML',
-  '.yaml': 'YAML',
-  '.yml': 'YAML',
-  '.csv': 'CSV',
-  '.tsv': 'TSV',
-  '.sql': 'SQL',
-  '.ipynb': 'IPYNB',
-  '.dockerfile': 'DOCKERFILE',
-  'dockerfile': 'DOCKERFILE', // For files named Dockerfile with no extension
-  '.gitignore': 'GITIGNORE',
-  '.gitattributes': 'GITATTRIBUTES',
-  // Add more common types
-};
+const DEFAULT_EXCLUDE_PATTERNS = [
+  '**/node_modules/**',
+  '**/.git/**',
+  '**/dist/**',
+  '**/build/**',
+  '**/.DS_Store'
+];
 
-class RepositoryScannerService {
+const DEFAULT_MAX_DEPTH = 20;
+
+export class RepositoryScannerService {
+
   constructor() {
-    logger.info('RepositoryScannerService initialized');
+    // Dependencies like config service could be injected here later
   }
 
-  private isExcluded(filePath: string, initialPath: string, patterns?: string[]): boolean {
-    if (!patterns || patterns.length === 0) {
-      return false;
-    }
-    const relativePath = path.relative(initialPath, filePath);
-    for (const pattern of patterns) {
-      // Use matchBase:true if patterns are like 'node_modules' instead of '**/node_modules/**'
-      // Use dot:true to ensure patterns starting with . match hidden files/dirs
-      if (minimatch(relativePath, pattern, { dot: true, matchBase: true })) { 
-        logger.debug(`Path ${relativePath} (abs: ${filePath}) excluded by pattern: ${pattern}`);
-        return true;
-      }
-    }
-    return false;
+  private shouldExclude(relativePath: string, patterns: string[] = []): boolean {
+    // Normalize path separators for consistent matching
+    const normalizedPath = relativePath.replace(/\\/g, '/');
+    return patterns.some(pattern => minimatch(normalizedPath, pattern, { dot: true }));
   }
 
-  private async detectFileTypeAndCategory(
-    filePath: string,
-    fileName: string,
-    fileExt: string,
-  ): Promise<{ fileType: string; fileCategory: string }> {
-    let fileType = EXTENSION_TYPE_MAP[fileExt.toLowerCase()] || 'UNKNOWN';
-    let fileCategory = 'unknown';
+  async scanRepository(
+    repositoryPath: string,
+    options: TraversalOptions = {}
+  ): Promise<TraversedFile[]> {
+    const absoluteRepoPath = path.resolve(repositoryPath);
 
-    // Simple content checks for refinement (can be expanded)
-    if (fileType === 'UNKNOWN' || fileType === 'TEXT') {
-      try {
-        const content = await fs.readFile(filePath, { encoding: 'utf8', flag: 'r' });
-        if (fileExt === '.m' || (fileType === 'UNKNOWN' && content.match(/^\s*function\b/) && content.match(/^\s*%/m))) {
-          fileType = 'MATLAB';
-        } else if (fileExt === '.py' || (fileType === 'UNKNOWN' && content.match(/^\s*(import|from|def|class)\b/) && content.match(/^\s*#/m))) {
-          fileType = 'PYTHON';
-        }
-        // Add more content-based detections if necessary
-      } catch (err: any) {
-        // logger.warn(`Could not read content of ${filePath} for type detection: ${err.message}`);
-        // If it's not readable as text, or very large, it might be binary.
-        // This is a very basic check.
-        if (err.code === 'ENOENT' || err.code === 'EISDIR') {
-          // Already handled or not a file
-        } else {
-          fileType = 'BINARY'; // Fallback for unreadable text files
-        }
-      }
+    logger.info(`Starting repository scan at: ${absoluteRepoPath}`);
+
+    if (!fs.existsSync(absoluteRepoPath)) {
+      throw new McpApplicationError(`Repository path does not exist: ${absoluteRepoPath}`, 'NOT_FOUND');
     }
 
-    // Category detection
-    const lowerFileName = fileName.toLowerCase();
-    if (fileType === 'PYTHON') {
-      if (lowerFileName.startsWith('test_') || lowerFileName.endsWith('_test.py')) {
-        fileCategory = 'test';
-      } else {
-        fileCategory = 'source';
-      }
-    } else if (fileType === 'MATLAB') {
-      if (lowerFileName.startsWith('test') || lowerFileName.includes('testcase')) {
-        fileCategory = 'test';
-      } else {
-        fileCategory = 'source';
-      }
-    } else if (['JSON', 'YAML', 'XML'].includes(fileType)) {
-      if (lowerFileName.includes('config') || lowerFileName.includes('setting') || lowerFileName.includes('schema')) {
-        fileCategory = 'config';
-      } else if (lowerFileName.includes('package') || lowerFileName.includes('lock')) {
-        fileCategory = 'config'; // e.g. package.json, package-lock.json
-      } else {
-        fileCategory = 'data';
-      }
-    } else if (['MARKDOWN', 'TEXT'].includes(fileType)) {
-      fileCategory = 'docs';
-    } else if (['JAVASCRIPT', 'TYPESCRIPT', 'JAVA', 'C', 'CPP', 'CSHARP', 'GO', 'RUST', 'SWIFT', 'KOTLIN', 'PHP', 'RUBY'].includes(fileType)) {
-      // Basic categorization for other source code types
-      // TODO: Add test file patterns for these languages
-      fileCategory = 'source';
-    } else if (fileType === 'IPYNB') {
-      fileCategory = 'notebook';
-    } else if (fileType === 'DOCKERFILE' || fileType === 'GITIGNORE' || fileType === 'GITATTRIBUTES') {
-      fileCategory = 'config';
-    } else if (fileType !== 'UNKNOWN') {
-      fileCategory = 'asset'; // Default for other known types like images, sql, etc.
-    }
-
-    return { fileType, fileCategory };
-  }
-
-  // Added basic Python parser
-  private async parsePythonFile(filePath: string): Promise<CodeMetadata | null> {
     try {
-      const content = await fs.readFile(filePath, 'utf-8');
-      const imports: string[] = [];
-      const functions: string[] = [];
-      const classes: string[] = [];
-      // Basic regex, not a full AST parse
-      const importRegex = /^\s*(?:from\s+([\w.]+)\s+import\s+(.+)|import\s+(.+))/gm;
-      const functionRegex = /^\s*def\s+([a-zA-Z_]\w*)\s*\(/gm;
-      const classRegex = /^\s*class\s+([a-zA-Z_]\w*)[\(:]/gm;
-      const mainGuardRegex = /^if\s+__name__\s*==\s*['\"]__main__['\"]:/m;
-      let match;
-      while ((match = importRegex.exec(content)) !== null) {
-        if (match[3]) imports.push(...match[3].split(',').map(m => m.trim())); // import a, b
-        else if (match[1] && match[2]) imports.push(`${match[1]}.${match[2].split(',').map(m => m.trim()).join(', ')}`); // from x import y, z
+      const stats = await fs.promises.stat(absoluteRepoPath);
+      if (!stats.isDirectory()) {
+        throw new McpApplicationError(`Repository path is not a directory: ${absoluteRepoPath}`, 'VALIDATION_ERROR');
       }
-      while ((match = functionRegex.exec(content)) !== null) functions.push(match[1]);
-      while ((match = classRegex.exec(content)) !== null) classes.push(match[1]);
-      const hasMainGuard = mainGuardRegex.test(content);
-      if (imports.length || functions.length || classes.length || hasMainGuard) return { imports, functions, classes, hasMainGuard };
-      return null;
     } catch (error: any) {
-      logger.warn(`Failed to parse Python file ${filePath}: ${error.message}`);
-      return null;
-    }
-  }
-
-  // Added basic MATLAB parser
-  private async parseMatlabFile(filePath: string): Promise<CodeMetadata | null> {
-    try {
-      const content = await fs.readFile(filePath, 'utf-8');
-      const functions: string[] = [];
-      const classes: string[] = [];
-      // Basic regex for function and class definitions
-      const functionRegex = /^\s*function(?:\s*\[[^\]]*\])?\s*=?\s*([a-zA-Z_]\w*)\s*\(/gm;
-      const classRegex = /^\s*classdef\s+([a-zA-Z_]\w*)/gm;
-      let match;
-      while ((match = functionRegex.exec(content)) !== null) functions.push(match[1]);
-      while ((match = classRegex.exec(content)) !== null) classes.push(match[1]);
-      if (functions.length || classes.length) return { functions, classes }; // Imports for MATLAB are harder with regex, skip for now
-      return null;
-    } catch (error: any) {
-      logger.warn(`Failed to parse MATLAB file ${filePath}: ${error.message}`);
-      return null;
-    }
-  }
-
-  // Added pattern and entry point detection logic
-  private detectPatternsAndEntryPoints(file: TraversedFile): { isEntryPoint?: boolean; detectedPatterns?: string[] } {
-    const patterns: string[] = [];
-    let isEntryPoint = false;
-    const lowerName = file.name.toLowerCase();
-    const lowerPath = file.relativePath.toLowerCase(); // Use relative path for checks
-
-    // Category-based patterns
-    if (file.fileCategory === 'test') patterns.push('TEST_SUITE');
-    if (file.fileCategory === 'config') patterns.push('CONFIG_FILE');
-    if (file.fileCategory === 'docs') patterns.push('DOCS_FILE');
-    if (file.fileCategory === 'notebook') patterns.push('NOTEBOOK');
-    if (file.fileCategory === 'asset') patterns.push('ASSET');
-
-    // Name/Convention-based patterns
-    if (file.fileCategory === 'source' && (lowerName.includes('util') || lowerName.includes('helper') || lowerName.includes('common'))) {
-      patterns.push('UTIL_MODULE');
-    }
-    if (file.fileCategory === 'source' && lowerName.includes('controller') && file.codeMetadata?.classes?.length) {
-      patterns.push('MVC_CONTROLLER');
-    }
-    if (file.fileCategory === 'source' && lowerName.includes('model') && file.codeMetadata?.classes?.length) {
-      patterns.push('MVC_MODEL');
-    }
-    if (file.fileCategory === 'source' && lowerName.includes('service') && file.codeMetadata?.classes?.length) {
-      patterns.push('SERVICE_CLASS');
-    }
-    if (file.fileCategory === 'source' && (lowerName.includes('interface') || lowerName.includes('types'))) {
-      patterns.push('TYPE_DEFINITION');
+        logger.error(`Error accessing repository path ${absoluteRepoPath}: ${error.message}`);
+        throw new McpApplicationError(`Failed to access repository path: ${error.message}`, 'ACCESS_ERROR', error);
     }
 
-    // Entry Point Detection
-    if (file.fileType === 'PYTHON') {
-      if (lowerName === '__main__.py' || lowerName === 'manage.py' || lowerName === 'app.py' || file.codeMetadata?.hasMainGuard) {
-        isEntryPoint = true;
-      }
-    } else if (file.fileType === 'MATLAB') {
-      // Script if no functions defined (or only one matching file name) and not in test/private path
-      const isScript = !file.codeMetadata?.functions || file.codeMetadata.functions.length === 0 || 
-                       (file.codeMetadata.functions.length === 1 && file.codeMetadata.functions[0] === file.name.replace('.m',''));
-      if (isScript && !lowerPath.includes('test') && !lowerPath.includes('private') && (lowerName.startsWith('run_') || lowerName.startsWith('main_'))) {
-        isEntryPoint = true;
-      }
-    } else if (['JAVASCRIPT', 'TYPESCRIPT', 'SHELL'].includes(file.fileType)) {
-      if ((lowerName === 'main' || lowerName === 'index' || lowerName === 'app' || lowerName === 'server') && file.depth <= 1) { // Simple check for top-level scripts
-          isEntryPoint = true;
-      }
-    }
-    // Add checks for package.json main/bin fields if needed later
-    
-    return { isEntryPoint: isEntryPoint || undefined, detectedPatterns: patterns.length ? patterns : undefined };
+    const visitedPaths = new Set<string>();
+    const result: TraversedFile[] = [];
+    const mergedOptions: TraversalOptions = {
+        maxDepth: options.maxDepth ?? DEFAULT_MAX_DEPTH,
+        excludePatterns: [...DEFAULT_EXCLUDE_PATTERNS, ...(options.excludePatterns ?? [])],
+        followSymlinks: options.followSymlinks ?? false,
+        includeHidden: options.includeHidden ?? false,
+    };
+
+    await this.traverseDirectoryRecursive(
+      absoluteRepoPath, // rootPath
+      absoluteRepoPath, // currentPath starts at root
+      result,
+      mergedOptions,
+      0, // initial depth
+      visitedPaths
+    );
+
+    logger.info(`Repository scan complete. Found ${result.length} files/directories.`);
+    return result;
   }
 
   private async traverseDirectoryRecursive(
-    dirPath: string,
-    initialPath: string,
-    currentDepth: number,
+    rootPath: string,
+    currentPath: string,
+    result: TraversedFile[],
     options: TraversalOptions,
-    accumulatedFiles: TraversedFile[],
-    visitedSymlinks: Set<string> = new Set() 
+    depth: number,
+    visitedPaths: Set<string>
   ): Promise<void> {
-    if (options.maxDepth !== undefined && currentDepth > options.maxDepth) {
-      logger.debug(`Max depth ${options.maxDepth} reached at ${dirPath}`);
+    // Base case: Check depth limit
+    if (depth > (options.maxDepth ?? Infinity)) {
+      logger.debug(`Max depth (${options.maxDepth}) reached at: ${currentPath}`);
       return;
     }
 
-    // Check exclusion for the directory itself before reading
-    if (this.isExcluded(dirPath, initialPath, options.excludePatterns)) {
-      return;
-    }
-
+    // Base case: Prevent infinite loops with visited paths (especially for symlinks)
+    // Using realpath to resolve symlinks before adding to visited set
     try {
-      const entries = await fs.readdir(dirPath, { withFileTypes: true });
-      for (const entry of entries) {
-        const entryPath = path.join(dirPath, entry.name);
-
-        // Check exclusion for each entry (file or directory)
-        // Important: check exclusion *before* following symlinks or recursing
-        if (this.isExcluded(entryPath, initialPath, options.excludePatterns)) {
-          continue;
+        const realCurrentPath = await fs.promises.realpath(currentPath);
+        if (visitedPaths.has(realCurrentPath)) {
+            logger.warn(`Already visited path (possible symlink loop): ${currentPath} -> ${realCurrentPath}`);
+            return;
         }
+        visitedPaths.add(realCurrentPath);
+    } catch (error: any) { // Handle potential errors during realpath (e.g., broken symlink)
+        logger.warn(`Could not resolve real path for ${currentPath}: ${error.message}`);
+        // Decide if we should stop or continue for the non-resolved path
+        if (visitedPaths.has(currentPath)) return; // Still check the non-resolved path
+        visitedPaths.add(currentPath);
+    }
 
-        let stat;
-        try {
-          stat = await fs.lstat(entryPath); // Use lstat to get info about the entry itself (symlink or actual file/dir)
-        } catch (statError: any) {
-          logger.warn(`Could not stat ${entryPath}: ${statError.message}`);
-          continue; // Skip if we can't stat
+    let dirents: fs.Dirent[] = [];
+    try {
+      dirents = await fs.promises.readdir(currentPath, { withFileTypes: true });
+    } catch (error: any) {
+      logger.warn(`Could not read directory ${currentPath}: ${error.message}`);
+      return; // Cannot proceed if directory is unreadable
+    }
+
+    for (const dirent of dirents) {
+      const entryPath = path.join(currentPath, dirent.name);
+      const relativePath = path.relative(rootPath, entryPath);
+
+      // Skip hidden files/dirs unless explicitly included
+      if (!options.includeHidden && dirent.name.startsWith('.')) {
+        continue;
+      }
+
+      // Check exclusion patterns
+      if (this.shouldExclude(relativePath, options.excludePatterns)) {
+        logger.debug(`Excluding path based on pattern: ${relativePath}`);
+        continue;
+      }
+
+      let stats: fs.Stats | null = null;
+      let isSymlink = dirent.isSymbolicLink();
+      let targetPath = entryPath; // Path to stat (could be symlink target)
+
+      try {
+        if (isSymlink) {
+            // If following symlinks, stat the target, otherwise stat the link itself
+            if (options.followSymlinks) {
+                // Note: fs.promises.stat follows symlinks by default
+                stats = await fs.promises.stat(entryPath);
+                // We might need the real path of the target later if it's a directory
+                // targetPath = await fs.promises.realpath(entryPath); // This could be redundant if stat works
+            } else {
+                // Use lstat to get info about the link itself
+                stats = await fs.promises.lstat(entryPath);
+            }
+        } else {
+            stats = await fs.promises.stat(entryPath);
         }
+      } catch (error: any) {
+        logger.warn(`Could not get stats for ${entryPath}: ${error.message}`);
+        continue; // Skip entry if we cannot get stats
+      }
 
-        if (entry.isSymbolicLink() && options.followSymlinks) {
-          try {
-            const realPath = await fs.realpath(entryPath);
-            // Prevent infinite loops
-            if (visitedSymlinks.has(realPath)) {
-              logger.warn(`Symlink loop detected for ${entryPath} -> ${realPath}. Skipping.`);
-              continue;
-            }
-            // Clone the set for the recursive call to prevent siblings interfering
-            const nextVisited = new Set(visitedSymlinks);
-            nextVisited.add(realPath);
-            
-            const linkTargetStat = await fs.stat(realPath); // stat the target of the symlink
-            
-            // Record the symlink itself with its own stats (from lstat)
-            accumulatedFiles.push({
-              path: entryPath, // Path of the symlink itself
-              relativePath: path.relative(initialPath, entryPath),
-              name: entry.name,
-              ext: '', 
-              depth: currentDepth,
-              isSymlink: true,
-              fileType: 'SYMLINK', // Special type for symlinks
-              fileCategory: 'system',
-              size: stat.size, // Size of the symlink file itself
-              createdAt: stat.birthtime,
-              modifiedAt: stat.mtime,
-              accessedAt: stat.atime,
-            });
+      if (!stats) continue; // Should not happen if try/catch works, but for type safety
 
-            if (linkTargetStat.isDirectory()) {
-                await this.traverseDirectoryRecursive(
-                    realPath, 
-                    initialPath,
-                    currentDepth + 1, 
-                    options,
-                    accumulatedFiles,
-                    nextVisited 
-                );
-            } else if (linkTargetStat.isFile()) {
-                // If symlink points to a file, it will be picked up if not excluded
-                // No need to explicitly add it here as the main loop handles files
-                // OR, if we decide to represent the target file *through* the symlink path:
-                const fileExt = path.extname(realPath); // ext of the target file
-                const { fileType, fileCategory } = await this.detectFileTypeAndCategory(realPath, path.basename(realPath), fileExt);
-                let codeMetadata: CodeMetadata | null = null;
-                if (options.parseCode) { // Check option before parsing
-                  if (fileType === 'PYTHON') codeMetadata = await this.parsePythonFile(realPath);
-                  else if (fileType === 'MATLAB') codeMetadata = await this.parseMatlabFile(realPath);
-                }
-                accumulatedFiles.push({
-                    path: realPath, // Path of the target file
-                    relativePath: path.relative(initialPath, realPath),
-                    name: path.basename(realPath), // Name of the target file
-                    ext: fileExt,
-                    depth: currentDepth +1, // Depth of target can be considered deeper
-                    isSymlink: false, // This entry represents the target file
-                    fileType,
-                    fileCategory,
-                    size: linkTargetStat.size,
-                    createdAt: linkTargetStat.birthtime,
-                    modifiedAt: linkTargetStat.mtime,
-                    accessedAt: linkTargetStat.atime,
-                    codeMetadata
-                });
-            }
-          } catch (symlinkError: any) {
-            logger.warn(`Could not resolve or process symlink ${entryPath}: ${symlinkError.message}`);
-            // Record the broken/unfollowable symlink itself
-            accumulatedFiles.push({
-              path: entryPath,
-              relativePath: path.relative(initialPath, entryPath),
-              name: entry.name,
-              ext: '',
-              depth: currentDepth,
-              isSymlink: true,
-              fileType: 'SYMLINK_BROKEN',
-              fileCategory: 'system',
-              size: stat.size,
-              createdAt: stat.birthtime,
-              modifiedAt: stat.mtime,
-              accessedAt: stat.atime,
-            });
-          }
-        } else if (entry.isDirectory()) {
-          await this.traverseDirectoryRecursive(
-            entryPath,
-            initialPath,
-            currentDepth + 1,
+      const traversedEntry: TraversedFile = {
+        path: entryPath,
+        relativePath,
+        name: dirent.name,
+        ext: path.extname(dirent.name),
+        depth,
+        size: stats.size,
+        isSymlink,
+        isDirectory: stats.isDirectory(),
+        isFile: stats.isFile(),
+        lastModified: stats.mtime,
+      };
+
+      // Add the entry (file or directory, or link if not following)
+      result.push(traversedEntry);
+      // logger.debug(`Added entry: ${traversedEntry.relativePath} (isFile: ${traversedEntry.isFile}, isDir: ${traversedEntry.isDirectory})`);
+
+      // If it's a directory, recurse
+      if (stats.isDirectory()) {
+         await this.traverseDirectoryRecursive(
+            rootPath,
+            entryPath, // Recurse into the directory path
+            result,
             options,
-            accumulatedFiles,
-            // Pass visited set only if following symlinks, otherwise pass empty/new set
-            options.followSymlinks ? new Set(visitedSymlinks) : new Set() 
-          );
-        } else if (entry.isFile()) {
-          const fileExt = path.extname(entry.name);
-          const { fileType, fileCategory } = await this.detectFileTypeAndCategory(entryPath, entry.name, fileExt);
-          let codeMetadata: CodeMetadata | null = null;
-          if (options.parseCode) { // Check option before parsing
-             if (fileType === 'PYTHON') codeMetadata = await this.parsePythonFile(entryPath);
-             else if (fileType === 'MATLAB') codeMetadata = await this.parseMatlabFile(entryPath);
-          }
-          accumulatedFiles.push({
-            path: entryPath,
-            relativePath: path.relative(initialPath, entryPath),
-            name: entry.name,
-            ext: fileExt,
-            depth: currentDepth,
-            isSymlink: false,
-            fileType,
-            fileCategory,
-            size: stat.size,
-            createdAt: stat.birthtime,
-            modifiedAt: stat.mtime,
-            accessedAt: stat.atime,
-            codeMetadata
-          });
-        }
+            depth + 1,
+            visitedPaths // Pass the same visited set down
+         );
       }
-    } catch (error: any) {
-      // Log errors like permission denied but continue traversal if possible
-      logger.warn(`Failed to read directory ${dirPath}: ${error.message}`);
+       // Note: If followSymlinks is true and it's a symlink to a directory, stats.isDirectory() should be true
+       // and recursion will happen automatically.
+       // If followSymlinks is false, stats.isDirectory() will be false for a symlink, so no recursion.
     }
-  }
-
-  public async scanRepository(
-    repoPath: string,
-    options: TraversalOptions = {}
-  ): Promise<TraversedFile[]> {
-    logger.info(`Starting repository scan at: ${repoPath}, options: ${JSON.stringify(options)}`);
-    const absoluteRepoPath = path.resolve(repoPath);
-    const files: TraversedFile[] = [];
-
-    try {
-      const stats = await fs.stat(absoluteRepoPath);
-      if (!stats.isDirectory()) {
-        throw new Error(`Path is not a directory: ${absoluteRepoPath}`);
-      }
-    } catch (error: any) {
-      logger.error(`Error accessing repository path ${absoluteRepoPath}: ${error.message}`);
-      throw new McpApplicationError(
-        `Failed to access repository: ${error.message}`,
-        'REPOSITORY_SCAN_ERROR'
-      );
-    }
-    
-    const initialVisited: Set<string> = options.followSymlinks ? new Set<string>() : new Set<string>(); 
-    if(options.followSymlinks) initialVisited.add(absoluteRepoPath); 
-
-    // Step 1: Traverse and collect basic file info + code metadata (if enabled)
-    await this.traverseDirectoryRecursive(absoluteRepoPath, absoluteRepoPath, 0, options, files, initialVisited);
-
-    // Step 2: Post-process to detect patterns and entry points
-    for (const file of files) {
-        const { isEntryPoint, detectedPatterns } = this.detectPatternsAndEntryPoints(file);
-        file.isEntryPoint = isEntryPoint;
-        file.detectedPatterns = detectedPatterns;
-    }
-
-    logger.info(`Repository scan completed. Found ${files.length} files.`);
-    return files;
   }
 }
 

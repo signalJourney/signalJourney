@@ -1,5 +1,4 @@
-import { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
-import { z } from 'zod';
+import { CallToolResult, McpErrorPayload } from '@modelcontextprotocol/sdk/types.js';
 
 import logger from '@/utils/logger';
 import { AuthPayload } from '@/middleware/auth.middleware';
