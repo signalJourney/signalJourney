@@ -10,7 +10,7 @@ import tokenServiceInstance from '@/services/token.service'; // Import the actua
 
 // Mock the tokenService blacklist for isolated tests of auth routes
 // This is to avoid interference between logout tests and validate tests
-let mockBlacklist = new Set<string>();
+const mockBlacklist = new Set<string>();
 
 jest.mock('@/services/token.service', () => {
   const originalTokenService = jest.requireActual('@/services/token.service').default; // Access the singleton instance
