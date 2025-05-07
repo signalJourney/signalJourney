@@ -1,226 +1,182 @@
-import express from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import helmet from 'helmet';
-import cors from 'cors'; // Import cors
+import cors from 'cors';
 import { StreamableHTTPServerTransport, StdioServerTransport, AuthenticationContext } from '@modelcontextprotocol/sdk';
 import config from '@/config';
 import logger, { stream as morganStream } from '@/utils/logger';
 import { initializeMcpServer, getMcpServer } from '@/core/server';
-import morgan from 'morgan'; // HTTP request logger middleware
+import { jwtAuthMiddleware, AuthenticatedRequest } from '@/middleware/auth.middleware';
 import { requestIdMiddleware } from '@/middleware/requestId.middleware';
-import { jwtAuthMiddleware, AuthenticatedRequest, AuthPayload } from '@/middleware/auth.middleware';
+import authRoutes from '@/routes/auth.routes';
+import { McpApplicationError, McpErrorPayload } from '@/core/mcp-types'; 
+import morgan from 'morgan'; 
 import rateLimit from 'express-rate-limit';
-import { McpApplicationError } from '@/core/mcp-types';
+import { randomUUID } from 'crypto'; // Imported randomUUID
 
 async function startServer() {
-  // Initialize MCP Server instance
-  const mcpServer = initializeMcpServer();
+  await initializeMcpServer();
+  const mcpServerInstance = getMcpServer();
 
-  // Create Express app
   const app = express();
 
-  // Trust proxy if behind one (e.g., Nginx, Heroku) for rate limiting and secure cookies
-  app.set('trust proxy', 1); 
-
-  // Apply Request ID middleware first
-  app.use(requestIdMiddleware);
-
-  // Security Middleware
+  // --- Core Middleware ---
   app.use(helmet());
+  app.use(cors(config.server.corsOptions)); // Use CORS options from config
+  app.use(express.json());
+  app.use(express.urlencoded({ extended: true }));
+  app.use(requestIdMiddleware); // Add request ID to res.locals
 
-  // CORS Middleware
-  const corsOptions = {
-    origin: config.security.corsAllowedOrigins, // Use configured origins
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-ID'],
-    credentials: true,
-  };
-  app.use(cors(corsOptions));
-  logger.info(`CORS enabled for origins: ${config.security.corsAllowedOrigins.join(', ')}`);
-
-  // Request Body Parsing Middleware
-  app.use(express.json({ limit: '10mb' })); // Adjust limit as needed
-  app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-
-  // HTTP Request Logging Middleware (Morgan)
-  // Use 'combined' format for production and 'dev' for development
+  // Morgan logging - uses res.locals.requestId set by requestIdMiddleware
   const morganFormat = config.server.nodeEnv === 'production' ? 'combined' : 'dev';
-  // Add custom token for requestId in Morgan
-  morgan.token('id', (req: AuthenticatedRequest) => res.locals.requestId || '-');
+  // Morgan token for requestId. Morgan's req is http.IncomingMessage, res is http.ServerResponse.
+  morgan.token('id', (req: Request, res: Response) => res.locals.requestId || '-'); 
   app.use(morgan(`:id :remote-addr - :remote-user [:date[clf]] ":method :url HTTP/:http-version" :status :res[content-length] ":referrer" ":user-agent"`, { stream: morganStream }));
 
   // Apply JWT authentication middleware globally. It populates req.authInfo if token is valid.
   app.use(jwtAuthMiddleware);
 
-  // Rate Limiting Middleware - applied to /mcp and /auth routes (if an /auth route is added later)
+  // Rate Limiting Middleware
   const apiLimiter = rateLimit({
-    windowMs: config.security.rateLimitWindowMs,
-    max: config.security.rateLimitMax,
-    standardHeaders: 'draft-7', // Use recommended standard draft
-    legacyHeaders: false, 
-    message: {
-      error: { code: 'RATE_LIMIT_EXCEEDED', message: 'Too many requests, please try again later.' },
+    windowMs: config.security.rateLimitWindowMs, 
+    max: config.security.rateLimitMaxRequests,
+    standardHeaders: true,
+    legacyHeaders: false,
+    handler: (req: Request, res: Response, next: NextFunction, options) => {
+      // Pass a structured error to the global error handler
+      next(new McpApplicationError(
+        options.message || 'Too many requests, please try again later.',
+        'RATE_LIMIT_EXCEEDED',
+        { currentRate: options.max, window: `${options.windowMs / 1000}s` },
+        options.statusCode
+      ));
     },
-    keyGenerator: (req: AuthenticatedRequest) => req.ip || randomUUID(), // Fallback if IP is not available
+    keyGenerator: (req: Request) => req.ip || randomUUID(), // Use base Request type
   });
   app.use('/mcp', apiLimiter);
-  // app.use('/auth', apiLimiter); // Example if auth routes are added
+  app.use('/auth', apiLimiter, authRoutes);
 
   // MCP StreamableHTTP Transport Endpoint
-  app.all('/mcp', async (req: AuthenticatedRequest, res) => {
+  app.all('/mcp', async (req: Request, res: Response) => { // Use base Request type
     try {
-      // Pass authentication context from Express to MCP SDK transport
-      // The SDK's StreamableHTTPServerTransport can accept a function to provide context.
-      // For now, we assume the SDK transport or McpServer can access req.authInfo implicitly if needed or via a custom context provider.
-      // A more explicit way would be to customize the transport if the SDK supports it, or pass it via the `execute` method options if possible.
-      // The `sdkContext.auth` in the tool's execute method is the target for this.
-      
-      // Let's try to pass it via the options to connect, if the SDK supports custom context for transports
-      // This is a hypothetical way to pass it, actual SDK mechanism might differ.
-      // const transport = new StreamableHTTPServerTransport(req, res, { getAuthenticationContext: async () => req.authInfo as AuthenticationContext });
-      const transport = new StreamableHTTPServerTransport(req, res, {
-        getAuthenticationContext: async () => req.authInfo as AuthenticationContext | undefined,
-      });
-
-      await mcpServer.connect(transport);
-    } catch (error) {
-      logger.error('Error in MCP HTTP transport connection:', { error, requestId: res.locals.requestId });
+      const sdkContext: AuthenticationContext = {
+        protocol: 'http',
+        http: { req: req as express.Request, res: res as express.Response }, 
+        auth: (req as AuthenticatedRequest).authInfo, // Pass populated authInfo
+      };
+      const transport = new StreamableHTTPServerTransport(mcpServerInstance, sdkContext);
+      await transport.handler(req as express.Request, res as express.Response);
+    } catch (error: any) {
+      logger.error('Error in MCP HTTP transport handler:', { error, requestId: res.locals.requestId });
       if (!res.headersSent) {
-        res.status(500).json({ error: { code: 'MCP_TRANSPORT_ERROR', message: 'MCP transport connection error' }});
+        // Delegate to global error handler
+        const mcpError = new McpApplicationError(error.message || 'MCP transport error', 'MCP_TRANSPORT_ERROR', error, 500);
+        express().handle(mcpError, req, res, () => {}); // A bit of a hack to use global handler if possible
       }
     }
   });
 
   // Basic health check endpoint
-  app.get('/health', (req: AuthenticatedRequest, res) => {
+  app.get('/health', (req: Request, res: Response) => { // Use base Request type
     res.status(200).json({
       status: 'UP',
       serverName: config.server.mcpServerName,
       version: config.server.mcpServerVersion,
       timestamp: new Date().toISOString(),
-      requestId: res.locals.requestId,
+      nodeVersion: process.version,
+      platform: process.platform,
+      memoryUsage: process.memoryUsage(),
     });
   });
 
-  // Global Error Handler Middleware (Express specific)
-  // This should be the last middleware
-  app.use((err: any, req: AuthenticatedRequest, res: express.Response, next: express.NextFunction) => {
+  // Global Error Handler Middleware
+  app.use((err: any, req: Request, res: Response, next: NextFunction) => { // Use base Request, Response, NextFunction
     const requestId = res.locals.requestId || 'unknown';
     logger.error(
       `Unhandled Express error: ${err.message}`,
       { 
         stack: config.server.nodeEnv === 'development' ? err.stack : undefined, 
-        requestPath: req.path, 
+        requestPath: (req as AuthenticatedRequest).path, // req.path should be available on base Request too
         requestId, 
-        errorCode: err.code, // Log our custom error code if present
+        errorCode: err.code, 
         errorDetails: err.details 
       }
     );
 
     if (res.headersSent) {
-      return next(err);
+      return next(err); // Delegate to default Express error handler if headers already sent
     }
 
     let statusCode = 500;
-    let errorBody: any = {
-      error: {
-        code: 'INTERNAL_ERROR',
-        message: 'An internal server error occurred.',
-        requestId,
-      }
+    let responseBody: McpErrorPayload = {
+      code: 'INTERNAL_SERVER_ERROR',
+      message: 'An unexpected error occurred.',
     };
 
     if (err instanceof McpApplicationError) {
-      errorBody.error.code = err.code;
-      errorBody.error.message = err.message;
-      if (err.details) errorBody.error.details = err.details;
+      statusCode = err.statusCode || 500;
+      responseBody = { code: err.code, message: err.message, details: err.details };
+    } else if (err instanceof ZodError) { // Handle ZodErrors directly if they weren't wrapped
+      statusCode = 400;
+      responseBody = { 
+        code: 'VALIDATION_ERROR', 
+        message: 'Request validation failed', 
+        details: err.issues 
+      };
+    } else if (err.name === 'UnauthorizedError') { // Example for express-jwt errors
+        statusCode = 401;
+        responseBody = { code: 'UNAUTHORIZED', message: err.message };
+    }
+    // Add more specific error type checks here if needed
 
-      switch (err.code) {
-        case 'VALIDATION_ERROR': statusCode = 400; break;
-        case 'AUTHENTICATION_REQUIRED': statusCode = 401; break;
-        case 'AUTHENTICATION_FAILED': statusCode = 401; break; // e.g. invalid token
-        case 'AUTHORIZATION_FAILED': statusCode = 403; break;
-        case 'NOT_FOUND': statusCode = 404; break;
-        default: statusCode = err.statusCode || 500; // Use status code from error if provided
-      }
-    }
-    // For ZodErrors specifically if not wrapped in McpApplicationError (though McpServer should handle this)
-    else if (err.name === 'ZodError' && err.issues) {
-        statusCode = 400;
-        errorBody.error.code = 'VALIDATION_ERROR';
-        errorBody.error.message = 'Request validation failed';
-        errorBody.error.details = err.issues;
-    }
-    
-    res.status(statusCode).json(errorBody);
+    res.status(statusCode).json(responseBody);
   });
 
-  // Start HTTP server
-  const server = app.listen(config.server.port, () => {
-    logger.info(`HTTP Server listening on port ${config.server.port}`);
-    logger.info(`MCP Server Name: ${config.server.mcpServerName}, Version: ${config.server.mcpServerVersion}`);
-    logger.info(`Environment: ${config.server.nodeEnv}, Log Level: ${config.logging.level}`);
-    logger.info(`Access health check at http://localhost:${config.server.port}/health`);
-    logger.info(`MCP endpoint at http://localhost:${config.server.port}/mcp`);
-  });
-
-  // Handle server errors (e.g., EADDRINUSE)
-  server.on('error', (error: NodeJS.ErrnoException) => {
-    if (error.syscall !== 'listen') {
-      throw error;
-    }
-    switch (error.code) {
-      case 'EACCES':
-        logger.error(`Port ${config.server.port} requires elevated privileges`);
-        process.exit(1);
-        break;
-      case 'EADDRINUSE':
-        logger.error(`Port ${config.server.port} is already in use`);
-        process.exit(1);
-        break;
-      default:
-        throw error;
-    }
-  });
-
-  // Stdio Transport (if enabled via command line argument, e.g., --stdio)
-  if (process.argv.includes('--stdio')) {
-    try {
-      // For stdio, the McpServer itself handles the request loop after connect.
-      // Authentication for stdio would need a custom mechanism if JWTs (HTTP-centric) aren't used.
-      // E.g., first message could be an auth token, or it runs in a trusted environment.
-      // For now, authInfo will be undefined for stdio tools unless a mechanism is added.
-      const stdioTransport = new StdioServerTransport(); // No auth context passed here for now
-      await mcpServer.connect(stdioTransport);
-      logger.info('MCP Server connected via Stdio transport.');
-    } catch (error) {
-      logger.error('Failed to connect MCP Server via Stdio transport:', error);
-    }
+  // --- Start Stdio Transport if enabled ---
+  if (config.server.enableStdioTransport) {
+    logger.info('Starting StdioServerTransport...');
+    const stdioTransport = new StdioServerTransport(mcpServerInstance, {
+      protocol: 'stdio',
+      // No specific auth for stdio in this basic setup, but could be added
+    });
+    stdioTransport.listen();
+    logger.info('StdioServerTransport is listening.');
   }
 
+  // --- Start HTTP Server ---
+  const port = config.server.port;
+  const server = app.listen(port, () => {
+    logger.info(`MCP Server '${config.server.mcpServerName}' v${config.server.mcpServerVersion} started.`);
+    logger.info(`HTTP transport listening on http://localhost:${port}/mcp`);
+    if (config.server.enableStdioTransport) {
+      logger.info('STDIO transport also active.');
+    }
+  });
+
   // Graceful shutdown
-  const shutdown = (signal: string) => {
-    logger.info(`Received ${signal}. Shutting down gracefully...`);
-    server.close(() => {
-      logger.info('HTTP server closed.');
-      // Potentially disconnect MCP transports if the SDK requires/provides it.
-      // Example: getMcpServer().disconnectAll();
-      logger.info('MCP server shutting down complete.');
-      process.exit(0);
+  const signals: NodeJS.Signals[] = ['SIGINT', 'SIGTERM'];
+  signals.forEach(signal => {
+    process.on(signal, async () => {
+      logger.info(`Received ${signal}, shutting down gracefully...`);
+      server.close(() => {
+        logger.info('HTTP server closed.');
+        // Add any other cleanup here (e.g., close StdioTransport if it has a close method)
+        if (config.server.enableStdioTransport && (getMcpServer() as any).stdioTransport?.close) {
+            // (getMcpServer() as any).stdioTransport.close(); // Assuming a close method
+            logger.info('Stdio transport closed.');
+        }
+        process.exit(0);
+      });
+      // Force shutdown if server hasn't closed in time
+      setTimeout(() => {
+        logger.warn('Graceful shutdown timed out, forcing exit.');
+        process.exit(1);
+      }, 10000); // 10 seconds timeout
     });
-
-    // Force shutdown if graceful shutdown fails after a timeout
-    setTimeout(() => {
-      logger.error('Could not close connections in time, forcefully shutting down');
-      process.exit(1);
-    }, 10000); // 10 seconds
-  };
-
-  process.on('SIGTERM', () => shutdown('SIGTERM'));
-  process.on('SIGINT', () => shutdown('SIGINT'));
+  });
 
 }
 
 startServer().catch(error => {
-  logger.error('Failed to start server:', { errorMessage: error.message, stack: error.stack });
+  logger.error('Failed to start MCP server:', error);
   process.exit(1);
 }); 

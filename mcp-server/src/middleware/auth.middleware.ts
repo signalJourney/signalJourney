@@ -1,21 +1,23 @@
-import { Response, NextFunction } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import config from '@/config';
 import logger from '@/utils/logger';
 import { McpApplicationError } from '@/core/mcp-types'; // Assuming McpApplicationError is defined
+import tokenService from '@/services/token.service';
 
 // Define a structure for the JWT payload
 export interface AuthPayload {
   userId: string;
   username: string;
   scopes: string[]; // e.g., ['read:pipeline', 'write:docs']
+  jti: string; // JWT ID, added for blacklisting
   // Standard JWT claims like iat, exp can also be here
   iat?: number;
   exp?: number;
 }
 
 // Extend Express Request type to include authInfo
-export interface AuthenticatedRequest extends express.Request {
+export interface AuthenticatedRequest extends Request {
   authInfo?: AuthPayload;
 }
 
@@ -35,9 +37,8 @@ export const jwtAuthMiddleware = (
   const requestId = res.locals.requestId || 'unknown'; // Get requestId from previous middleware
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    // No token provided, proceed without authInfo
-    // Protected routes should check for req.authInfo later
-    return next();
+    logger.debug(`No Bearer token found in Authorization header. RequestId: ${requestId}`);
+    return next(); // No token, proceed without authInfo
   }
 
   const token = authHeader.split(' ')[1];
@@ -49,8 +50,21 @@ export const jwtAuthMiddleware = (
 
   try {
     const decoded = jwt.verify(token, config.security.jwtSecret) as AuthPayload;
+    // Verify token structure, especially presence of jti, after decoding
+    if (!decoded.jti) {
+      logger.warn(`JWT verification failed: Decoded token missing JTI. requestId: ${requestId}`);
+      req.authInfo = undefined;
+      return next();
+    }
+    // Check against blacklist using TokenService
+    if (tokenService.verifyToken(token) === null) { // verifyToken now checks blacklist
+      logger.warn(`JWT verification failed: Token is blacklisted or invalid by TokenService. jti: ${decoded.jti}, requestId: ${requestId}`);
+      req.authInfo = undefined;
+      return next(); // Or `next(new McpApplicationError('Token revoked', 'AUTHENTICATION_FAILED'))` if immediate rejection is preferred
+    }
+
     req.authInfo = decoded;
-    logger.debug(`JWT verified for user: ${decoded.userId}, requestId: ${requestId}`);
+    logger.debug(`JWT verified for user: ${decoded.userId}, jti: ${decoded.jti}, requestId: ${requestId}`);
     next();
   } catch (error: any) {
     logger.warn(`JWT verification failed: ${error.message}, requestId: ${requestId}`);
