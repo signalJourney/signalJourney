@@ -60,16 +60,24 @@ export type McpToolHandler<TArgs = any, TResult = any> = (
 
 // --- Custom Application Errors ---
 
-export class McpApplicationError extends Error {
-  public readonly code: string;
-  public readonly details?: any;
+export interface McpErrorPayload {
+  code: string;       // e.g., 'VALIDATION_ERROR', 'NOT_FOUND', 'INTERNAL_SERVER_ERROR'
+  message: string;
+  details?: any;     // Optional structured details
+}
 
-  constructor(message: string, code: string, details?: any) {
+export class McpApplicationError extends Error {
+  public code: string;
+  public details?: any;
+  public statusCode?: number; // Added statusCode
+
+  constructor(message: string, code: string, details?: any, statusCode?: number) {
     super(message);
     this.name = this.constructor.name;
     this.code = code;
     this.details = details;
-    Object.setPrototypeOf(this, McpApplicationError.prototype);
+    this.statusCode = statusCode; // Assign statusCode
+    Error.captureStackTrace(this, this.constructor);
   }
 
   toErrorResponse(): McpToolErrorResponse {
@@ -85,26 +93,32 @@ export class McpApplicationError extends Error {
 
 export class McpValidationError extends McpApplicationError {
   constructor(message: string = 'Validation failed', details?: any) {
-    super(message, 'VALIDATION_ERROR', details);
-    this.name = 'McpValidationError';
-    Object.setPrototypeOf(this, McpValidationError.prototype);
+    super(message, 'VALIDATION_ERROR', details, 400); // Default to 400 for validation errors
   }
 }
 
 export class McpNotFoundError extends McpApplicationError {
   constructor(message: string = 'Resource not found', details?: any) {
-    super(message, 'NOT_FOUND', details);
-    this.name = 'McpNotFoundError';
-    Object.setPrototypeOf(this, McpNotFoundError.prototype);
+    super(message, 'NOT_FOUND', details, 404); // Default to 404
   }
 }
 
 export class McpInternalError extends McpApplicationError {
   constructor(message: string = 'An internal server error occurred', details?: any) {
-    super(message, 'INTERNAL_ERROR', details);
-    this.name = 'McpInternalError';
-    Object.setPrototypeOf(this, McpInternalError.prototype);
+    super(message, 'INTERNAL_SERVER_ERROR', details, 500); // Default to 500
   }
+}
+
+export class McpAuthorizationError extends McpApplicationError {
+    constructor(message: string = 'Authorization failed', details?: any) {
+        super(message, 'AUTHORIZATION_FAILED', details, 403); // Default to 403
+    }
+}
+
+export class McpAuthenticationError extends McpApplicationError {
+    constructor(message: string = 'Authentication required', details?: any) {
+        super(message, 'AUTHENTICATION_REQUIRED', details, 401); // Default to 401
+    }
 }
 
 /**

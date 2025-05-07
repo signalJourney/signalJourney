@@ -1,4 +1,4 @@
-import { McpServer, McpServerToolValidationError } from '@modelcontextprotocol/sdk';
+import { McpServer, AuthenticationContext, McpServerTool } from '@modelcontextprotocol/sdk';
 import { ZodError } from 'zod';
 import config from '@/config';
 import logger from '@/utils/logger';
@@ -7,105 +7,127 @@ import {
   GetServerVersionArgsSchema,
   handleGetServerStatus,
   handleGetServerVersion,
+  GetServerStatusParamsSchema,
+  GetServerVersionParamsSchema
 } from '@/handlers/system.handlers';
-import { McpExecutionContext, McpApplicationError } from '@/core/mcp-types';
+import { McpExecutionContext, McpApplicationError, McpErrorPayload } from '@/core/mcp-types';
 import { randomUUID } from 'crypto'; // For generating requestId
+import {
+  handleCreateResource, CreateResourceParamsSchema,
+  handleGetResource, GetResourceParamsSchema,
+  handleUpdateResource, UpdateResourceParamsSchema,
+  handleDeleteResource, DeleteResourceParamsSchema,
+  handleListResources, ListResourcesParamsSchema
+} from '@/handlers/resource.handlers';
+import { AuthPayload } from '@/middleware/auth.middleware'; // For casting authInfo
 
 let mcpServerInstance: McpServer;
 
-export function initializeMcpServer(): McpServer {
+// Custom error serializer for MCP Server
+const serializeError = (error: any): McpErrorPayload => {
+  if (error instanceof McpApplicationError) {
+    return { code: error.code, message: error.message, details: error.details };
+  }
+  if (error instanceof Error) {
+    return { code: 'UNHANDLED_TOOL_ERROR', message: error.message };
+  }
+  return { code: 'UNKNOWN_TOOL_ERROR', message: 'An unknown error occurred in the tool' };
+};
+
+export async function initializeMcpServer(): Promise<McpServer> {
   if (mcpServerInstance) {
     logger.warn('MCP Server already initialized.');
     return mcpServerInstance;
   }
 
   mcpServerInstance = new McpServer({
-    name: config.server.mcpServerName,
-    version: config.server.mcpServerVersion,
-    description: 'MCP Server for SignalJourney Pipeline Analysis',
-    // TODO: Update this URL to the actual documentation URL once available
-    documentationUrl: 'https://github.com/neuromechanist/signalJourney/docs/mcp-server',
-    // Define capabilities as needed, e.g., tools, resources, prompts
-    capabilities: {
-      tools: true, // Indicates that the server will register tools
-      resources: true, // Indicates that the server will register resources
-      prompts: false, // Set to true if prompts will be registered
-      // TODO: Add more specific capability declarations as features are implemented
-    },
-    // Custom error serialization to ensure our McpApplicationError details are included
-    serializeError: (err: Error) => {
-      if (err instanceof McpApplicationError) {
-        return {
-          code: err.code,
-          message: err.message,
-          details: err.details,
-        };
-      }
-      if (err instanceof McpServerToolValidationError) {
-        // The SDK's validation error already has a good structure
-        return {
-            code: 'VALIDATION_ERROR',
-            message: err.message,            
-            details: err.issues.map(issue => ({ 
-                path: issue.path,
-                message: issue.message,
-                code: issue.code, 
-            })),
-        };
-      }
-      // Fallback for generic errors
-      return {
-        code: 'INTERNAL_ERROR',
-        message: err.message || 'An unexpected error occurred.',
-        // stack: config.server.nodeEnv === 'development' ? err.stack : undefined, // Optionally include stack
-      };
-    },
+    serverName: config.server.mcpServerName,
+    serverVersion: config.server.mcpServerVersion,
+    logger: logger, // Use your Winston logger instance
+    serializeError: serializeError, // Register custom error serializer
+    // executionContextBuilder: buildExecutionContext // Register custom context builder
   });
 
-  logger.info(
-    `MCP Server initialized: ${config.server.mcpServerName} v${config.server.mcpServerVersion}`
-  );
+  logger.info('MCP Server instance created.');
 
-  // Register system tools
-  mcpServerInstance.tool('get_server_status', {
-    description: 'Returns the current status, name, version, and timestamp of the server.',
-    paramSchema: GetServerStatusArgsSchema,
-    execute: async (args, sdkContext) => {
-      // Create our McpExecutionContext
-      const executionContext: McpExecutionContext = {
-        requestId: sdkContext.requestId || randomUUID(), // Use SDK requestId or generate one
-        logger: logger.child({ requestId: sdkContext.requestId || 'unknown' }),
-        authInfo: sdkContext.auth as AuthPayload | undefined, // Pass along auth context from SDK
-      };
-      return handleGetServerStatus(args, executionContext);
-    },
+  // --- Register System Tools ---
+  mcpServerInstance.tool('system.getServerStatus', {
+    description: 'Get the current status of the MCP server.',
+    handler: handleGetServerStatus,
+    paramSchema: GetServerStatusParamsSchema, // Zod schema for params
   });
-  logger.info('Registered tool: get_server_status');
 
-  mcpServerInstance.tool('get_server_version', {
-    description: 'Returns the name and version of the server.',
-    paramSchema: GetServerVersionArgsSchema,
-    execute: async (args, sdkContext) => {
-      const executionContext: McpExecutionContext = {
-        requestId: sdkContext.requestId || randomUUID(),
-        logger: logger.child({ requestId: sdkContext.requestId || 'unknown' }),
-        authInfo: sdkContext.auth as AuthPayload | undefined, // Pass along auth context from SDK
-      };
-      return handleGetServerVersion(args, executionContext);
-    },
+  mcpServerInstance.tool('system.getServerVersion', {
+    description: 'Get the version of the MCP server.',
+    handler: handleGetServerVersion,
+    paramSchema: GetServerVersionParamsSchema,
   });
-  logger.info('Registered tool: get_server_version');
-  
-  // TODO: Register other tools as they are developed
 
+  // --- Register Resource Management Tools ---
+  mcpServerInstance.tool('resource.create', {
+    description: 'Create a new resource.',
+    handler: handleCreateResource,
+    paramSchema: CreateResourceParamsSchema,
+    requiredScopes: ['write:resource'] // Example scope requirement
+  });
+
+  mcpServerInstance.tool('resource.get', {
+    description: 'Get a resource by its ID.',
+    handler: handleGetResource,
+    paramSchema: GetResourceParamsSchema,
+    requiredScopes: ['read:resource']
+  });
+
+  mcpServerInstance.tool('resource.update', {
+    description: 'Update an existing resource.',
+    handler: handleUpdateResource,
+    paramSchema: UpdateResourceParamsSchema,
+    requiredScopes: ['write:resource']
+  });
+
+  mcpServerInstance.tool('resource.delete', {
+    description: 'Delete a resource by its ID.',
+    handler: handleDeleteResource,
+    paramSchema: DeleteResourceParamsSchema,
+    requiredScopes: ['write:resource'] // Or a more specific 'delete:resource'
+  });
+
+  mcpServerInstance.tool('resource.list', {
+    description: 'List resources, optionally filtered by type (owned by the authenticated user).'
+    handler: handleListResources,
+    paramSchema: ListResourcesParamsSchema,
+    requiredScopes: ['read:resource']
+  });
+
+  logger.info('All MCP tools registered.');
   return mcpServerInstance;
 }
 
+// Custom Execution Context Builder
+// This function is called by the McpServer before each tool execution.
+// It allows you to enrich the context passed to your tool handlers.
+// McpServer.prototype.buildExecutionContext = function (
+//     rawContext?: Partial<AuthenticationContext>
+// ): McpExecutionContext {
+//     const requestId = (rawContext?.http?.res?.locals?.requestId) || randomUUID(); 
+//     const authInfo = rawContext?.auth as AuthPayload | undefined;
+
+//     logger.debug('Building execution context', { requestId, userId: authInfo?.userId });
+
+//     // Basic context provided by SDK (like rawContext.auth)
+//     // Plus, anything custom you want to add, like a transaction ID, specific user permissions, etc.
+//     return {
+//         requestId,
+//         authInfo,
+//         // dbClient: getDbClient(), // Example: if you want to pass a db client to tools
+//     };
+// };
+
 export function getMcpServer(): McpServer {
   if (!mcpServerInstance) {
-    logger.error('MCP Server has not been initialized. Call initializeMcpServer() first.');
+    logger.error('MCP Server has not been initialized. Call initializeMcpServer first.');
     process.exit(1);
-    // throw new Error('MCP Server has not been initialized. Call initializeMcpServer() first.');
+    // throw new Error('MCP Server has not been initialized. Call initializeMcpServer first.');
   }
   return mcpServerInstance;
 } 
