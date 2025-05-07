@@ -1,6 +1,7 @@
+import { McpServer, ToolContext } from '@modelcontextprotocol/sdk';
+
 import { ScanPersistenceService } from '@/services/scanPersistence.service';
 // eslint-disable-next-line import/no-unresolved
-import { McpServer, ToolContext } from '@modelcontextprotocol/sdk';
 
 import { handleScanRepository } from '@/handlers/scanner.handlers';
 

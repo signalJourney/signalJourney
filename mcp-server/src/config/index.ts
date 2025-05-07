@@ -1,5 +1,6 @@
-import * as dotenv from 'dotenv';
 import path from 'path';
+
+import * as dotenv from 'dotenv';
 import { z } from 'zod';
 
 // import { getLogger } from '@/utils/logger'; // Removed unused import
