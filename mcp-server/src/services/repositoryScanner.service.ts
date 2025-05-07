@@ -454,7 +454,7 @@ class RepositoryScannerService {
       );
     }
     
-    const initialVisited = options.followSymlinks ? new Set<string>() : new Set(); // Always init set
+    const initialVisited: Set<string> = options.followSymlinks ? new Set<string>() : new Set<string>(); 
     if(options.followSymlinks) initialVisited.add(absoluteRepoPath); 
 
     // Step 1: Traverse and collect basic file info + code metadata (if enabled)
