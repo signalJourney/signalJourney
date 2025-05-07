@@ -1,7 +1,9 @@
 import express, { Request, Response, NextFunction } from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
-import { StreamableHTTPServerTransport, StdioServerTransport, AuthenticationContext } from '@modelcontextprotocol/sdk';
+import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
+import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import { ServerRequest } from '@modelcontextprotocol/sdk/types.js';
 import config from '@/config';
 import logger, { stream as morganStream } from '@/utils/logger';
 import { initializeMcpServer, getMcpServer } from '@/core/server';
@@ -11,7 +13,9 @@ import authRoutes from '@/routes/auth.routes';
 import { McpApplicationError, McpErrorPayload } from '@/core/mcp-types'; 
 import morgan from 'morgan'; 
 import rateLimit from 'express-rate-limit';
-import { randomUUID } from 'crypto'; // Imported randomUUID
+import { randomUUID } from 'crypto';
+import { ZodError } from 'zod';
+import dotenv from 'dotenv';
 
 let serverInstance: any; // To hold the http.Server instance for graceful shutdown
 export let app: express.Express; // Export app for testing
@@ -20,7 +24,7 @@ async function startServer() {
   await initializeMcpServer();
   const mcpServerInstance = getMcpServer();
 
-  app = express(); // Assign to the exported app
+  app = express();
 
   // --- Core Middleware ---
   app.use(helmet());
@@ -30,7 +34,7 @@ async function startServer() {
   app.use(requestIdMiddleware); // Add request ID to res.locals
 
   // Morgan logging - uses res.locals.requestId set by requestIdMiddleware
-  const morganFormat = config.server.nodeEnv === 'production' ? 'combined' : 'dev';
+  // const morganFormat = config.server.nodeEnv === 'production' ? 'combined' : 'dev'; // Removed morganFormat
   // Morgan token for requestId. Morgan's req is http.IncomingMessage, res is http.ServerResponse.
   morgan.token('id', (req: Request, res: Response) => res.locals.requestId || '-'); 
   app.use(morgan(`:id :remote-addr - :remote-user [:date[clf]] ":method :url HTTP/:http-version" :status :res[content-length] ":referrer" ":user-agent"`, { stream: morganStream }));
@@ -59,22 +63,33 @@ async function startServer() {
   app.use('/auth', apiLimiter, authRoutes);
 
   // MCP StreamableHTTP Transport Endpoint
-  app.all('/mcp', async (req: Request, res: Response) => { // Use base Request type
+  app.all('/mcp', async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const sdkContext: AuthenticationContext = {
-        protocol: 'http',
-        http: { req: req as express.Request, res: res as express.Response }, 
-        auth: (req as AuthenticatedRequest).authInfo, // Pass populated authInfo
-      };
-      const transport = new StreamableHTTPServerTransport(mcpServerInstance, sdkContext);
-      await transport.handler(req as express.Request, res as express.Response);
+      // The transport is created per request or session, then connected.
+      // For resumability, an eventStore would be used here, and session ID managed.
+      // For simplicity now, creating a new one. Refer to SDK examples for session management.
+      const transport = new StreamableHTTPServerTransport({
+        // Basic options; refer to SDK examples for session ID generation, event store for resumability
+        sessionIdGenerator: randomUUID, // Example generator
+        // onsessioninitialized: (sessionId) => { logger.info(`HTTP Session initialized: ${sessionId}`); },
+        // eventStore: myEventStore, // For resumability
+      });
+
+      // The AuthenticationContext is built by the transport or passed to connect if needed.
+      // For StreamableHTTPServerTransport, it often derives it from req/res.
+      // We pass authInfo from our middleware via the `connect` method's second arg if supported,
+      // or ensure the transport can access it (e.g. if it uses req.authInfo itself).
+      // The MCP server connect method takes the transport.
+      // Authentication context is more about what the McpServer passes to tools.
+      await mcpServerInstance.connect(transport); 
+      
+      // Pass the raw request body to handleRequest if it expects it
+      // The `req.body` should already be parsed by `express.json()`
+      await transport.handleRequest(req as express.Request, res as express.Response, req.body as ServerRequest);
     } catch (error: any) {
       logger.error('Error in MCP HTTP transport handler:', { error, requestId: res.locals.requestId });
-      if (!res.headersSent) {
-        // Delegate to global error handler
-        const mcpError = new McpApplicationError(error.message || 'MCP transport error', 'MCP_TRANSPORT_ERROR', error, 500);
-        express().handle(mcpError, req, res, () => {}); // A bit of a hack to use global handler if possible
-      }
+      // Pass error to the global Express error handler
+      next(error); // Changed to use next(error)
     }
   });
 
@@ -106,7 +121,9 @@ async function startServer() {
     );
 
     if (res.headersSent) {
-      return next(err); // Delegate to default Express error handler if headers already sent
+      // If headers already sent, delegate to the default Express error handler
+      // This is important for streaming responses or if an error occurs mid-stream
+      return next(err);
     }
 
     let statusCode = 500;
@@ -137,12 +154,11 @@ async function startServer() {
   // --- Start Stdio Transport if enabled ---
   if (config.server.enableStdioTransport) {
     logger.info('Starting StdioServerTransport...');
-    const stdioTransport = new StdioServerTransport(mcpServerInstance, {
-      protocol: 'stdio',
-      // No specific auth for stdio in this basic setup, but could be added
-    });
-    stdioTransport.listen();
-    logger.info('StdioServerTransport is listening.');
+    // StdioServerTransport constructor takes optional stdin/stdout, not server instance or options object directly.
+    const stdioTransport = new StdioServerTransport(/* process.stdin, process.stdout */);
+    await mcpServerInstance.connect(stdioTransport); // Connect server to transport
+    await stdioTransport.start(); // Call start() method
+    logger.info('StdioServerTransport is listening (started).');
   }
 
   // --- Start HTTP Server ---

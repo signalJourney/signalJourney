@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { randomUUID } from 'crypto';
-import logger from '@/utils/logger'; // Assuming logger is set up to handle child loggers or context
+// import logger from '@/utils/logger'; // Removed logger
 
 /**
  * Middleware to generate a unique request ID for each incoming request.
