@@ -1,6 +1,8 @@
 import fs from 'fs/promises';
 import path from 'path';
+
 import { minimatch } from 'minimatch';
+
 import logger from '@/utils/logger';
 import { McpApplicationError } from '@/core/mcp-types';
 
@@ -17,7 +19,51 @@ export interface TraversedFile {
   ext: string;
   depth: number;
   isSymlink?: boolean; 
+  fileType: string;
+  fileCategory: string;
+  size: number;
 }
+
+// Basic file type mapping by extension
+const EXTENSION_TYPE_MAP: Record<string, string> = {
+  '.m': 'MATLAB',
+  '.py': 'PYTHON',
+  '.json': 'JSON',
+  '.md': 'MARKDOWN',
+  '.txt': 'TEXT',
+  '.R': 'R',
+  '.java': 'JAVA',
+  '.js': 'JAVASCRIPT',
+  '.ts': 'TYPESCRIPT',
+  '.c': 'C',
+  '.cpp': 'CPP',
+  '.h': 'C_HEADER',
+  '.hpp': 'CPP_HEADER',
+  '.cs': 'CSHARP',
+  '.php': 'PHP',
+  '.rb': 'RUBY',
+  '.go': 'GO',
+  '.swift': 'SWIFT',
+  '.kt': 'KOTLIN',
+  '.rs': 'RUST',
+  '.sh': 'SHELL',
+  '.bat': 'BATCH',
+  '.ps1': 'POWERSHELL',
+  '.html': 'HTML',
+  '.css': 'CSS',
+  '.xml': 'XML',
+  '.yaml': 'YAML',
+  '.yml': 'YAML',
+  '.csv': 'CSV',
+  '.tsv': 'TSV',
+  '.sql': 'SQL',
+  '.ipynb': 'IPYNB',
+  '.dockerfile': 'DOCKERFILE',
+  'dockerfile': 'DOCKERFILE', // For files named Dockerfile with no extension
+  '.gitignore': 'GITIGNORE',
+  '.gitattributes': 'GITATTRIBUTES',
+  // Add more common types
+};
 
 class RepositoryScannerService {
   constructor() {
@@ -38,6 +84,75 @@ class RepositoryScannerService {
       }
     }
     return false;
+  }
+
+  private async detectFileTypeAndCategory(
+    filePath: string,
+    fileName: string,
+    fileExt: string,
+  ): Promise<{ fileType: string; fileCategory: string }> {
+    let fileType = EXTENSION_TYPE_MAP[fileExt.toLowerCase()] || 'UNKNOWN';
+    let fileCategory = 'unknown';
+
+    // Simple content checks for refinement (can be expanded)
+    if (fileType === 'UNKNOWN' || fileType === 'TEXT') {
+      try {
+        const content = await fs.readFile(filePath, { encoding: 'utf8', flag: 'r' });
+        if (fileExt === '.m' || (fileType === 'UNKNOWN' && content.match(/^\s*function\b/) && content.match(/^\s*%/m))) {
+          fileType = 'MATLAB';
+        } else if (fileExt === '.py' || (fileType === 'UNKNOWN' && content.match(/^\s*(import|from|def|class)\b/) && content.match(/^\s*#/m))) {
+          fileType = 'PYTHON';
+        }
+        // Add more content-based detections if necessary
+      } catch (err: any) {
+        // logger.warn(`Could not read content of ${filePath} for type detection: ${err.message}`);
+        // If it's not readable as text, or very large, it might be binary.
+        // This is a very basic check.
+        if (err.code === 'ENOENT' || err.code === 'EISDIR') {
+          // Already handled or not a file
+        } else {
+          fileType = 'BINARY'; // Fallback for unreadable text files
+        }
+      }
+    }
+
+    // Category detection
+    const lowerFileName = fileName.toLowerCase();
+    if (fileType === 'PYTHON') {
+      if (lowerFileName.startsWith('test_') || lowerFileName.endsWith('_test.py')) {
+        fileCategory = 'test';
+      } else {
+        fileCategory = 'source';
+      }
+    } else if (fileType === 'MATLAB') {
+      if (lowerFileName.startsWith('test') || lowerFileName.includes('testcase')) {
+        fileCategory = 'test';
+      } else {
+        fileCategory = 'source';
+      }
+    } else if (['JSON', 'YAML', 'XML'].includes(fileType)) {
+      if (lowerFileName.includes('config') || lowerFileName.includes('setting') || lowerFileName.includes('schema')) {
+        fileCategory = 'config';
+      } else if (lowerFileName.includes('package') || lowerFileName.includes('lock')) {
+        fileCategory = 'config'; // e.g. package.json, package-lock.json
+      } else {
+        fileCategory = 'data';
+      }
+    } else if (['MARKDOWN', 'TEXT'].includes(fileType)) {
+      fileCategory = 'docs';
+    } else if (['JAVASCRIPT', 'TYPESCRIPT', 'JAVA', 'C', 'CPP', 'CSHARP', 'GO', 'RUST', 'SWIFT', 'KOTLIN', 'PHP', 'RUBY'].includes(fileType)) {
+      // Basic categorization for other source code types
+      // TODO: Add test file patterns for these languages
+      fileCategory = 'source';
+    } else if (fileType === 'IPYNB') {
+      fileCategory = 'notebook';
+    } else if (fileType === 'DOCKERFILE' || fileType === 'GITIGNORE' || fileType === 'GITATTRIBUTES') {
+      fileCategory = 'config';
+    } else if (fileType !== 'UNKNOWN') {
+      fileCategory = 'asset'; // Default for other known types like images, sql, etc.
+    }
+
+    return { fileType, fileCategory };
   }
 
   private async traverseDirectoryRecursive(
@@ -91,6 +206,9 @@ class RepositoryScannerService {
               ext: '', // Symlinks don't have extensions themselves
               depth: currentDepth,
               isSymlink: true,
+              fileType: '',
+              fileCategory: '',
+              size: 0,
             });
 
             // If the link points to a directory, traverse it
@@ -117,6 +235,9 @@ class RepositoryScannerService {
               ext: '',
               depth: currentDepth,
               isSymlink: true, // Mark as symlink even if broken
+              fileType: '',
+              fileCategory: '',
+              size: 0,
             });
           }
         } else if (entry.isDirectory()) {
@@ -130,13 +251,19 @@ class RepositoryScannerService {
             options.followSymlinks ? new Set(visitedSymlinks) : new Set() 
           );
         } else if (entry.isFile()) {
+          const fileExt = path.extname(entry.name);
+          const stat = await fs.stat(entryPath);
+          const { fileType, fileCategory } = await this.detectFileTypeAndCategory(entryPath, entry.name, fileExt);
           accumulatedFiles.push({
             path: entryPath,
             relativePath: path.relative(initialPath, entryPath),
             name: entry.name,
-            ext: path.extname(entry.name),
+            ext: fileExt,
             depth: currentDepth,
             isSymlink: false,
+            fileType,
+            fileCategory,
+            size: stat.size,
           });
         }
       }

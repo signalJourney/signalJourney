@@ -1,10 +1,12 @@
+import { randomUUID } from 'crypto';
+
 import { z } from 'zod';
-import config from '@/config';
-import { McpExecutionContext, McpApplicationError } from '@/core/mcp-types';
 import { CallToolResult, ServerRequest, ServerNotification } from '@modelcontextprotocol/sdk/types.js';
 import { RequestHandlerExtra } from '@modelcontextprotocol/sdk/shared/protocol.js';
+
+import config from '@/config';
+import { McpExecutionContext, McpApplicationError } from '@/core/mcp-types';
 import logger from '@/utils/logger';
-import { randomUUID } from 'crypto';
 import { AuthPayload } from '@/middleware/auth.middleware'; // To cast extra.authInfo
 
 // Schema for get_server_status (no arguments)

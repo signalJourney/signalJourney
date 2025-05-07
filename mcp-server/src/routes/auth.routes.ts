@@ -1,5 +1,6 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { z, ZodError, ZodSchema } from 'zod';
+
 import tokenService from '@/services/token.service';
 import { AuthPayload, AuthenticatedRequest, jwtAuthMiddleware } from '@/middleware/auth.middleware';
 import logger from '@/utils/logger';
