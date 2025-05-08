@@ -73,7 +73,12 @@ router.post('/login', validate(LoginSchema), async (req: Request, res: Response,
     } else {
       logger.warn(`Login failed for user '${username}': Invalid credentials. requestId: ${requestId}`);
       // Use McpApplicationError for consistent error handling via global error middleware
-      return next(new McpApplicationError('Invalid username or password', 'AUTHENTICATION_FAILED', { username }));
+      return next(new McpApplicationError(
+        'Invalid username or password', 
+        'AUTHENTICATION_FAILED', 
+        { username },
+        401 // Add explicit 401 status code
+      ));
     }
   } catch (error) {
     logger.error('Error during login:', { error, requestId });
@@ -107,7 +112,12 @@ router.post('/validate-token', validate(ValidateTokenSchema), async (req: Reques
     } else {
       logger.warn(`Token validation failed. Provided token is invalid or expired. requestId: ${requestId}`);
       // Error response consistent with McpApplicationError structure, handled by global error handler
-      return next(new McpApplicationError('Invalid or expired token', 'TOKEN_VALIDATION_FAILED'));
+      return next(new McpApplicationError(
+        'Invalid or expired token', 
+        'TOKEN_VALIDATION_FAILED',
+        undefined, // No specific details needed here
+        400 // Add explicit 400 status code
+      ));
     }
   } catch (error) {
     logger.error('Error during token validation:', { error, requestId });
@@ -130,7 +140,12 @@ router.post('/logout', jwtAuthMiddleware, async (req: AuthenticatedRequest, res:
     } else {
       logger.warn(`Logout attempt without valid authInfo or jti/exp. requestId: ${requestId}`);
       // This case implies jwtAuthMiddleware didn't populate authInfo or token was malformed.
-      return next(new McpApplicationError('No active session to log out or token is invalid.', 'LOGOUT_FAILED'));
+      return next(new McpApplicationError(
+        'No active session to log out or token is invalid.', 
+        'AUTHENTICATION_REQUIRED',
+        undefined,
+        401 // Use 401 for authentication/session issues
+      ));
     }
   } catch (error) {
     logger.error('Error during logout:', { error, requestId });

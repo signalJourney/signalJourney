@@ -5,7 +5,7 @@ import helmet from 'helmet';
 import cors from 'cors';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import { ServerRequest, AuthenticationContext } from '@modelcontextprotocol/sdk/types.js';
+import { ServerRequest } from '@modelcontextprotocol/sdk/types.js';
 import morgan from 'morgan';
 import rateLimit from 'express-rate-limit';
 import { ZodError } from 'zod';
@@ -22,12 +22,20 @@ import { connectDB, disconnectDB } from '@/core/db';
 import tokenService from '@/services/token.service';
 
 let serverInstance: any; // To hold the http.Server instance for graceful shutdown
-export let app: express.Express; // Export app for testing
 
-async function startServer() {
+async function startServer(): Promise<express.Express> {
+  let app: express.Express; // Define app inside the function
   try {
     // Connect to Database first
-    await connectDB();
+    const dbConnected = await connectDB(); // connectDB now returns a boolean
+
+    if (!dbConnected && process.env.NODE_ENV !== 'test') {
+      // If DB connection fails and not in test mode, throw to prevent startup
+      throw new Error('Database connection failed, server cannot start.');
+    }
+    if (!dbConnected && process.env.NODE_ENV === 'test') {
+      logger.warn('Database connection failed in TEST environment. Server will continue starting for tests not requiring DB.');
+    }
 
     // Initialize MCP Server
     const mcpServer = await createMcpServer();
@@ -72,51 +80,52 @@ async function startServer() {
 
     // --- Setup Transports --- 
     const transports: any[] = [];
-    // ... (StreamableHTTP Transport Setup)
+    
+    // Create a handler function for token authentication
+    const handleTokenAuthentication = async (token: string | undefined): Promise<any> => {
+      if (!token) return { isAuthenticated: false };
+      try {
+        const decoded = tokenService.verifyToken(token);
+        if (!decoded) return { isAuthenticated: false };
+        return { 
+          isAuthenticated: true,
+          token: token,
+          scopes: decoded.scopes || [],
+          extra: decoded 
+        };
+      } catch (error) {
+        return { isAuthenticated: false };
+      }
+    };
+    
+    // Create the HTTP transport 
     const httpTransport = new StreamableHTTPServerTransport({
-      serverInfoProvider: () => ({
-          name: config.server.mcpServerName,
-          version: config.server.mcpServerVersion,
-          // capabilities: mcpServer.capabilities // Expose server capabilities
-      }),
-      authenticationProvider: async (token: string | undefined, request?: ServerRequest) => {
-          if (!token) return { isAuthenticated: false };
-          try {
-              const decoded = tokenService.verifyToken(token);
-              const authInfo: AuthenticationContext = {
-                  isAuthenticated: true,
-                  token: token,
-                  scopes: decoded.scopes,
-                  extra: decoded // Pass the full decoded payload as extra
-              };
-              return authInfo;
-          } catch (error) {
-              return { isAuthenticated: false };
-          }
-      },
-      // sessionIdGenerator, onsessioninitialized if needed
+      sessionIdGenerator: () => randomUUID()
     });
+    
+    // We'll handle auth manually in our Express route
     transports.push(httpTransport);
 
     // --- MCP Endpoint ---
     app.post('/mcp', jwtAuthMiddleware, async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-      const requestBody = req.body as ServerRequest;
+      const requestBody = req.body;
       const mcpSessionId = req.headers['mcp-session-id'] as string | undefined;
-      const authContext: AuthenticationContext = req.authInfo ? {
-          isAuthenticated: true,
-          token: req.headers.authorization?.split(' ')?.[1],
-          scopes: req.authInfo.scopes,
-          extra: req.authInfo 
+      const authContext = req.authInfo ? { 
+        isAuthenticated: true,
+        token: req.headers.authorization?.split(' ')?.[1],
+        scopes: req.authInfo.scopes,
+        extra: req.authInfo 
       } : { isAuthenticated: false };
 
       try {
-          await httpTransport.handleRequest(requestBody, res, { 
-              authContext,
-              requestId: req.id, 
-              sessionId: mcpSessionId 
-          });
+        const requestId = req.res?.locals?.requestId || req.headers['x-request-id'] || randomUUID();
+        await httpTransport.handleRequest(requestBody, res, { 
+          authContext,
+          requestId: requestId,
+          sessionId: mcpSessionId 
+        });
       } catch (error) {
-          next(error); 
+        next(error); 
       }
     });
 
@@ -131,25 +140,50 @@ async function startServer() {
     }
 
     // Connect transports to the server
-    await mcpServer.connect(...transports);
+    for (const transport of transports) {
+      await mcpServer.connect(transport);
+    }
     logger.info('MCP transports connected.');
 
-    // --- Start Stdio Transport if enabled ---
-    if (config.server.enableStdioTransport) {
-      logger.info('Starting StdioServerTransport...');
-      // StdioServerTransport constructor takes optional stdin/stdout, not server instance or options object directly.
-      const stdioTransport = new StdioServerTransport(/* process.stdin, process.stdout */);
-      await mcpServer.connect(stdioTransport); // Connect server to transport
-      await stdioTransport.start(); // Call start() method
-      logger.info('StdioServerTransport is listening (started).');
-    }
+    // --- Global Error Handler ---
+    // This MUST be the last middleware registered.
+    app.use((err: any, req: Request, res: Response, next: NextFunction) => {
+      const requestId = res.locals.requestId || 'unknown';
+      logger.error('[GlobalErrorHandler]', { error: err, message: err.message, requestId });
+
+      if (err instanceof McpApplicationError) {
+        return res.status(err.statusCode || 500).json({
+          code: err.code,
+          message: err.message,
+          details: err.details,
+          requestId,
+        });
+      } 
+      // McpValidationError should be caught by the route-specific validation middleware
+      // but if it somehow reaches here, handle it.
+      if (err instanceof ZodError) { // Check for ZodError directly
+        return res.status(400).json({
+          code: 'VALIDATION_ERROR',
+          message: 'Request validation failed',
+          details: err.errors.map(e => ({ path: e.path, message: e.message })),
+          requestId,
+        });
+      }
+      
+      // Handle other unexpected errors
+      return res.status(500).json({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'An unexpected internal server error occurred.',
+        requestId,
+      });
+    });
 
     // --- Start HTTP Server ---
     const port = config.server.port;
     
-    // Only start listening if not in test environment or if explicitly told to listen
-    // This prevents EADDRINUSE errors when supertest starts its own server instance.
-    if (config.server.nodeEnv !== 'test') {
+    // Only start listening if not in test environment.
+    // supertest handles server lifecycle for tests when app is passed to it.
+    if (process.env.NODE_ENV !== 'test') {
       serverInstance = app.listen(port, () => {
         logger.info(`MCP Server '${config.server.mcpServerName}' v${config.server.mcpServerVersion} started.`);
         logger.info(`HTTP transport listening on http://localhost:${port}/mcp`);
@@ -158,47 +192,55 @@ async function startServer() {
         }
       });
     } else {
-      logger.info('Server configured for testing, HTTP listener not started by default.');
+      logger.info('Server configured for testing, HTTP listener not started by startServer.');
     }
 
-    // Graceful shutdown (modified to handle serverInstance potentially not being set if in test and not listening)
+    // Graceful shutdown (modified to handle serverInstance potentially not being set)
     const signals: NodeJS.Signals[] = ['SIGINT', 'SIGTERM'];
     signals.forEach(signal => {
       process.on(signal, async () => {
         logger.info(`Received ${signal}, shutting down gracefully...`);
+        await disconnectDB(); // Disconnect DB first
         if (serverInstance) {
           serverInstance.close(() => {
             logger.info('HTTP server closed.');
-            if (config.server.enableStdioTransport && (getMcpServer() as any).stdioTransport?.close) {
-                logger.info('Stdio transport closed.');
-            }
+            // Stdio transport close logic if needed
             process.exit(0);
           });
+          // Force exit if graceful shutdown times out
           setTimeout(() => {
             logger.warn('Graceful shutdown timed out, forcing exit.');
             process.exit(1);
-          }, 10000);
+          }, 10000); 
         } else {
-          // If serverInstance is not defined (e.g., in test mode without listen), exit directly
-          logger.info('No active HTTP server to close. Exiting.');
+          logger.info('No active HTTP server to close by startServer. Exiting.');
           process.exit(0);
         }
       });
     });
 
+    return app; // Return the initialized app
+
   } catch (error) {
     logger.error('Failed to start server:', error);
     await disconnectDB(); // Ensure DB disconnects on startup failure
-    process.exit(1);
+    // Do not exit process in test environment to allow tests to run/fail gracefully
+    if (process.env.NODE_ENV !== 'test') {
+      process.exit(1);
+    }
+    // Rethrow or return a specific error/null for tests to handle
+    throw error; 
   }
 }
 
-startServer().catch(error => {
-  logger.error('Failed to start MCP server:', error);
-  process.exit(1);
-});
+// Call startServer only if not in test environment
+if (process.env.NODE_ENV !== 'test') {
+  startServer().catch(error => {
+    // Log error - already done inside startServer catch block
+    // logger.error('Failed to start MCP server from global scope:', error);
+    // process.exit(1); // Already handled in startServer catch block
+  });
+}
 
-// Export the app instance for testing purposes after it's initialized
-// This is a bit tricky with async startServer. A better way might be to have startServer return the app.
-// For now, tests will import this and it should be populated after startServer() resolves in the main execution.
-// Alternatively, tests can call startServer and then use the app. 
+// Export the startServer function itself for tests to call
+export { startServer }; 

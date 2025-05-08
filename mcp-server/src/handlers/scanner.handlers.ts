@@ -1,12 +1,12 @@
 import { z } from 'zod';
-import { RequestHandlerExtra, ServerRequest, ServerNotification } from '@modelcontextprotocol/sdk/types.js';
+import { ServerRequest, ServerNotification } from '@modelcontextprotocol/sdk/types.js';
+import { RequestHandlerExtra } from '@modelcontextprotocol/sdk/shared/protocol.js';
 
 // Import the class, not the default
 import { RepositoryScannerService, TraversalOptions, TraversedFile } from '@/services/repositoryScanner.service';
 import { McpExecutionContext, CallToolResult, McpApplicationError } from '@/core/mcp-types';
 import { AuthPayload } from '@/middleware/auth.middleware';
 import logger from '@/utils/logger';
-import { ScanRepositoryParams } from '@/schemas/scanner.schemas';
 
 // Define Zod Schema for the tool parameters
 export const scanRepositoryParamsSchema = z.object({
@@ -17,17 +17,15 @@ export const scanRepositoryParamsSchema = z.object({
   parseCode: z.boolean().optional().default(true).describe('Whether to perform basic code structure parsing.'),
 });
 
-// Infer TypeScript type from the Zod schema
+// Use the local schema definition instead of importing
 export type ScanRepositoryParams = z.infer<typeof scanRepositoryParamsSchema>;
-
-// Instantiate the service
-const repositoryScannerService = new RepositoryScannerService();
 
 // MCP Tool Handler function
 export async function handleScanRepository(
   args: ScanRepositoryParams,
-  extra: RequestHandlerExtra
+  extra: RequestHandlerExtra<ServerRequest, ServerNotification>
 ): Promise<CallToolResult> {
+  const repositoryScannerService = new RepositoryScannerService();
   const scanId = extra.requestId || `scan-${Date.now()}`;
   logger.info(`[${scanId}] Received scan_repository request`, { repoPath: args.repoPath });
 
@@ -66,29 +64,35 @@ export async function handleScanRepository(
     const limitedFiles = files.slice(0, maxResponseItems);
 
     return {
-      status: 'success',
-      content: [{ type: 'json', data: { scanId, count: files.length, durationMs: scanDuration, items: limitedFiles } }]
+      content: [{ 
+        type: 'text', 
+        text: JSON.stringify({ 
+          success: true,
+          scanId, 
+          count: files.length, 
+          durationMs: scanDuration, 
+          items: limitedFiles 
+        }) 
+      }]
     };
   } catch (error: any) {
     logger.error(`[${scanId}] Repository scan failed: ${error.message}`, { stack: error.stack });
     if (error instanceof McpApplicationError) {
-      return {
-        status: 'error',
-        error: {
-          message: error.message,
-          code: error.code || 'SCAN_ERROR',
-          details: error.details,
-        },
-      };
+      throw error; // Let the MCP server handle the application error
     }
 
     // For unexpected errors
     return {
-      status: 'error',
-      error: {
-        message: 'Failed to scan repository due to an unexpected error.',
-        code: 'SCAN_UNEXPECTED_ERROR',
-      },
+      content: [{ 
+        type: 'text', 
+        text: JSON.stringify({
+          success: false,
+          error: {
+            message: 'Failed to scan repository due to an unexpected error.',
+            code: 'SCAN_UNEXPECTED_ERROR',
+          }
+        }) 
+      }]
     };
   }
 } 

@@ -1,11 +1,13 @@
 // eslint-disable-next-line import/no-unresolved
-import { McpRequest, McpResponse, ToolContext } from '@modelcontextprotocol/sdk/types.js';
+// Remove incorrect SDK imports
+// import { McpRequest, McpResponse, ToolContext } from '@modelcontextprotocol/sdk/types.js'; 
 import { z } from 'zod';
+// Import correct types from SDK
 import { ServerRequest, ServerNotification } from '@modelcontextprotocol/sdk/types.js';
 import { RequestHandlerExtra } from '@modelcontextprotocol/sdk/shared/protocol.js';
 
 import { McpExecutionContext, McpApplicationError, CallToolResult } from '@/core/mcp-types';
-import { ResourceService } from '@/services/resource.service';
+import ResourceService from '@/services/resource.service';
 import { AuthPayload } from '@/middleware/auth.middleware';
 import logger from '@/utils/logger';
 import { Resource } from '@/models/resource.model';
@@ -63,9 +65,9 @@ const buildMcpContext = (extra: RequestHandlerExtra<ServerRequest, ServerNotific
  * Requires 'write:resource' scope.
  */
 export async function handleCreateResource(
-  request: McpRequest,
-  context: ToolContext,
-): Promise<McpResponse> {
+  request: any, // Placeholder type
+  context: any, // Placeholder type
+): Promise<any> { // Placeholder type
   context.logger.info(`Handling createResource request: ${request.id}`);
   try {
     const params = createResourceParamsSchema.parse(request.params);
@@ -78,7 +80,13 @@ export async function handleCreateResource(
       metadata: params.metadata,
     };
 
-    const newResource = await resourceService.createResource(resourceData as Resource);
+    const newResource = await ResourceService.create(
+      params.type,
+      params.data,
+      context.authInfo?.sub,
+      params.metadata
+    );
+    
     return {
       id: request.id,
       jsonrpc: '2.0',
@@ -98,13 +106,13 @@ export async function handleCreateResource(
  * Requires 'read:resource' scope.
  */
 export async function handleGetResource(
-  request: McpRequest,
-  context: ToolContext,
-): Promise<McpResponse> {
+  request: any, // Placeholder type
+  context: any, // Placeholder type
+): Promise<any> { // Placeholder type
   context.logger.info(`Handling getResource request: ${request.id}`);
   try {
     const { id } = getResourceParamsSchema.parse(request.params);
-    const resource = await resourceService.getResourceById(id);
+    const resource = await ResourceService.getById(id);
     if (!resource) {
       throw new McpApplicationError(`Resource with ID '${id}' not found.`, 'RESOURCE_NOT_FOUND', { resourceId: id }, 404);
     }
@@ -127,13 +135,13 @@ export async function handleGetResource(
  * Requires 'write:resource' scope.
  */
 export async function handleUpdateResource(
-  request: McpRequest,
-  context: ToolContext,
-): Promise<McpResponse> {
+  request: any, // Placeholder type
+  context: any, // Placeholder type
+): Promise<any> { // Placeholder type
   context.logger.info(`Handling updateResource request: ${request.id}`);
   try {
     const { id, updates } = updateResourceParamsSchema.parse(request.params);
-    const updatedResource = await resourceService.updateResource(id, updates as Partial<Resource>);
+    const updatedResource = await ResourceService.update(id, updates as any);
     if (!updatedResource) {
       throw new McpApplicationError(`Resource with ID '${id}' not found for update.`, 'RESOURCE_NOT_FOUND', { resourceId: id }, 404);
     }
@@ -156,13 +164,13 @@ export async function handleUpdateResource(
  * Requires 'write:resource' scope (or a more specific 'delete:resource').
  */
 export async function handleDeleteResource(
-  request: McpRequest,
-  context: ToolContext,
-): Promise<McpResponse> {
+  request: any, // Placeholder type
+  context: any, // Placeholder type
+): Promise<any> { // Placeholder type
   context.logger.info(`Handling deleteResource request: ${request.id}`);
   try {
     const { id } = deleteResourceParamsSchema.parse(request.params);
-    const success = await resourceService.deleteResource(id);
+    const success = await ResourceService.delete(id);
     if (!success) {
       throw new McpApplicationError(`Resource with ID '${id}' not found for deletion.`, 'RESOURCE_NOT_FOUND', { resourceId: id }, 404);
     }
@@ -186,7 +194,7 @@ export async function handleDeleteResource(
  */
 export async function handleListResources(
   params: ListResourcesParams,
-  extra: RequestHandlerExtra<ServerRequest, ServerNotification>
+  extra: RequestHandlerExtra<ServerRequest, ServerNotification> // Correct type used here
 ): Promise<CallToolResult> {
   const context = buildMcpContext(extra);
   context.logger.info(`handleListResources called with type: ${params.type || 'all'}`, { requestId: context.requestId });
@@ -195,11 +203,12 @@ export async function handleListResources(
   }
 
   try {
-    let resources: Resource[];
+    // Use any type to work around the type mismatches temporarily
+    let resources: any[];
     if (params.type) {
-      resources = await resourceService.listByType(params.type, context.authInfo.sub);
+      resources = await ResourceService.listByType(params.type, context.authInfo.sub);
     } else {
-      resources = await resourceService.listByOwner(context.authInfo.sub);
+      resources = await ResourceService.listByOwner(context.authInfo.sub);
     }
     return { content: [{ type: 'text', text: JSON.stringify({ resources: resources }) }] };
   } catch (error: any) {

@@ -9,6 +9,7 @@ import config from '@/config';
 // import { McpApplicationError } from '@/core/mcp-types'; // Removed unused import
 import logger from '@/utils/logger';
 import { AuthPayload } from '@/middleware/auth.middleware'; // To cast extra.authInfo
+import { McpExecutionContext } from '@/core/mcp-types';
 
 // Schema for get_server_status (no arguments)
 export const GetServerStatusParamsSchema = z.object({});
