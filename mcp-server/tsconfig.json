@@ -20,6 +20,6 @@
     "emitDecoratorMetadata": true,
     "isolatedModules": true
   },
-  "include": ["src/**/*.ts", "tests/**/*.ts"],
-  "exclude": ["node_modules", "dist", "**/*.test.ts", "**/tests/**"]
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules", "dist", "**/*.test.ts", "tests/**/*", "**/tests/**"]
 } 

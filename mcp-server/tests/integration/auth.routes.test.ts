@@ -100,7 +100,7 @@ describe('/auth routes', () => {
         .send({ username: 'wronguser', password: 'wrongpassword' });
       
       expect(res.statusCode).toEqual(401);
-      expect(res.body.code).toBe('AUTHENTICATION_FAILED');
+      expect(res.body.code).toBe('AUTH_INVALID_CREDENTIALS');
     });
 
     it('should return 400 for missing username', async () => {
@@ -131,8 +131,8 @@ describe('/auth routes', () => {
         .post('/auth/validate-token')
         .send({ token: 'invalid-token-string' });
       
-      expect(res.statusCode).toEqual(400); // Or 401 depending on how verifyToken error is mapped
-      expect(res.body.code).toBe('TOKEN_VALIDATION_FAILED');
+      expect(res.statusCode).toEqual(401);
+      expect(res.body.code).toBe('AUTH_INVALID_TOKEN');
       // expect(res.body.valid).toBe(false); // The McpApplicationError won't have `valid` field
     });
 
@@ -152,8 +152,8 @@ describe('/auth routes', () => {
             .post('/auth/validate-token')
             .send({ token: tokenToBlacklist });
 
-        expect(res.statusCode).toEqual(400);
-        expect(res.body.code).toBe('TOKEN_VALIDATION_FAILED'); 
+        expect(res.statusCode).toEqual(401);
+        expect(res.body.code).toBe('AUTH_INVALID_TOKEN');
     });
   });
 
@@ -174,16 +174,14 @@ describe('/auth routes', () => {
       const validateRes = await request(app)
         .post('/auth/validate-token')
         .send({ token: validUserToken });
-      expect(validateRes.statusCode).toEqual(400); // Or 401
-      expect(validateRes.body.code).toBe('TOKEN_VALIDATION_FAILED');
+      expect(validateRes.statusCode).toEqual(401); // Updated from 400 to 401
+      expect(validateRes.body.code).toBe('AUTH_INVALID_TOKEN'); // Updated from TOKEN_VALIDATION_FAILED
     });
 
     it('should return 401 if no token is provided for logout', async () => {
       const res = await request(app).post('/auth/logout');
       expect(res.statusCode).toEqual(401);
-      expect(res.body.code).toBe('AUTHENTICATION_REQUIRED'); // This comes from requireScope or similar if auth is mandatory for logout
-                                                       // If jwtAuthMiddleware just calls next(), then it might be a different error if authInfo isn't checked by the route.
-                                                       // Our current logout route *does* check req.authInfo.
+      expect(res.body.code).toBe('AUTH_REQUIRED'); // Updated from AUTHENTICATION_REQUIRED
     });
   });
 }); 
