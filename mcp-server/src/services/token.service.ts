@@ -1,5 +1,7 @@
-import jwt from 'jsonwebtoken';
 import { randomUUID } from 'crypto';
+
+import jwt from 'jsonwebtoken';
+
 import config from '@/config';
 import logger from '@/utils/logger';
 import { AuthPayload } from '@/middleware/auth.middleware'; // Assuming AuthPayload is now primarily defined here or in mcp-types

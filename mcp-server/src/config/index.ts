@@ -1,7 +1,11 @@
-import dotenv from 'dotenv';
 import path from 'path';
-import logger from '@/utils/logger'; // Assuming alias @ is set up for src
+
+import * as dotenv from 'dotenv';
 import { z } from 'zod';
+
+// import { getLogger } from '@/utils/logger'; // Removed unused import
+
+// const logger = getLogger('Config'); // Removed unused logger
 
 // Load .env file from the project root where mcp-server is located
 // Adjust the path if your .env file is located elsewhere relative to this config file's execution.
@@ -27,23 +31,27 @@ const envSchema = z.object({
   BLACKLIST_PRUNE_INTERVAL: z.coerce.number().default(60 * 60 * 1000),
 
   // Mock Auth
-  MOCK_AUTH_USERNAME: z.string().optional(),
-  MOCK_AUTH_PASSWORD: z.string().optional(),
+  MOCK_AUTH_USERNAME: z.string().default('testuser'),
+  MOCK_AUTH_PASSWORD: z.string().default('password'),
+
+  // Database
+  MONGO_URI: z.string().url().default('mongodb://localhost:27017/signaljourney_mcp'),
+  MONGO_URI_TEST_OVERRIDE: z.string().url().optional(),
 });
 
 // Load environment variables
 dotenv.config();
 
-let config: z.infer<typeof envSchema>;
+let configInstance: z.infer<typeof envSchema>;
 
 try {
-  config = envSchema.parse(process.env);
+  configInstance = envSchema.parse(process.env);
   console.log('Configuration loaded successfully:', 
     {
-        NODE_ENV: config.NODE_ENV,
-        PORT: config.PORT,
-        MCP_SERVER_NAME: config.MCP_SERVER_NAME,
-        LOG_LEVEL: config.LOG_LEVEL
+        NODE_ENV: configInstance.NODE_ENV,
+        PORT: configInstance.PORT,
+        MCP_SERVER_NAME: configInstance.MCP_SERVER_NAME,
+        LOG_LEVEL: configInstance.LOG_LEVEL
         // Avoid logging secrets
     }
   );
@@ -57,35 +65,40 @@ try {
 }
 
 export default {
-  env: config.NODE_ENV,
+  env: configInstance.NODE_ENV,
   server: {
-    port: config.PORT,
-    mcpServerName: config.MCP_SERVER_NAME,
-    mcpServerVersion: config.MCP_SERVER_VERSION,
-    enableStdioTransport: config.ENABLE_STDIO_TRANSPORT,
+    port: configInstance.PORT,
+    mcpServerName: configInstance.MCP_SERVER_NAME,
+    mcpServerVersion: configInstance.MCP_SERVER_VERSION,
+    enableStdioTransport: configInstance.ENABLE_STDIO_TRANSPORT,
     corsOptions: {
-        origin: config.CORS_ORIGIN === '*' ? '*' : config.CORS_ORIGIN.split(','),
+        origin: configInstance.CORS_ORIGIN === '*' ? '*' : configInstance.CORS_ORIGIN.split(','),
         methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
         allowedHeaders: ['Content-Type', 'Authorization', 'Mcp-Session-Id'],
         credentials: true,
     },
-    nodeEnv: config.NODE_ENV,
+    nodeEnv: configInstance.NODE_ENV,
   },
   logging: {
-    level: config.LOG_LEVEL,
-    logDir: config.LOG_DIR,
+    level: configInstance.LOG_LEVEL,
+    logDir: configInstance.LOG_DIR,
   },
   security: {
-    jwtSecret: config.JWT_SECRET,
-    jwtExpiresIn: config.JWT_EXPIRES_IN,
-    rateLimitWindowMs: config.RATE_LIMIT_WINDOW_MS,
-    rateLimitMaxRequests: config.RATE_LIMIT_MAX_REQUESTS,
-    blacklistPruneInterval: config.BLACKLIST_PRUNE_INTERVAL,
+    jwtSecret: configInstance.JWT_SECRET,
+    jwtExpiresIn: configInstance.JWT_EXPIRES_IN,
+    rateLimitWindowMs: configInstance.RATE_LIMIT_WINDOW_MS,
+    rateLimitMaxRequests: configInstance.RATE_LIMIT_MAX_REQUESTS,
+    blacklistPruneInterval: configInstance.BLACKLIST_PRUNE_INTERVAL,
   },
   auth: {
     mockUser: {
-      username: config.MOCK_AUTH_USERNAME,
-      password: config.MOCK_AUTH_PASSWORD,
+      username: configInstance.MOCK_AUTH_USERNAME,
+      password: configInstance.MOCK_AUTH_PASSWORD,
     }
+  },
+  db: {
+    mongoUri: (process.env.NODE_ENV === 'test' && configInstance.MONGO_URI_TEST_OVERRIDE) 
+              ? configInstance.MONGO_URI_TEST_OVERRIDE 
+              : configInstance.MONGO_URI,
   }
 }; 

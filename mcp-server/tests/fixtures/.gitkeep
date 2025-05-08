@@ -1,0 +1,7 @@
+# This directory is for test fixtures, such as mock file system structures.
+# For example, you might have:
+# - tests/fixtures/sample-repo-1/
+#   - file1.py
+#   - subfolder/
+#     - file2.js
+# - tests/fixtures/empty-repo/ 

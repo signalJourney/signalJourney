@@ -1,6 +1,8 @@
 import request from 'supertest';
-import { app } from '@/index'; // Import the conditionally started Express app
-import tokenServiceInstance from '@/services/token.service'; // Import the actual instance
+import express from 'express'; // Import express type
+
+import { startServer } from '../../src/index'; // Use relative path to src/index
+import tokenServiceInstance from '../../src/services/token.service'; // Use relative path to services
 // import config from '@/config'; // config seems unused in this file now
 
 // Ensure the server is fully initialized before tests run if it's not already.
@@ -10,10 +12,10 @@ import tokenServiceInstance from '@/services/token.service'; // Import the actua
 
 // Mock the tokenService blacklist for isolated tests of auth routes
 // This is to avoid interference between logout tests and validate tests
-let mockBlacklist = new Set<string>();
+const mockBlacklist = new Set<string>();
 
-jest.mock('@/services/token.service', () => {
-  const originalTokenService = jest.requireActual('@/services/token.service').default; // Access the singleton instance
+jest.mock('../../src/services/token.service', () => {
+  const originalTokenService = jest.requireActual('../../src/services/token.service').default; // Access the singleton instance
   return {
     __esModule: true,
     default: { // Keep the .default structure if that's how the original is exported and used
@@ -36,33 +38,36 @@ jest.mock('@/services/token.service', () => {
   };
 });
 
+let app: express.Express; // Variable to hold the app instance
 
 describe('/auth routes', () => {
   let validUserToken = '';
   let validUserJti = '';
 
+  // Use beforeAll to start the server once for the suite
   beforeAll(async () => {
-    // Ensure NODE_ENV is test so the app doesn't try to listen on a port
     process.env.NODE_ENV = 'test';
-    // Override JWT secret for predictable tokens if necessary for specific test cases, though not strictly needed here
-    // config.security.jwtSecret = 'test-integration-secret';
-    
-    // Log in a user to get a token for authenticated routes
-    // Note: This uses the actual login logic, which in turn uses the mocked tokenService.generateToken
-    const loginRes = await request(app)
-      .post('/auth/login')
-      .send({ username: 'testuser', password: 'password123' });
-    
-    if (loginRes.body.accessToken) {
-      validUserToken = loginRes.body.accessToken;
-      // Use the imported instance for direct calls if mock doesn't fully cover or if pre-mock logic needed
-      const decoded = tokenServiceInstance.verifyToken(validUserToken); 
-      if (decoded && decoded.jti) {
-        validUserJti = decoded.jti;
+    try {
+      // Start the server and get the app instance
+      app = await startServer(); 
+      // Now perform login to get token
+      const loginRes = await request(app)
+        .post('/auth/login')
+        .send({ username: 'testuser', password: 'password123' });
+      
+      if (loginRes.body.accessToken) {
+        validUserToken = loginRes.body.accessToken;
+        const decoded = tokenServiceInstance.verifyToken(validUserToken); 
+        if (decoded && decoded.jti) {
+          validUserJti = decoded.jti;
+        }
+      } else {
+        console.error('Test setup failed: Could not log in', loginRes.status, loginRes.body);
+        throw new Error('Prerequisite login failed for /auth route tests');
       }
-    } else {
-      console.error('Failed to log in user for auth tests:', loginRes.body);
-      throw new Error('Prerequisite login failed for /auth route tests');
+    } catch (error) {
+       console.error('Test setup failed: startServer() threw an error:', error);
+       throw error; // Fail fast if server doesn't start
     }
   });
 
@@ -84,7 +89,7 @@ describe('/auth routes', () => {
       expect(res.body).toHaveProperty('accessToken');
       expect(res.body.tokenType).toBe('Bearer');
       expect(res.body).toHaveProperty('expiresIn');
-      expect(res.body.userId).toBe('user-123');
+      expect(res.body.sub).toBe('user-123');
       expect(res.body.username).toBe('testuser');
       expect(res.body.scopes).toEqual(expect.arrayContaining(['read:resource', 'write:resource']));
     });
@@ -95,7 +100,7 @@ describe('/auth routes', () => {
         .send({ username: 'wronguser', password: 'wrongpassword' });
       
       expect(res.statusCode).toEqual(401);
-      expect(res.body.code).toBe('AUTHENTICATION_FAILED');
+      expect(res.body.code).toBe('AUTH_INVALID_CREDENTIALS');
     });
 
     it('should return 400 for missing username', async () => {
@@ -117,7 +122,8 @@ describe('/auth routes', () => {
       
       expect(res.statusCode).toEqual(200);
       expect(res.body.valid).toBe(true);
-      expect(res.body.payload.userId).toBe('user-123');
+      expect(res.body.payload.sub).toBe('user-123');
+      expect(res.body.payload.jti).toBe(validUserJti);
     });
 
     it('should return valid:false for an invalid token', async () => {
@@ -125,8 +131,8 @@ describe('/auth routes', () => {
         .post('/auth/validate-token')
         .send({ token: 'invalid-token-string' });
       
-      expect(res.statusCode).toEqual(400); // Or 401 depending on how verifyToken error is mapped
-      expect(res.body.code).toBe('TOKEN_VALIDATION_FAILED');
+      expect(res.statusCode).toEqual(401);
+      expect(res.body.code).toBe('AUTH_INVALID_TOKEN');
       // expect(res.body.valid).toBe(false); // The McpApplicationError won't have `valid` field
     });
 
@@ -146,8 +152,8 @@ describe('/auth routes', () => {
             .post('/auth/validate-token')
             .send({ token: tokenToBlacklist });
 
-        expect(res.statusCode).toEqual(400);
-        expect(res.body.code).toBe('TOKEN_VALIDATION_FAILED'); 
+        expect(res.statusCode).toEqual(401);
+        expect(res.body.code).toBe('AUTH_INVALID_TOKEN');
     });
   });
 
@@ -168,16 +174,14 @@ describe('/auth routes', () => {
       const validateRes = await request(app)
         .post('/auth/validate-token')
         .send({ token: validUserToken });
-      expect(validateRes.statusCode).toEqual(400); // Or 401
-      expect(validateRes.body.code).toBe('TOKEN_VALIDATION_FAILED');
+      expect(validateRes.statusCode).toEqual(401); // Updated from 400 to 401
+      expect(validateRes.body.code).toBe('AUTH_INVALID_TOKEN'); // Updated from TOKEN_VALIDATION_FAILED
     });
 
     it('should return 401 if no token is provided for logout', async () => {
       const res = await request(app).post('/auth/logout');
       expect(res.statusCode).toEqual(401);
-      expect(res.body.code).toBe('AUTHENTICATION_REQUIRED'); // This comes from requireScope or similar if auth is mandatory for logout
-                                                       // If jwtAuthMiddleware just calls next(), then it might be a different error if authInfo isn't checked by the route.
-                                                       // Our current logout route *does* check req.authInfo.
+      expect(res.body.code).toBe('AUTH_REQUIRED'); // Updated from AUTHENTICATION_REQUIRED
     });
   });
 }); 
