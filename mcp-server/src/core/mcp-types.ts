@@ -1,10 +1,13 @@
-import { CallToolResult, McpErrorPayload } from '@modelcontextprotocol/sdk/types.js';
+// We'll replace the SDK imports with our own type definitions
+// import { CallToolResult, McpErrorPayload } from '@modelcontextprotocol/sdk/types.js';
 
 import logger from '@/utils/logger';
 import { AuthPayload } from '@/middleware/auth.middleware';
 
-// --- Re-exporting core SDK types for convenience and potential future extension ---
-export type { CallToolResult };
+// Define our own CallToolResult type to match the SDK
+export interface CallToolResult {
+  content: Array<{ type: string; text: string; }>;
+}
 
 /**
  * Represents the context for a command execution.

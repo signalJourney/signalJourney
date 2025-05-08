@@ -1,54 +1,34 @@
-import { RepositoryScannerService, TraversalOptions } from '@/services/repositoryScanner.service';
+import * as fs from 'fs';
+import * as path from 'path';
+import { RepositoryScannerService, TraversalOptions, TraversedFile } from '@/services/repositoryScanner.service';
 
-// Mock 'fs/promises' and 'glob'
-jest.mock('fs/promises');
-jest.mock('glob');
+// Mock the logger used internally by the service
+jest.mock('@/utils/logger', () => ({
+  info: jest.fn(),
+  warn: jest.fn(),
+  error: jest.fn(),
+  debug: jest.fn(),
+}));
 
 describe('RepositoryScannerService', () => {
   let scannerService: RepositoryScannerService;
-  let mockOptions: TraversalOptions;
 
   beforeEach(() => {
-    // Reset mocks before each test
-    jest.clearAllMocks();
-
-    mockOptions = {
-      include: ['**/*'],
-      exclude: ['node_modules/**', '.git/**'],
-      maxDepth: 10,
-      followSymlinks: false,
-    };
-    scannerService = new RepositoryScannerService(mockOptions);
+    // Create a new instance for each test
+    scannerService = new RepositoryScannerService();
+    jest.clearAllMocks(); 
   });
 
   describe('scanRepository', () => {
     it('should be defined', () => {
       expect(scannerService.scanRepository).toBeDefined();
     });
-    // Add more tests for scanRepository
+    // Add more tests for scanRepository here focusing on its inputs and outputs
+    // e.g., mock fs.promises.readdir, fs.promises.stat, fs.promises.readFile
+    // and assert the structure of the returned TraversedFile[]
   });
 
-  describe('detectFileTypeAndCategory', () => {
-    it('should be defined', () => {
-      // @ts-expect-error // Accessing private method for testing
-      expect(scannerService.detectFileTypeAndCategory).toBeDefined();
-    });
-    // Add more tests for detectFileTypeAndCategory
-  });
-
-  describe('extractBasicCodeMetadata', () => {
-    it('should be defined', () => {
-      // @ts-expect-error // Accessing private method for testing
-      expect(scannerService.extractBasicCodeMetadata).toBeDefined();
-    });
-    // Add more tests for extractBasicCodeMetadata
-  });
-
-  describe('detectPatternsAndEntryPoints', () => {
-    it('should be defined', () => {
-      // @ts-expect-error // Accessing private method for testing
-      expect(scannerService.detectPatternsAndEntryPoints).toBeDefined();
-    });
-    // Add more tests for detectPatternsAndEntryPoints
-  });
+  // Tests for private methods (detectFileTypeAndCategory, 
+  // extractBasicCodeMetadata, detectPatternsAndEntryPoints) 
+  // have been removed as they should be tested via the public scanRepository method.
 }); 

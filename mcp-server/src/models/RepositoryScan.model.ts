@@ -1,5 +1,7 @@
 import mongoose, { Schema, Document /*, Model*/ } from 'mongoose';
 
+import { TraversedFile } from '@/services/repositoryScanner.service'; // Import TraversedFile
+
 // import { TraversedFile, CodeMetadata } from '@/services/repositoryScanner.service'; // Removed unused import
 
 // Define interface for CodeMetadata document part
@@ -40,16 +42,12 @@ const TraversedFileSchema: Schema<ITraversedFile> = new Schema({
   name: { type: String, required: true },
   ext: { type: String },
   depth: { type: Number, required: true },
+  size: { type: Number },
   isSymlink: { type: Boolean, default: false },
-  fileType: { type: String, required: true },
-  fileCategory: { type: String, required: true },
-  size: { type: Number, required: true },
-  createdAt: { type: Date },
-  modifiedAt: { type: Date },
-  accessedAt: { type: Date },
+  isDirectory: { type: Boolean, default: false },
+  isFile: { type: Boolean, default: true },
+  lastModified: { type: Date },
   codeMetadata: { type: CodeMetadataSchema, default: null },
-  isEntryPoint: { type: Boolean, default: false },
-  detectedPatterns: [String],
 });
 
 // Index common query fields within the files array if needed (can impact write performance)

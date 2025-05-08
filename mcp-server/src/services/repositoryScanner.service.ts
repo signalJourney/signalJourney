@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 
-import minimatch from 'minimatch';
+import * as minimatch from 'minimatch';
 import { z } from 'zod';
 
 import logger from '@/utils/logger';
@@ -14,6 +14,7 @@ export interface TraversalOptions {
   excludePatterns?: string[];
   followSymlinks?: boolean;
   includeHidden?: boolean;
+  parseCode?: boolean;
   // Concurrency, gitAwareMode, onProgress etc. to be added later
 }
 
@@ -28,6 +29,7 @@ export interface TraversedFile {
   isDirectory?: boolean;// Is it a directory?
   isFile?: boolean;     // Is it a file?
   lastModified?: Date; // Last modification time
+  codeMetadata?: any;   // Added to match what's referenced in model
 }
 
 const DEFAULT_EXCLUDE_PATTERNS = [
@@ -50,7 +52,10 @@ export class RepositoryScannerService {
   private shouldExclude(relativePath: string, patterns: string[] = []): boolean {
     // Normalize path separators for consistent matching
     const normalizedPath = relativePath.replace(/\\/g, '/');
-    return patterns.some(pattern => minimatch(normalizedPath, pattern, { dot: true }));
+    return patterns.some(pattern => {
+      // Use minimatch correctly
+      return minimatch.minimatch(normalizedPath, pattern, { dot: true });
+    });
   }
 
   async scanRepository(

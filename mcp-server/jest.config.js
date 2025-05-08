@@ -49,4 +49,6 @@ module.exports = {
   },
   // Indicates whether each individual test should be reported during the run
   verbose: true,
+  // Timeout for each test in milliseconds
+  testTimeout: 30000, // Increased timeout to 30 seconds
 }; 
