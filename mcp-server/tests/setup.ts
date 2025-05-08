@@ -2,6 +2,7 @@
 import path from 'path';
 
 import dotenv from 'dotenv';
+import { disconnectDB } from '../src/core/db';
 
 // Load environment variables from .env.test or .env.example for tests
 // This ensures that tests run with a consistent and isolated environment
@@ -23,6 +24,14 @@ if (envConfig.error && envConfig.error.message.includes('ENOENT')) {
   console.log('tests/setup.ts: Loaded test configuration from .env.test');
 }
 
+// Set NODE_ENV to 'test' if not already set
+process.env.NODE_ENV = process.env.NODE_ENV || 'test';
+
+// Make sure JWT_SECRET is set for auth tests
+if (!process.env.JWT_SECRET) {
+  process.env.JWT_SECRET = 'test-secret-for-jest';
+}
+
 // Example: Mock global Date (if needed for consistent timestamps in tests)
 // const MOCK_DATE = '2024-01-01T00:00:00.000Z';
 // jest.spyOn(global, 'Date').mockImplementation(() => new Date(MOCK_DATE));
@@ -36,8 +45,12 @@ if (envConfig.error && envConfig.error.message.includes('ENOENT')) {
 // }));
 
 // Clean up after tests if needed, though Jest usually handles this well for mocks
-afterAll(() => {
+afterAll(async () => {
   // jest.restoreAllMocks();
+  
+  // Ensure MongoDB connections are closed after all tests
+  await disconnectDB();
+  console.log('Tests cleanup complete. MongoDB connections closed.');
 });
 
 console.log('Test setup complete. JWT_SECRET:', process.env.JWT_SECRET ? 'Loaded' : 'NOT LOADED'); 

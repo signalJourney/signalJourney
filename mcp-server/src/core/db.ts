@@ -21,8 +21,8 @@ export async function connectDB(): Promise<boolean> {
   try {
     logger.info(`Attempting to connect to MongoDB at ${config.db.mongoUri}...`);
     await mongoose.connect(config.db.mongoUri, {
-      serverSelectionTimeoutMS: (process.env.NODE_ENV === 'test' ? 1000 : 5000),
-      socketTimeoutMS: 45000,
+      serverSelectionTimeoutMS: (process.env.NODE_ENV === 'test' ? 500 : 5000),
+      socketTimeoutMS: (process.env.NODE_ENV === 'test' ? 1000 : 45000),
     });
     isConnected = true;
     if (!mongoose.connection.listeners('connected').length) {
@@ -46,6 +46,7 @@ export async function connectDB(): Promise<boolean> {
     if (process.env.NODE_ENV !== 'test') {
       throw new Error(`Failed to connect to MongoDB: ${error.message}`);
     }
+    logger.warn('Database connection failed in TEST environment. Server will continue starting for tests not requiring DB.');
     return false;
   }
 }

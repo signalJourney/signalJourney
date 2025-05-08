@@ -13,9 +13,9 @@
     "format": "prettier --write \"src/**/*.ts\" \"tests/**/*.ts\"",
     "prettier": "prettier --check \"**/*.{ts,tsx,js,json,md}\"",
     "prettier:fix": "prettier --write \"**/*.{ts,tsx,js,json,md}\"",
-    "test": "jest",
+    "test": "jest --forceExit",
     "test:watch": "jest --watch",
-    "test:cov": "jest --coverage",
+    "test:cov": "jest --coverage --forceExit",
     "typecheck": "tsc --noEmit"
   },
   "keywords": [
