@@ -79,10 +79,10 @@
           "description": "Fitted ICA object."
         },
         {
-           "targetType": "file",
-           "location": "./derivatives/signaljourney/sub-01/eeg/sub-01_task-rest_desc-ica_object.fif",
-           "format": "FIF",
-           "description": "Saved ICA object file."
+          "targetType": "inlineData",
+          "format": "mne.preprocessing.ICA",
+          "description": "Fitted ICA object."
+          "data": [[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15],[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15],<fill in the rest, this is just an example>,]
          }
       ]
     },
@@ -118,15 +118,21 @@
           "description": "Indices of identified EOG components."
         },
         {
+          "targetType": "inlineData",
+          "name": "eog_indices",
+          "data": [0, 3]
+        },
+        {
           "targetType": "variable",
           "name": "eog_scores",
           "description": "Scores associated with EOG components."
+        },
+        {
+          "targetType": "inlineData",
+          "name": "eog_scores",
+          "data": [99, 85]
         }
       ],
-       "qualityMetrics": {
-         "eogComponentsFound": [0, 3], 
-         "numEogComponentsFound": 2
-       }
     },
     {
       "stepId": "4",
@@ -166,14 +172,9 @@
           "description": "ICA cleaned EEG data file."
         }
       ],
-       "qualityMetrics": {
-         "componentsRemoved": [0, 3],
-         "numComponentsRemoved": 2
-         
-       }
     }
   ],
-  "summaryMetrics": {
+  "qualityMetrics": {
     "numIcaComponents": 15,
     "numArtifactComponentsRemoved": 2
   }
