@@ -25,7 +25,7 @@ These fields are required at the root level of every signalJourney JSON file.
 ### Optional Top-Level Fields
 
 *   `summaryMetrics` (object, optional)
-    *   **Description:** Contains summary quality metrics that apply to the final output of the entire pipeline.
+    *   **Description:** Contains summary quality metrics that summarizes multiple `qualtiyMetrics` fileds across pipline or dataset. For example, sumamrizing quality metrics such as average powerline noise across subjects in a dataset.
     *   **Structure:** Key-value pairs where keys are metric names and values are the metric results. Can be nested objects.
     *   **See:** [Quality Metrics Object](#quality-metrics-object)
     *   **Example:** `"summaryMetrics": { "finalSNR": 35.2, "percentDataRejected": 5.1 }`
