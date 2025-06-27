@@ -15,72 +15,136 @@ This MNE-Python pipeline demonstrates time-frequency analysis using Morlet wavel
 
 ```mermaid
 flowchart TD
-    A[Load Cleaned Data] --> B[Extract Epochs]
-    B --> C[Compute TFR<br/>tfr_morlet]
-    C --> D[Apply Baseline Correction]
-    D --> E[Save Results]
+    A[Load Cleaned Data<br/>mne.io.read_raw_fif] --> B[Extract Epochs<br/>mne.Epochs]
+    B --> C[Compute TFR<br/>mne.time_frequency.tfr_morlet]
+    C --> D[Apply Baseline Correction<br/>tfr.apply_baseline]
+    D --> E[Save TFR Results<br/>tfr.save]
+    
+    %% Input from previous pipeline
+    F["📁 sub-01_task-rest_desc-cleaned_eeg.fif<br/>From: ICA Decomposition Pipeline"] --> A
+    
+    %% Intermediate outputs
+    A --> A1["📊 Raw Object<br/>ICA-cleaned data"]
+    B --> B1["📊 Epochs Object<br/>Event-related epochs"]
+    C --> C1["📊 TFR Object<br/>Time-frequency data"]
+    D --> D1["📊 TFR Object<br/>Baseline corrected"]
+    
+    %% Variables and data
+    B --> V1["📊 Events Array<br/>Event timings"]
+    C --> V2["📊 Frequencies<br/>[4, 8, 13, 30] Hz"]
+    C --> V3["📊 Power Matrix<br/>Channels × Frequencies × Time"]
+    
+    %% Final outputs
+    E --> G["💾 sub-01_task-rest_desc-tfr_eeg.h5<br/>Time-frequency results"]
+    D --> H["💾 sub-01_task-rest_desc-tfr_plot.png<br/>Visualization"]
+    
+    %% Quality metrics
+    C --> Q1["📈 Frequency range: 4-30 Hz<br/>Cycles: 2-15"]
+    D --> Q2["📈 Baseline: [-0.2, 0] s<br/>Mode: percent"]
+
+    %% Styling
+    classDef processStep fill:#e1f5fe,stroke:#01579b,stroke-width:2px
+    classDef inputFile fill:#fff3e0,stroke:#e65100,stroke-width:2px
+    classDef outputFile fill:#e8f5e8,stroke:#1b5e20,stroke-width:2px
+    classDef inlineData fill:#f3e5f5,stroke:#4a148c,stroke-width:1px
+    classDef qualityMetric fill:#f9f9f9,stroke:#666,stroke-width:1px
+
+    class A,B,C,D,E processStep
+    class F inputFile
+    class G,H outputFile
+    class A1,B1,C1,D1,V1,V2,V3 inlineData
+    class Q1,Q2 qualityMetric
 ```
 
-## JSON Example
+## Key MNE-Python Features Demonstrated
 
-See the full JSON file: [`time_frequency_analysis_pipeline_mne.signalJourney.json`](https://github.com/neuromechanist/signalJourney/blob/main/schema/examples/time_frequency_analysis_pipeline_mne.signalJourney.json)
+### Time-Frequency Functions
+- **`mne.Epochs`**: Event-related epoch extraction
+- **`mne.time_frequency.tfr_morlet`**: Morlet wavelet decomposition
+- **`tfr.apply_baseline`**: Baseline correction for power changes
+- **`tfr.save`**: Save time-frequency results in HDF5 format
+
+### Advanced Parameters
+- **Wavelet parameters**: Adaptive cycles for different frequencies
+- **Baseline correction**: Percent change from pre-stimulus period
+- **Frequency selection**: Logarithmically spaced frequencies
+- **Output formats**: Both HDF5 data and PNG visualization
+
+## Example JSON Structure
+
+The time-frequency computation step demonstrates complex parameter documentation:
 
 ```json
 {
-  "sj_version": "0.1.0",
-  "schema_version": "0.1.0",
-  "description": "Example signalJourney file for a time-frequency analysis pipeline using MNE-Python.",
-  "pipelineInfo": {
-    "name": "Time-Frequency Analysis (Morlet)",
-    "description": "Calculates time-frequency representation using Morlet wavelets on epoched data and applies baseline correction.",
-    "pipelineType": "time-frequency",
-    "version": "1.0.0",
-    "executionDate": "2024-05-02T12:00:00Z"
+  "stepId": "3",
+  "name": "Compute Time-Frequency Decomposition",
+  "description": "Calculate time-frequency representation using Morlet wavelets.",
+  "software": {
+    "name": "MNE-Python",
+    "version": "1.6.1",
+    "functionCall": "mne.time_frequency.tfr_morlet(epochs, freqs=freqs, n_cycles=n_cycles, return_itc=False)"
   },
-  "processingSteps": [
-    // ... steps detailed below ...
-  ],
-  "summaryMetrics": {
-    "analysisType": "Time-Frequency",
-    "method": "Morlet Wavelet",
-    "frequencyRangeHz": [2.0, 40.0]
+  "parameters": {
+    "freqs": [4, 6, 8, 10, 13, 17, 22, 30],
+    "n_cycles": [2, 3, 4, 5, 6.5, 8.5, 11, 15],
+    "use_fft": true,
+    "return_itc": false,
+    "decim": 1,
+    "n_jobs": 1
   }
 }
 ```
 
-## Overview
+### Multi-Output Documentation
+Steps can produce multiple related outputs:
 
-The pipeline performs the following steps:
+```json
+"outputTargets": [
+  {
+    "targetType": "file",
+    "location": "./derivatives/signaljourney/sub-01/eeg/sub-01_task-rest_desc-tfr_eeg.h5",
+    "format": "HDF5",
+    "description": "Time-frequency power data."
+  },
+  {
+    "targetType": "file", 
+    "location": "./derivatives/signaljourney/sub-01/eeg/sub-01_task-rest_desc-tfr_plot.png",
+    "format": "PNG",
+    "description": "Time-frequency plot visualization."
+  }
+]
+```
 
-1.  Loads epoched EEG data (presumably cleaned, e.g., output from an ICA pipeline).
-2.  Calculates TFR power using Morlet wavelets for frequencies between 2-40 Hz for a specific condition ("ConditionA").
-3.  Applies baseline correction (log ratio) to the calculated power.
-4.  Saves the baseline-corrected TFR power to an HDF5 file.
+## Time-Frequency Analysis Features
 
-## Key Sections Explained
+### Wavelet Parameter Selection
+- **Frequency-dependent cycles**: Lower frequencies use fewer cycles for better temporal resolution
+- **Higher frequencies**: More cycles for better frequency resolution
+- **Adaptive approach**: Balances time-frequency trade-off across spectrum
 
-*   **`pipelineInfo`:** Defines the pipeline name, description, type ("time-frequency"), etc.
-*   **`processingSteps`:**
-    *   **Step 1: Load Epoched Data**
-        *   `inputSources`: Loads an epoched FIF file (`*_epo.fif`), potentially generated by a previous pipeline (`pipelineSource: "ICA Decomposition"`).
-        *   `outputTargets`: Outputs the loaded data as an `in-memory` MNE Epochs object.
-    *   **Step 2: Calculate TFR (Morlet)**
-        *   `dependsOn`: `["1"]`.
-        *   `software`: MNE-Python, using `mne.time_frequency.tfr_morlet`.
-        *   `parameters`: Specifies the analysis parameters:
-            *   `event_id`: Selects epochs belonging to "ConditionA".
-            *   `freqs`: Defines the frequency range using start/stop/step.
-            *   `n_cycles_formula`: Shows how the number of wavelet cycles was determined (here, frequency-dependent).
-            *   Other parameters like `use_fft`, `return_itc`, `decim`.
-        *   `inputSources`: Takes the loaded Epochs object from Step 1.
-        *   `outputTargets`: Outputs the computed TFR power as an `in-memory` AverageTFR object.
-    *   **Step 3: Apply Baseline Correction**
-        *   `dependsOn`: `["2"]`.
-        *   `software`: MNE-Python, using the `apply_baseline` method of the TFR object.
-        *   `parameters`: Specifies the `baseline` period `[-0.5, 0.0]` seconds and the correction `mode` (`"logratio"`).
-        *   `inputSources`: Takes the TFR power object from Step 2.
-        *   `outputTargets`: Saves the final baseline-corrected TFR power to a `file` (`format: "HDF5"`).
-        *   `qualityMetrics`: Records the baseline period and mode used.
-*   **`summaryMetrics`:** Provides overall information about the analysis performed, such as the type, method, and frequency range.
+### Baseline Correction Methods
+- **Percent change**: `(power - baseline) / baseline * 100`
+- **Ratio**: `power / baseline`
+- **Decibel**: `10 * log10(power / baseline)`
+- **Z-score**: `(power - baseline_mean) / baseline_std`
 
-This example illustrates documenting time-frequency specific parameters, including how parameters like frequency ranges or wavelet cycles were defined, and linking to prior processing stages. 
+## MNE-Python vs EEGLAB Comparison
+
+| Aspect | MNE-Python Version | EEGLAB Version |
+|--------|-------------------|----------------|
+| **Method** | Morlet wavelets | Morlet wavelets (timef) |
+| **Baseline** | `apply_baseline()` | Built into `timef` |
+| **Output** | HDF5, NPZ formats | MATLAB .mat files |
+| **Visualization** | matplotlib plots | EEGLAB plots |
+| **Cycles** | Manual specification | Automatic or manual |
+
+## Usage Notes
+
+This example demonstrates:
+- **Time-frequency decomposition** with optimal parameters
+- **Baseline correction** for interpretable results
+- **Multi-format outputs** for analysis and visualization
+- **Pipeline integration** building on previous processing steps
+- **Quality documentation** for reproducible analysis
+
+The pipeline showcases MNE-Python's comprehensive time-frequency analysis capabilities while maintaining full parameter transparency for reproducibility. 

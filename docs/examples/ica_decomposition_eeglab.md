@@ -17,37 +17,63 @@ This EEGLAB pipeline demonstrates how to apply ICA to remove artifacts from prep
 ```mermaid
 flowchart TD
     A[Load Preprocessed Data<br/>pop_loadset] --> B[Run ICA Decomposition<br/>pop_runica]
-    B --> C[Classify Components<br/>ICLabel<br/>pop_iclabel]
-    C --> D[Remove Artifact Components<br/>pop_subcomp]
-    D --> E[Save Cleaned Data<br/>pop_saveset]
+    B --> C[Classify Components<br/>pop_iclabel]
+    C --> D[Select Components<br/>pop_selectcomps]
+    D --> E[Remove Components<br/>pop_subcomp]
+    E --> F[Save Cleaned Data<br/>pop_saveset]
     
-    B --> F[ICA Weights & Sphere<br/>Variables]
-    C --> G[Component Classifications<br/>Brain/Muscle/Eye/etc.]
-    D --> H[Artifact-Free EEG<br/>Inline Data]
+    %% Input from basic preprocessing
+    G["📁 sub-01_task-rest_desc-preproc_eeg.set<br/>From: Basic Preprocessing Pipeline"] --> A
     
-    style A fill:#e1f5fe
-    style E fill:#f3e5f5
-    style B fill:#fff3e0
-    style C fill:#e8f5e8
-    style D fill:#fff3e0
-    style F fill:#fce4ec
-    style G fill:#fce4ec
-    style H fill:#fce4ec
+    %% Intermediate outputs
+    A --> A1["📊 EEG Structure<br/>Preprocessed dataset"]
+    B --> B1["📊 ICA Weights<br/>Extended Infomax decomposition"]
+    C --> C1["📊 ICLabel Classifications<br/>Brain/Artifact probabilities"]
+    D --> D1["📊 Component Selection<br/>Manual review interface"]
+    
+    %% ICA analysis data
+    B --> V1["📊 ICA Sphere<br/>Whitening matrix"]
+    B --> V2["📊 Component Maps<br/>Scalp topographies"]
+    C --> V3["📊 Classification Scores<br/>Brain: 0.92, Eye: 0.05"]
+    E --> V4["📊 Artifact Components<br/>[2, 15, 23] removed"]
+    
+    %% Final outputs
+    F --> H["💾 sub-01_task-rest_desc-cleaned_eeg.set<br/>ICA-cleaned dataset"]
+    D --> I["💾 sub-01_task-rest_desc-components_review.fig<br/>Component browser"]
+    C --> J["💾 sub-01_task-rest_desc-iclabel_report.mat<br/>Classification results"]
+    
+    %% Quality metrics
+    C --> Q1["📈 Brain components: 58/64<br/>Muscle components: 3/64"]
+    E --> Q2["📈 Components removed: 3<br/>Variance preserved: 92.1%"]
+
+    %% Styling
+    classDef processStep fill:#e1f5fe,stroke:#01579b,stroke-width:2px
+    classDef inputFile fill:#fff3e0,stroke:#e65100,stroke-width:2px
+    classDef outputFile fill:#e8f5e8,stroke:#1b5e20,stroke-width:2px
+    classDef inlineData fill:#f3e5f5,stroke:#4a148c,stroke-width:1px
+    classDef qualityMetric fill:#f9f9f9,stroke:#666,stroke-width:1px
+
+    class A,B,C,D,E,F processStep
+    class G inputFile
+    class H,I,J outputFile
+    class A1,B1,C1,D1,V1,V2,V3,V4 inlineData
+    class Q1,Q2 qualityMetric
 ```
 
 ## Key EEGLAB Features Demonstrated
 
 ### ICA-Specific Functions
 - **`pop_runica`**: Extended Infomax ICA decomposition
-- **`pop_iclabel`**: Automated component classification
+- **`pop_iclabel`**: Automated component classification using deep learning
+- **`pop_selectcomps`**: Interactive component selection interface
 - **`pop_subcomp`**: Remove components from EEG data
-- **ICLabel integration**: Brain vs. artifact classification
+- **ICLabel integration**: Brain vs. artifact classification with probability scores
 
-### Advanced signalJourney Features
-- **Variable storage**: ICA weights and sphere matrices
-- **Inline data preservation**: Component timecourses and topographies
-- **Quality metrics**: Classification probabilities and removal statistics
-- **Multi-output steps**: Steps generating both files and variables
+### EEGLAB-Specific Parameters
+- **Extended Infomax**: Natural gradient algorithm for ICA
+- **ICLabel classification**: Automated artifact detection using trained models
+- **Interactive selection**: GUI-based component review and selection
+- **Dataset integration**: Seamless EEGLAB structure preservation
 
 ## Example JSON Structure
 
@@ -61,27 +87,17 @@ The ICA decomposition step demonstrates complex output documentation:
   "software": {
     "name": "EEGLAB",
     "version": "2023.1",
-    "functionCall": "pop_runica(EEG, 'icatype', 'runica', 'extended', 1, 'interupt', 'off')"
+    "functionCall": "pop_runica(EEG, 'icatype', 'runica', 'extended', 1, 'interrupt', 'off')"
   },
   "parameters": {
     "icatype": "runica",
     "extended": 1,
     "interrupt": "off",
-    "pca": null
-  },
-  "outputTargets": [
-    {
-      "targetType": "variable",
-      "name": "ica_weights",
-      "description": "ICA unmixing matrix."
-    },
-    {
-      "targetType": "inlineData",
-      "name": "component_topographies",
-      "data": "{{ica_component_maps}}",
-      "description": "ICA component scalp topographies"
-    }
-  ]
+    "pca": null,
+    "lrate": 0.001,
+    "maxsteps": 500,
+    "stop": 1e-7
+  }
 }
 ```
 
@@ -90,27 +106,63 @@ The ICLabel step showcases automated artifact classification:
 
 ```json
 {
+  "stepId": "3", 
+  "name": "Classify Components with ICLabel",
+  "description": "Automatically classify ICA components using ICLabel deep learning model.",
+  "software": {
+    "name": "EEGLAB",
+    "version": "2023.1",
+    "functionCall": "EEG = pop_iclabel(EEG, 'default')"
+  },
   "qualityMetrics": {
-    "brain_components": "{{num_brain_components}}",
-    "muscle_components": "{{num_muscle_components}}",
-    "eye_components": "{{num_eye_components}}",
-    "heart_components": "{{num_heart_components}}",
-    "line_noise_components": "{{num_line_noise_components}}",
-    "channel_noise_components": "{{num_channel_noise_components}}",
-    "other_components": "{{num_other_components}}"
+    "brain_components": 58,
+    "muscle_components": 3,
+    "eye_components": 2,
+    "heart_components": 0,
+    "line_noise_components": 1,
+    "channel_noise_components": 0,
+    "other_components": 0
   }
 }
 ```
+
+### Advanced signalJourney Features
+- **Variable storage**: ICA weights and sphere matrices
+- **Inline data preservation**: Component timecourses and topographies
+- **Quality metrics**: Classification probabilities and removal statistics
+- **Multi-output steps**: Steps generating both files and variables
+
+## EEGLAB ICA Workflow
+
+### Extended Infomax Algorithm
+EEGLAB's `pop_runica` provides:
+- **Natural gradient optimization**: Efficient convergence for EEG data
+- **Extended model**: Handles both sub- and super-Gaussian sources
+- **Robust convergence**: Adaptive learning rate and stopping criteria
+- **Reproducible results**: Fixed random seed options
+
+### ICLabel Classification System
+- **Deep learning model**: Trained on thousands of manually labeled components
+- **Multiple artifact types**: Brain, muscle, eye, heart, line noise, channel noise
+- **Probability scores**: Confidence levels for each classification
+- **Automatic thresholding**: Configurable probability thresholds for removal
+
+### Interactive Component Review
+- **Visual inspection**: Component topographies, time courses, and spectra
+- **Classification overlay**: ICLabel probabilities displayed for each component
+- **Manual override**: User can override automatic classifications
+- **Batch selection**: Tools for selecting multiple components efficiently
 
 ## EEGLAB vs MNE-Python Comparison
 
 | Aspect | EEGLAB Version | MNE-Python Version |
 |--------|----------------|-------------------|
-| **ICA Algorithm** | Extended Infomax (`runica`) | FastICA, Infomax |
-| **Classification** | ICLabel (automated) | Manual inspection |
-| **Component Removal** | `pop_subcomp` | `apply()` method |
-| **Visualization** | Built-in component plots | Custom plotting |
-| **Integration** | Seamless EEGLAB workflow | Requires additional steps |
+| **Algorithm** | Extended Infomax (runica) | FastICA, Infomax, Picard |
+| **Classification** | ICLabel (automated) | Manual inspection + correlation |
+| **Component Removal** | `pop_subcomp` | `ica.apply()` |
+| **Visualization** | Built-in component plots | Custom plotting functions |
+| **Integration** | Seamless EEGLAB workflow | Object-oriented approach |
+| **Automation** | Highly automated | Semi-automatic workflow |
 
 ## Advanced Features
 
@@ -118,18 +170,27 @@ The ICLabel step showcases automated artifact classification:
 1. **Automated Classification**: ICLabel provides probability scores for each component type
 2. **Threshold-Based Selection**: Components automatically flagged based on classification confidence
 3. **Quality Assurance**: Detailed metrics on component types and removal decisions
+4. **Manual Review**: Interactive interface for validation and adjustment
 
-### Data Provenance
+### Data Provenance and Quality Control
 - **Pipeline Dependencies**: Clear links to preprocessing steps
 - **Parameter Tracking**: Complete ICA algorithm parameters
 - **Component Documentation**: Full record of which components were removed and why
+- **Classification Confidence**: Probability scores for reproducibility
+
+### EEGLAB Dataset Integration
+- **Structure Preservation**: EEG structure maintained throughout processing
+- **History Tracking**: All operations recorded in EEG.history
+- **Compatibility**: Works seamlessly with other EEGLAB functions
+- **STUDY Integration**: Results compatible with group-level analysis
 
 ## Usage Notes
 
 This example demonstrates:
-- **Advanced EEGLAB workflows** with ICA and artifact removal
-- **Automated component classification** using ICLabel
+- **Advanced EEGLAB workflows** with ICA and automated artifact classification
+- **ICLabel integration** for objective component classification
 - **Complex data documentation** with multiple output types
-- **Quality control integration** for artifact removal validation
+- **Quality control integration** for comprehensive artifact removal validation
+- **Interactive workflow support** with manual review capabilities
 
-The pipeline showcases signalJourney's ability to document sophisticated processing workflows while maintaining the flexibility needed for various EEGLAB analysis approaches. 
+The pipeline showcases signalJourney's ability to document sophisticated processing workflows while maintaining the flexibility needed for various EEGLAB analysis approaches. The combination of automated classification and manual review provides a robust framework for artifact removal that balances efficiency with quality control. 
