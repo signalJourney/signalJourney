@@ -5,60 +5,88 @@ This page explains the [`source_localization_pipeline_eeglab.signalJourney.json`
 ## Pipeline Overview
 
 This EEGLAB pipeline demonstrates source localization using equivalent dipole modeling on ICA components:
-- **Load ICA dataset** with decomposed components
+- **Load ICA dataset** with decomposed components from artifact removal pipeline
 - **Initialize DIPFIT settings** with head model and electrode locations
 - **Coregister electrodes** to the head model coordinate system
-- **Fit dipoles** to ICA components using grid search
+- **Perform grid search** for initial dipole locations across components
 - **Optimize dipole locations** with nonlinear search algorithms
-- **Save results** with dipole locations and quality metrics
+- **Save dipole results** with locations and quality metrics
 
 ## Pipeline Flowchart
 
 ```mermaid
 flowchart TD
-    A[Load ICA Dataset<br/>pop_loadset] --> B[Initialize DIPFIT<br/>Head model setup]
-    B --> C[Coregister Electrodes<br/>Spatial alignment]
-    C --> D[Fit Dipoles<br/>Grid search]
-    D --> E[Optimize Fits<br/>Nonlinear search]
-    E --> F[Save Results<br/>Dipole locations]
+    A[Load ICA Dataset<br/>pop_loadset] --> B[Initialize DIPFIT<br/>pop_dipfit_settings]
+    B --> C[Coregister Electrodes<br/>pop_dipfit_batch]
+    C --> D[Grid Search Dipoles<br/>pop_dipfit_gridsearch]
+    D --> E[Optimize Dipole Fits<br/>pop_dipfit_nonlinear]
+    E --> F[Save Results<br/>pop_saveset]
     
-    B --> G[Head Model<br/>Standard BEM]
-    D --> H[Initial Dipoles<br/>Grid positions]
-    E --> I[Optimized Dipoles<br/>Inline Data]
-    E --> J[Residual Variances<br/>Quality metrics]
+    %% Input from ICA pipeline
+    G["📁 sub-01_task-rest_desc-ica_eeg.set<br/>From: ICA decomposition"] --> A
     
-    style A fill:#e1f5fe
-    style F fill:#f3e5f5
-    style B fill:#fff3e0
-    style C fill:#fff3e0
-    style D fill:#fff3e0
-    style E fill:#fff3e0
-    style G fill:#fce4ec
-    style H fill:#fce4ec
-    style I fill:#fce4ec
-    style J fill:#fce4ec
+    %% Head model resources
+    H["📁 Standard BEM<br/>DIPFIT head model"] --> B
+    I["📁 Electrode Template<br/>Standard locations"] --> B
+    
+    %% Intermediate outputs
+    A --> A1["📊 EEG Structure<br/>ICA components"]
+    B --> B1["📊 DIPFIT Settings<br/>Head model config"]
+    C --> C1["📊 Electrode Positions<br/>Coregistered locations"]
+    D --> D1["📊 Initial Dipoles<br/>Grid search results"]
+    E --> E1["📊 Optimized Dipoles<br/>Final locations"]
+    
+    %% Analysis parameters
+    B --> V1["📊 Coordinate System<br/>MNI space"]
+    D --> V2["📊 Grid Resolution<br/>20mm spacing"]
+    E --> V3["📊 RV Threshold<br/>< 15% residual"]
+    
+    %% Final outputs
+    F --> J["💾 sub-01_task-rest_desc-dipoles_eeg.set<br/>Dataset with dipoles"]
+    E --> K["💾 sub-01_task-rest_desc-dipole_plot.png<br/>Brain visualization"]
+    
+    %% Quality metrics
+    D --> Q1["📈 Components fitted: 25/32<br/>Initial RV: 12.3%"]
+    E --> Q2["📈 Optimized dipoles: 18<br/>Final RV: 8.7%"]
+
+    %% Styling
+    classDef processStep fill:#e1f5fe,stroke:#01579b,stroke-width:2px
+    classDef inputFile fill:#fff3e0,stroke:#e65100,stroke-width:2px
+    classDef outputFile fill:#e8f5e8,stroke:#1b5e20,stroke-width:2px
+    classDef inlineData fill:#f3e5f5,stroke:#4a148c,stroke-width:1px
+    classDef qualityMetric fill:#f9f9f9,stroke:#666,stroke-width:1px
+
+    class A,B,C,D,E,F processStep
+    class G,H,I inputFile
+    class J,K outputFile
+    class A1,B1,C1,D1,E1,V1,V2,V3 inlineData
+    class Q1,Q2 qualityMetric
 ```
 
-## Key EEGLAB DIPFIT Features
+## Key EEGLAB DIPFIT Features Demonstrated
 
-### DIPFIT Functions
-- **`pop_dipfit_settings`**: Initialize head model and coordinate system
+### DIPFIT Core Functions
+- **`pop_dipfit_settings`**: Initialize head model and coordinate system setup
+- **`pop_dipfit_batch`**: Electrode coregistration to head model
 - **`pop_dipfit_gridsearch`**: Grid search for initial dipole locations
 - **`pop_dipfit_nonlinear`**: Nonlinear optimization of dipole parameters
-- **Standard templates**: Built-in BEM head models and electrode locations
+- **Template integration**: Standard BEM head models and electrode templates
 
-### Source Localization Approach
-- **Equivalent dipole modeling**: Single dipole per ICA component
-- **MNI coordinate system**: Standardized brain coordinate space
-- **Residual variance**: Goodness-of-fit metric for dipole solutions
-- **Component-based analysis**: Source localization of independent components
+### Equivalent Dipole Modeling
+- **Component-based analysis**: Single dipole per ICA component
+- **MNI coordinate system**: Standardized brain space for group analysis
+- **Residual variance**: Goodness-of-fit metric for dipole quality
+- **Spatial constraints**: Dipoles constrained to physiologically plausible locations
 
 ## Example JSON Structure
+
+The dipole optimization demonstrates EEGLAB's component-based approach:
 
 ```json
 {
   "stepId": "5",
   "name": "Optimize Dipole Fits",
+  "description": "Nonlinear optimization of dipole locations for components with low residual variance.",
   "software": {
     "name": "EEGLAB DIPFIT",
     "version": "4.3",
@@ -67,58 +95,98 @@ flowchart TD
   "parameters": {
     "component_selection": "rv < 0.15",
     "threshold": 0.15,
-    "optimization_method": "nonlinear"
+    "optimization_method": "nonlinear",
+    "mni_coord": true
   },
   "qualityMetrics": {
-    "dipoles_optimized": "{{num_optimized_dipoles}}",
-    "mean_residual_variance": "{{mean_rv_after_optimization}}",
-    "max_residual_variance": "{{max_rv_after_optimization}}"
+    "dipoles_optimized": 18,
+    "mean_residual_variance": 0.087,
+    "components_localized": "72% (18/25)"
   }
 }
 ```
 
-### Inline Data Documentation
-The pipeline preserves critical dipole information using inline data:
+### DIPFIT Settings Configuration
+The head model initialization shows EEGLAB's template system:
 
 ```json
 {
-  "targetType": "inlineData",
-  "name": "dipole_locations",
-  "data": "{{dipole_coordinates_mni}}",
-  "formatDescription": "Array of dipole coordinates in MNI space [n_components x 3]",
-  "description": "Fitted dipole locations for all components"
+  "stepId": "2", 
+  "name": "Initialize DIPFIT",
+  "description": "Setup DIPFIT with standard BEM head model and coordinate system.",
+  "software": {
+    "name": "EEGLAB DIPFIT",
+    "version": "4.3",
+    "functionCall": "pop_dipfit_settings(EEG, 'hdmfile', 'standard_BEM.mat', 'coordformat', 'MNI')"
+  },
+  "parameters": {
+    "hdmfile": "standard_BEM.mat",
+    "coordformat": "MNI",
+    "mrifile": "avg152t1.mat",
+    "chanfile": "standard_1005.elc"
+  }
 }
 ```
+
+## DIPFIT Source Localization Features
+
+### Equivalent Dipole Analysis
+- **Single dipole assumption**: One dipole per independent component
+- **Grid search initialization**: Systematic search across brain volume
+- **Nonlinear optimization**: Refinement of dipole position and orientation
+- **Quality assessment**: Residual variance and explained variance metrics
+
+### Coordinate System Integration
+- **MNI standardization**: Results in standard brain coordinate space
+- **Template head models**: Standard BEM for group-level analysis
+- **Electrode coregistration**: Proper spatial alignment procedures
+- **Brain visualization**: Integration with EEGLAB plotting functions
+
+### Quality Control Features
+- **Residual variance thresholds**: Automated dipole acceptance criteria
+- **Component selection**: Based on ICA decomposition quality
+- **Spatial validation**: Dipoles constrained to gray matter regions
+- **Outlier detection**: Identification of poorly fitted dipoles
 
 ## EEGLAB vs MNE-Python Comparison
 
 | Aspect | EEGLAB Version | MNE-Python Version |
 |--------|----------------|-------------------|
-| **Method** | Equivalent dipole modeling | Distributed source modeling |
-| **Approach** | Component-based (ICA) | Sensor-based (evoked data) |
-| **Head Model** | Standard BEM templates | Custom BEM/sphere models |
-| **Coordinates** | MNI space | Individual/fsaverage space |
-| **Software** | DIPFIT plugin | MNE forward/inverse functions |
-| **Complexity** | Single dipole per component | Thousands of dipole sources |
+| **Modeling Approach** | Equivalent dipole (single) | Distributed sources (thousands) |
+| **Analysis Target** | ICA components | Sensor-level data |
+| **Head Model** | Standard BEM templates | Custom BEM/FreeSurfer |
+| **Coordinate System** | MNI space | Individual/fsaverage |
+| **Software Plugin** | DIPFIT plugin | Core MNE functions |
+| **Computational Cost** | Low (few dipoles) | High (dense source space) |
 
-## Advanced Features
+## DIPFIT-Specific Workflow
 
-### Quality Control Integration
-- **Residual variance thresholds**: Automated dipole acceptance criteria
-- **Component classification**: Integration with ICLabel for source validation
-- **Spatial constraints**: Dipole locations constrained to brain regions
+### ICA Component Integration
+DIPFIT analysis leverages ICA decomposition results:
+1. **Component selection**: Based on ICLabel classification and quality
+2. **Spatial patterns**: Component topographies used for source fitting
+3. **Time courses**: Independent component activations preserved
+4. **Quality metrics**: Component-specific residual variance
 
-### Coordinate System Management
-- **MNI standardization**: Dipole locations in standard brain space
-- **Electrode coregistration**: Proper alignment between data and head model
-- **Template integration**: Use of standard head models for group analysis
+### Template-Based Analysis
+- **Standard head models**: Facilitates group-level comparisons
+- **Electrode templates**: Standard 10-20 and high-density layouts
+- **MNI brain space**: Enables meta-analysis and literature comparison
+- **Automated workflows**: Batch processing for multiple datasets
+
+### Interactive Analysis Features
+- **GUI integration**: Pop-up functions for parameter adjustment
+- **Visual feedback**: Real-time dipole visualization during fitting
+- **Manual refinement**: Interactive dipole position adjustment
+- **Quality inspection**: Visual assessment of dipole fits
 
 ## Usage Notes
 
 This example demonstrates:
 - **Component-based source localization** using equivalent dipole modeling
-- **DIPFIT workflow documentation** with complete parameter preservation
-- **Quality control integration** for dipole fitting validation
-- **Coordinate system management** for standardized source locations
+- **DIPFIT workflow documentation** with complete parameter preservation  
+- **Quality control integration** for automated dipole validation
+- **Template-based analysis** for standardized group studies
+- **ICA integration** leveraging independent component analysis
 
-The DIPFIT approach is particularly well-suited for ICA component localization, providing interpretable source locations for independent components identified in the data. This contrasts with the distributed source modeling approach typically used with MNE-Python, offering complementary perspectives on EEG source analysis. 
+The DIPFIT approach provides an interpretable source localization method particularly well-suited for ICA components, offering complementary insights to distributed source modeling approaches. The equivalent dipole assumption enables straightforward interpretation while maintaining computational efficiency for routine analysis workflows. 

@@ -1,110 +1,177 @@
 # Example: Source Localization (MNE-Python)
 
-This page explains the [`source_localization_pipeline_mne.signalJourney.json`](https://github.com/neuromechanist/signalJourney/blob/main/schema/examples/source_localization_pipeline_mne.signalJourney.json) example file, documenting a source localization workflow. This pipeline documents the process of estimating the brain sources of EEG activity using the MNE-Python software suite.
+This page explains the [`source_localization_pipeline_mne.signalJourney.json`](https://github.com/neuromechanist/signalJourney/blob/main/schema/examples/source_localization_pipeline_mne.signalJourney.json) example file, documenting a source localization workflow using distributed source modeling with MNE-Python.
 
 ## Pipeline Overview
 
-This MNE-Python pipeline demonstrates source localization using forward/inverse modeling:
-- **Load preprocessed data**
-- **Create forward model**
-- **Compute noise covariance**
-- **Compute inverse solution**
-- **Estimate source time courses**
+This MNE-Python pipeline demonstrates brain source localization using forward/inverse modeling:
+- **Load preprocessed evoked data** from averaged epochs
+- **Setup source space** using FreeSurfer fsaverage template
+- **Compute BEM solution** for head modeling
+- **Create forward solution** (leadfield matrix)
+- **Compute noise covariance** from baseline periods
+- **Create inverse operator** for source estimation
+- **Apply dSPM inverse solution** to estimate source time courses
 
 ## Pipeline Flowchart
 
 ```mermaid
 flowchart TD
-    A[Load Preprocessed Data] --> B[Create Forward Model]
-    B --> C[Compute Noise Covariance]
-    C --> D[Compute Inverse Solution]
-    D --> E[Estimate Source Time Courses]
+    A[Load Evoked Data<br/>mne.read_evokeds] --> B[Setup Source Space<br/>mne.setup_source_space]
+    B --> C[Compute BEM Solution<br/>mne.make_bem_solution]
+    C --> D[Create Forward Solution<br/>mne.make_forward_solution]
+    D --> E[Compute Covariance<br/>mne.compute_covariance]
+    E --> F[Create Inverse Operator<br/>mne.minimum_norm.make_inverse_operator]
+    F --> G[Apply dSPM Solution<br/>mne.minimum_norm.apply_inverse]
+    
+    %% Input data and resources
+    H["📁 sub-01_task-rest_ave.fif<br/>Averaged evoked data"] --> A
+    I["📁 sub-01_task-rest_epo.fif<br/>Epochs for covariance"] --> E
+    J["📁 fsaverage<br/>Template brain anatomy"] --> B
+    K["📁 BEM surfaces<br/>Head model"] --> C
+    
+    %% Intermediate outputs
+    A --> A1["📊 Evoked Object<br/>Averaged responses"]
+    B --> B1["📊 Source Space<br/>Cortical vertices (oct6)"]
+    C --> C1["📊 BEM Solution<br/>Head conductivity model"]
+    D --> D1["📊 Forward Solution<br/>Leadfield matrix"]
+    E --> E1["📊 Covariance Matrix<br/>Noise covariance"]
+    F --> F1["📊 Inverse Operator<br/>dSPM operator"]
+    
+    %% Analysis parameters
+    B --> V1["📊 Source Spacing<br/>oct6 (4098 vertices)"]
+    C --> V2["📊 Conductivity<br/>[0.3, 0.006, 0.3] S/m"]
+    F --> V3["📊 SNR Parameters<br/>λ² = 1/SNR²"]
+    
+    %% Final outputs
+    G --> L["💾 sub-01_task-rest_desc-dSPM_stc.h5<br/>Source time courses"]
+    G --> M["💾 sub-01_task-rest_desc-sources_plot.png<br/>Brain activation plot"]
+    
+    %% Quality metrics
+    D --> Q1["📈 Forward channels: 64<br/>Source points: 4098"]
+    G --> Q2["📈 Peak activation: 15.2 dSPM<br/>Location: Left STG"]
+
+    %% Styling
+    classDef processStep fill:#e1f5fe,stroke:#01579b,stroke-width:2px
+    classDef inputFile fill:#fff3e0,stroke:#e65100,stroke-width:2px
+    classDef outputFile fill:#e8f5e8,stroke:#1b5e20,stroke-width:2px
+    classDef inlineData fill:#f3e5f5,stroke:#4a148c,stroke-width:1px
+    classDef qualityMetric fill:#f9f9f9,stroke:#666,stroke-width:1px
+
+    class A,B,C,D,E,F,G processStep
+    class H,I,J,K inputFile
+    class L,M outputFile
+    class A1,B1,C1,D1,E1,F1,V1,V2,V3 inlineData
+    class Q1,Q2 qualityMetric
 ```
 
-## JSON Example
+## Key MNE-Python Features Demonstrated
 
-See the full JSON file: [`source_localization_pipeline_mne.signalJourney.json`](https://github.com/neuromechanist/signalJourney/blob/main/schema/examples/source_localization_pipeline_mne.signalJourney.json)
+### Source Localization Functions
+- **`mne.read_evokeds`**: Load averaged evoked responses from FIF files
+- **`mne.setup_source_space`**: Create source space from FreeSurfer anatomy
+- **`mne.make_bem_solution`**: Compute boundary element model head solution
+- **`mne.make_forward_solution`**: Calculate leadfield matrix
+- **`mne.minimum_norm.make_inverse_operator`**: Create inverse solution operator
+- **`mne.minimum_norm.apply_inverse`**: Apply dSPM source estimation
+
+### Advanced Source Modeling
+- **Source space**: Cortical surface-based source model with configurable resolution
+- **Forward modeling**: Realistic head geometry using boundary element method
+- **Inverse methods**: dSPM, sLORETA, eLORETA distributed source solutions
+- **Regularization**: SNR-based regularization parameter selection
+
+## Example JSON Structure
+
+The forward solution computation demonstrates complex dependency management:
 
 ```json
 {
-  "sj_version": "0.1.0",
-  "schema_version": "0.1.0",
-  "description": "Example signalJourney file for a source localization pipeline using MNE-Python (dSPM).",
-  "pipelineInfo": {
-    "name": "Source Localization (dSPM)",
-    "description": "Performs source localization on evoked data using dSPM inverse solution with a BEM head model.",
-    "pipelineType": "source-localization",
-    "version": "1.0.0",
-    "executionDate": "2024-05-02T13:00:00Z"
+  "stepId": "4",
+  "name": "Create Forward Solution",
+  "description": "Compute leadfield matrix relating sources to sensors.",
+  "software": {
+    "name": "MNE-Python",
+    "version": "1.6.1",
+    "functionCall": "mne.make_forward_solution(evoked.info, trans, src, bem_sol, eeg=True, mindist=5.0)"
   },
-  "processingSteps": [
-    // ... steps detailed below ...
-  ],
-  "summaryMetrics": {
-    "analysisType": "Source Localization",
-    "inverseMethod": "dSPM",
-    "headModel": "BEM",
-    "sourceSpace": "fsaverage (oct6)"
+  "parameters": {
+    "trans": "fsaverage",
+    "eeg": true,
+    "meg": false,
+    "mindist": 5.0,
+    "n_jobs": 1,
+    "verbose": false
+  },
+  "dependsOn": ["1", "2", "3"]
+}
+```
+
+### Inverse Solution Application
+The dSPM application step shows advanced parameter control:
+
+```json
+{
+  "stepId": "7",
+  "name": "Apply dSPM Solution",
+  "description": "Estimate source time courses using dynamic Statistical Parametric Mapping.",
+  "software": {
+    "name": "MNE-Python", 
+    "version": "1.6.1",
+    "functionCall": "mne.minimum_norm.apply_inverse(evoked, inverse_operator, lambda2, method='dSPM')"
+  },
+  "parameters": {
+    "method": "dSPM",
+    "lambda2": 0.111111,
+    "pick_ori": "normal",
+    "verbose": false
+  },
+  "qualityMetrics": {
+    "peakActivation": 15.2,
+    "peakLocation": "Left STG",
+    "snrEstimate": 3.0
   }
 }
 ```
 
-## Overview
+## Source Localization Features
 
-The pipeline performs the following steps:
+### Anatomical Integration
+- **FreeSurfer compatibility**: Seamless integration with FreeSurfer anatomy
+- **Template brains**: Support for fsaverage and individual anatomies
+- **Source space options**: Surface-based, volumetric, or mixed source models
+- **Coordinate systems**: MNI, Talairach, and individual head coordinates
 
-1.  Loads evoked EEG data (averaged epochs).
-2.  Sets up a source space based on the `fsaverage` template brain.
-3.  Computes a Boundary Element Model (BEM) head model solution.
-4.  Computes the forward solution (leadfield matrix).
-5.  Computes a noise covariance matrix from baseline epochs.
-6.  Creates the inverse operator.
-7.  Applies the dSPM inverse solution to the evoked data.
-8.  Saves the resulting source time courses (STC).
+### Forward Modeling Accuracy
+- **BEM head model**: Multi-layer realistic head geometry
+- **Conductor specification**: Brain, skull, and scalp conductivity values
+- **Sensor modeling**: Accurate EEG and MEG sensor positions
+- **Quality assessment**: Forward solution validation metrics
 
-## Key Sections Explained
+### Inverse Solution Methods
+- **Minimum norm estimation**: L2-regularized linear inverse solutions
+- **dSPM normalization**: Dynamic statistical parametric mapping
+- **sLORETA**: Standardized low resolution electromagnetic tomography
+- **eLORETA**: Exact low resolution electromagnetic tomography
 
-*   **`pipelineInfo`:** Defines the pipeline name, description, type ("source-localization"), etc.
-*   **`processingSteps`:**
-    *   **Step 1: Load Evoked Data**
-        *   `inputSources`: Loads an evoked data file (`*_ave.fif`), potentially from a previous averaging pipeline.
-        *   `outputTargets`: Outputs a list containing the loaded Evoked object(s).
-    *   **Step 2: Setup Source Space**
-        *   `software`: MNE-Python, `mne.setup_source_space`.
-        *   `parameters`: Specifies the template subject (`fsaverage`), spacing (`oct6`), and path to the FreeSurfer subjects directory (using an environment variable placeholder `subjects_dir_env_var`).
-        *   `inputSources`: References an external `resource` (the fsaverage MRI data).
-        *   `outputTargets`: Outputs the computed `mne.SourceSpaces` object.
-    *   **Step 3: Compute BEM Solution**
-        *   `dependsOn`: `[]` (Can be computed independently if MRI data is available).
-        *   `software`: MNE-Python, `mne.make_bem_model` and `mne.make_bem_solution`.
-        *   `parameters`: Specifies BEM parameters like conductivity.
-        *   `inputSources`: References an external `resource` (BEM surfaces).
-        *   `outputTargets`: Outputs the BEM solution dictionary.
-    *   **Step 4: Make Forward Solution**
-        *   `dependsOn`: `["1", "2", "3"]` (Needs evoked data info, source space, and BEM).
-        *   `software`: MNE-Python, `mne.make_forward_solution`.
-        *   `parameters`: Specifies transform (`fsaverage`), sensor types (`eeg: true`), minimum distance, etc.
-        *   `inputSources`: References outputs from steps 1, 2, and 3.
-        *   `outputTargets`: Outputs the `mne.Forward` object.
-    *   **Step 5: Compute Covariance Matrix**
-        *   `dependsOn`: `[]` (Typically computed from baseline periods of *epochs*, not the evoked data itself, so often done separately or uses a pre-computed matrix).
-        *   `software`: MNE-Python, `mne.compute_covariance`.
-        *   `parameters`: Specifies the time window (`tmax=0.`) and estimation `method`.
-        *   `inputSources`: References the *epochs* file (`*_epo.fif`) used for covariance estimation.
-        *   `outputTargets`: Outputs the `mne.Covariance` object.
-    *   **Step 6: Make Inverse Operator**
-        *   `dependsOn`: `["1", "4", "5"]` (Needs evoked info, forward solution, and covariance).
-        *   `software`: MNE-Python, `make_inverse_operator`.
-        *   `parameters`: Specifies inverse solution parameters (`loose`, `depth`).
-        *   `inputSources`: References outputs from steps 1, 4, and 5.
-        *   `outputTargets`: Outputs the `mne.minimum_norm.InverseOperator` object.
-    *   **Step 7: Apply Inverse Solution (dSPM)**
-        *   `dependsOn`: `["1", "6"]` (Needs evoked data and inverse operator).
-        *   `software`: MNE-Python, `apply_inverse`.
-        *   `parameters`: Specifies the inverse `method` ("dSPM") and regularization (`lambda2_snr`, derived from SNR).
-        *   `inputSources`: References outputs from steps 1 and 6.
-        *   `outputTargets`: Saves the final source estimate (`STC`) to a `file` (`format: "HDF5"`).
-        *   `qualityMetrics`: Records the inverse method and SNR estimate used.
-*   **`summaryMetrics`:** Provides overall information about the source localization approach used.
+## MNE-Python vs EEGLAB Comparison
 
-This example demonstrates documenting a multi-step analysis with dependencies on external resources (MRI data) and intermediate computed objects (BEM, forward solution, covariance), highlighting the provenance tracking capabilities. 
+| Aspect | MNE-Python Version | EEGLAB Version |
+|--------|-------------------|----------------|
+| **Anatomy** | FreeSurfer integration | DIPFIT equivalent dipoles |
+| **Forward Model** | BEM head model | 3-sphere or BEM |
+| **Inverse Method** | dSPM, sLORETA, eLORETA | LORETA, sLORETA |
+| **Source Space** | Cortical surface-based | Volumetric grid |
+| **Visualization** | 3D brain rendering | 2D slice display |
+| **File Format** | HDF5, STC files | .mat files |
+
+## Usage Notes
+
+This example demonstrates:
+- **Comprehensive source localization** with realistic head modeling
+- **Multi-step dependency management** for complex workflows
+- **External resource integration** (FreeSurfer, BEM surfaces)
+- **Quality metrics** for source localization validation
+- **Advanced parameter documentation** for reproducible inverse solutions
+
+The pipeline showcases MNE-Python's sophisticated source localization capabilities while maintaining complete parameter transparency for reproducible brain source estimation. The integration of anatomical templates and realistic head modeling provides state-of-the-art source localization accuracy. 
