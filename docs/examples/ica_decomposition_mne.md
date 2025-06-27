@@ -22,19 +22,11 @@ flowchart TD
     D --> E[Apply ICA<br/>ica.apply]
     E --> F[Save Cleaned Data<br/>raw.save]
     
-    %% Input from basic preprocessing
+    %% Input file
     G["📁 sub-01_task-rest_desc-preproc_eeg.fif<br/>From: Basic Preprocessing Pipeline"] --> A
     
-    %% Intermediate outputs
-    A --> A1["📊 Raw Object<br/>Preprocessed data"]
-    B --> B1["📊 ICA Object<br/>64 components fitted"]
-    C --> C1["📊 Component List<br/>EOG artifact indices"]
-    D --> D1["📊 Component Plot<br/>Topographies & time series"]
-    
-    %% Analysis data
-    B --> V1["📊 Unmixing Matrix<br/>64×64 ICA weights"]
-    C --> V2["📊 EOG Correlations<br/>r > 0.7 threshold"]
-    C --> V3["📈 Bad Components<br/>[0, 15, 23] identified"]
+    %% Inline data
+    C --> V3["📊 Bad Components<br/>[0, 15, 23] identified"]
     
     %% Final outputs
     F --> H["💾 sub-01_task-rest_desc-cleaned_eeg.fif<br/>ICA-cleaned data"]
@@ -48,14 +40,12 @@ flowchart TD
     classDef processStep fill:#e1f5fe,stroke:#01579b,stroke-width:2px
     classDef inputFile fill:#fff3e0,stroke:#e65100,stroke-width:2px
     classDef outputFile fill:#e8f5e8,stroke:#1b5e20,stroke-width:2px
-    classDef inMemoryData fill:#e3f2fd,stroke:#1565c0,stroke-width:1px
     classDef inlineData fill:#f3e5f5,stroke:#4a148c,stroke-width:1px
     classDef qualityMetric fill:#f9f9f9,stroke:#666,stroke-width:1px
 
     class A,B,C,D,E,F processStep
     class G inputFile
     class H,I outputFile
-    class A1,B1,C1,D1,V1,V2 inMemoryData
     class V3 inlineData
     class Q1,Q2 qualityMetric
 ```

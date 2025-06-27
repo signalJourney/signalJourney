@@ -76,6 +76,45 @@ Each example page includes:
 - **🔍 Quality control** integration examples
 - **🔗 Cross-references** to related examples and schemas
 
+### Mermaid Diagram Legend
+
+The flowcharts use a consistent color scheme to distinguish different types of elements:
+
+```mermaid
+flowchart TD
+    A[Processing Step<br/>Function call] --> B[Another Step<br/>Function call]
+    
+    %% Input and output files  
+    C["📁 input_file.fif<br/>Input data"] --> A
+    B --> D["💾 output_file.fif<br/>Processed data"]
+    
+    %% Inline data (small parameters/values saved in JSON)
+    A --> E["📊 Inline Data<br/>Small parameters/values"]
+    
+    %% Quality metrics
+    B --> F["📈 Quality Metrics<br/>Processing statistics"]
+
+    %% Styling
+    classDef processStep fill:#e1f5fe,stroke:#01579b,stroke-width:2px
+    classDef inputFile fill:#fff3e0,stroke:#e65100,stroke-width:2px
+    classDef outputFile fill:#e8f5e8,stroke:#1b5e20,stroke-width:2px
+    classDef inlineData fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
+    classDef qualityMetric fill:#f9f9f9,stroke:#666,stroke-width:1px
+
+    class A,B processStep
+    class C inputFile
+    class D outputFile
+    class E inlineData
+    class F qualityMetric
+```
+
+**Legend:**
+- **🔵 Light Blue**: Processing steps (function calls)
+- **🟠 Orange**: Input files 
+- **🟢 Green**: Output files (saved results)
+- **🟣 Purple**: Inline data (small parameters/values stored in JSON)
+- **⚪ Gray**: Quality metrics (processing statistics)
+
 ## Getting Started
 
 1. **Choose your software**: Pick MNE-Python or EEGLAB based on your workflow
