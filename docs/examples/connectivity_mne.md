@@ -20,19 +20,13 @@ flowchart TD
     C --> D[Calculate Coherence<br/>mne.connectivity.spectral_connectivity_epochs]
     D --> E[Generate Report<br/>connectivity_report]
     
-    %% Input from ICA pipeline
+    %% Input file
     F["📁 sub-01_task-rest_desc-cleaned_eeg.fif<br/>From: ICA Decomposition Pipeline"] --> A
     
-    %% Intermediate outputs
-    A --> A1["📊 Raw Object<br/>ICA-cleaned data"]
-    B --> B1["📊 Epochs Object<br/>Epoched data"]
-    C --> C1["📊 PSD Array<br/>Power spectral density"]
-    D --> D1["📊 Coherence Matrix<br/>64×64 channel pairs"]
-    
-    %% Analysis parameters
-    B --> V1["📈 Event Windows<br/>[-0.5, 1.5] s"]
-    C --> V2["📈 Frequency Bands<br/>Alpha: 8-12 Hz"]
-    D --> V3["📈 Connectivity Method<br/>Coherence (magnitude)"]
+    %% Inline data
+    B --> V1["📊 Event Windows<br/>[-0.5, 1.5] s"]
+    C --> V2["📊 Frequency Bands<br/>Alpha: 8-12 Hz"]
+    D --> V3["📊 Connectivity Method<br/>Coherence (magnitude)"]
     
     %% Final outputs
     E --> G["💾 sub-01_task-rest_desc-connectivity_eeg.h5<br/>Connectivity matrix"]
@@ -46,14 +40,12 @@ flowchart TD
     classDef processStep fill:#e1f5fe,stroke:#01579b,stroke-width:2px
     classDef inputFile fill:#fff3e0,stroke:#e65100,stroke-width:2px
     classDef outputFile fill:#e8f5e8,stroke:#1b5e20,stroke-width:2px
-    classDef inMemoryData fill:#e3f2fd,stroke:#1565c0,stroke-width:1px
     classDef inlineData fill:#f3e5f5,stroke:#4a148c,stroke-width:1px
     classDef qualityMetric fill:#f9f9f9,stroke:#666,stroke-width:1px
 
     class A,B,C,D,E processStep
     class F inputFile
     class G,H outputFile
-    class A1,B1,C1,D1 inMemoryData
     class V1,V2,V3 inlineData
     class Q1,Q2 qualityMetric
 ```

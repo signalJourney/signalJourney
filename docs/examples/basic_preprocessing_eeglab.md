@@ -23,15 +23,8 @@ flowchart TD
     D --> E[Average Reference<br/>pop_reref]
     E --> F[Interpolate Bad Channels<br/>pop_interp]
     
-    %% Input from sourcedata
+    %% Input file
     G["📁 sub-01_task-rest_raw.set<br/>Raw EEGLAB dataset"] --> A
-    
-    %% Intermediate in-memory objects
-    A --> A1["📊 EEG Structure<br/>Loaded dataset"]
-    B --> B1["📊 EEG Structure<br/>High-pass filtered"]
-    C --> C1["📊 EEG Structure<br/>Band-pass filtered"]
-    D --> D1["📊 EEG Structure<br/>Notch filtered"]
-    E --> E1["📊 EEG Structure<br/>Average referenced"]
     
     %% Final output
     F --> H["💾 sub-01_task-rest_desc-preproc_eeg.set<br/>Preprocessed dataset"]
@@ -44,13 +37,11 @@ flowchart TD
     classDef processStep fill:#e1f5fe,stroke:#01579b,stroke-width:2px
     classDef inputFile fill:#fff3e0,stroke:#e65100,stroke-width:2px
     classDef outputFile fill:#e8f5e8,stroke:#1b5e20,stroke-width:2px
-    classDef inMemoryData fill:#e3f2fd,stroke:#1565c0,stroke-width:1px
     classDef qualityMetric fill:#f9f9f9,stroke:#666,stroke-width:1px
 
     class A,B,C,D,E,F processStep
     class G inputFile
     class H outputFile
-    class A1,B1,C1,D1,E1 inMemoryData
     class Q1,Q2 qualityMetric
 ```
 

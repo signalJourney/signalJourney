@@ -20,19 +20,11 @@ flowchart TD
     C --> D[Apply Baseline Correction<br/>tfr.apply_baseline]
     D --> E[Save TFR Results<br/>tfr.save]
     
-    %% Input from previous pipeline
+    %% Input file
     F["📁 sub-01_task-rest_desc-cleaned_eeg.fif<br/>From: ICA Decomposition Pipeline"] --> A
     
-    %% Intermediate outputs
-    A --> A1["📊 Raw Object<br/>ICA-cleaned data"]
-    B --> B1["📊 Epochs Object<br/>Event-related epochs"]
-    C --> C1["📊 TFR Object<br/>Time-frequency data"]
-    D --> D1["📊 TFR Object<br/>Baseline corrected"]
-    
-    %% Variables and data
-    B --> V1["📊 Events Array<br/>Event timings"]
-    C --> V2["📈 Frequencies<br/>[4, 8, 13, 30] Hz"]
-    C --> V3["📊 Power Matrix<br/>Channels × Frequencies × Time"]
+    %% Inline data
+    C --> V2["📊 Frequencies<br/>[4, 8, 13, 30] Hz"]
     
     %% Final outputs
     E --> G["💾 sub-01_task-rest_desc-tfr_eeg.h5<br/>Time-frequency results"]
@@ -46,14 +38,12 @@ flowchart TD
     classDef processStep fill:#e1f5fe,stroke:#01579b,stroke-width:2px
     classDef inputFile fill:#fff3e0,stroke:#e65100,stroke-width:2px
     classDef outputFile fill:#e8f5e8,stroke:#1b5e20,stroke-width:2px
-    classDef inMemoryData fill:#e3f2fd,stroke:#1565c0,stroke-width:1px
     classDef inlineData fill:#f3e5f5,stroke:#4a148c,stroke-width:1px
     classDef qualityMetric fill:#f9f9f9,stroke:#666,stroke-width:1px
 
     class A,B,C,D,E processStep
     class F inputFile
     class G,H outputFile
-    class A1,B1,C1,D1,V1,V3 inMemoryData
     class V2 inlineData
     class Q1,Q2 qualityMetric
 ```

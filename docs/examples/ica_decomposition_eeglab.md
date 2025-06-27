@@ -22,20 +22,12 @@ flowchart TD
     D --> E[Remove Components<br/>pop_subcomp]
     E --> F[Save Cleaned Data<br/>pop_saveset]
     
-    %% Input from basic preprocessing
+    %% Input file
     G["📁 sub-01_task-rest_desc-preproc_eeg.set<br/>From: Basic Preprocessing Pipeline"] --> A
     
-    %% Intermediate outputs
-    A --> A1["📊 EEG Structure<br/>Preprocessed dataset"]
-    B --> B1["📊 ICA Weights<br/>Extended Infomax decomposition"]
-    C --> C1["📊 ICLabel Classifications<br/>Brain/Artifact probabilities"]
-    D --> D1["📊 Component Selection<br/>Manual review interface"]
-    
-    %% ICA analysis data
-    B --> V1["📊 ICA Sphere<br/>Whitening matrix"]
-    B --> V2["📊 Component Maps<br/>Scalp topographies"]
-    C --> V3["📈 Classification Scores<br/>Brain: 0.92, Eye: 0.05"]
-    E --> V4["📈 Artifact Components<br/>[2, 15, 23] removed"]
+    %% Inline data
+    C --> V3["📊 Classification Scores<br/>Brain: 0.92, Eye: 0.05"]
+    E --> V4["📊 Artifact Components<br/>[2, 15, 23] removed"]
     
     %% Final outputs
     F --> H["💾 sub-01_task-rest_desc-cleaned_eeg.set<br/>ICA-cleaned dataset"]
@@ -50,14 +42,12 @@ flowchart TD
     classDef processStep fill:#e1f5fe,stroke:#01579b,stroke-width:2px
     classDef inputFile fill:#fff3e0,stroke:#e65100,stroke-width:2px
     classDef outputFile fill:#e8f5e8,stroke:#1b5e20,stroke-width:2px
-    classDef inMemoryData fill:#e3f2fd,stroke:#1565c0,stroke-width:1px
     classDef inlineData fill:#f3e5f5,stroke:#4a148c,stroke-width:1px
     classDef qualityMetric fill:#f9f9f9,stroke:#666,stroke-width:1px
 
     class A,B,C,D,E,F processStep
     class G inputFile
     class H,I,J outputFile
-    class A1,B1,C1,D1,V1,V2 inMemoryData
     class V3,V4 inlineData
     class Q1,Q2 qualityMetric
 ```

@@ -13,6 +13,8 @@ The NEMAR pipeline implements a 12-step EEG preprocessing workflow organized int
 
 ## Processing Flow
 
+The diagram below shows the complete 12-step NEMAR pipeline workflow with color-coded elements:
+
 ```mermaid
 flowchart TD
     A["1.Import BIDS Dataset<br/>'pop_importbids'"] --> B["2.Check Import Status"]
@@ -55,6 +57,13 @@ flowchart TD
     class D1,G1,G2,G3,H1,H2,H3,I1,I2,J1,K1,K2 inlineData
     class J2,L1,L2 savedFile
 ```
+
+**Legend:**
+- **🔵 Light Blue**: Processing steps (EEGLAB/MATLAB functions)
+- **🟣 Purple**: Inline data (small parameters/values preserved in JSON)
+- **🟢 Green**: Saved files (datasets and reports)
+
+Note: Inmemory processing objects (Raw EEG structures, filtered data) are not shown as they represent the default temporary data flow between steps.
 
 ## Advanced Features
 
