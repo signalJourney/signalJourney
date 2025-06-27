@@ -1,6 +1,29 @@
-# Example: Source Localization
+# Example: Source Localization (MNE-Python)
 
-This page explains the [`source_localization_pipeline.signalJourney.json`](https://github.com/neuromechanist/signalJourney/blob/main/schema/examples/source_localization_pipeline.signalJourney.json) example file, documenting a source localization workflow. This pipeline documents the process of estimating the brain sources of EEG activity using the dSPM (dynamic Statistical Parametric Mapping) inverse solution in MNE-Python.
+This page explains the [`source_localization_pipeline_mne.signalJourney.json`](https://github.com/neuromechanist/signalJourney/blob/main/schema/examples/source_localization_pipeline_mne.signalJourney.json) example file, documenting a source localization workflow. This pipeline documents the process of estimating the brain sources of EEG activity using the MNE-Python software suite.
+
+## Pipeline Overview
+
+This MNE-Python pipeline demonstrates source localization using forward/inverse modeling:
+- **Load preprocessed data**
+- **Create forward model**
+- **Compute noise covariance**
+- **Compute inverse solution**
+- **Estimate source time courses**
+
+## Pipeline Flowchart
+
+```mermaid
+flowchart TD
+    A[Load Preprocessed Data] --> B[Create Forward Model]
+    B --> C[Compute Noise Covariance]
+    C --> D[Compute Inverse Solution]
+    D --> E[Estimate Source Time Courses]
+```
+
+## JSON Example
+
+See the full JSON file: [`source_localization_pipeline_mne.signalJourney.json`](https://github.com/neuromechanist/signalJourney/blob/main/schema/examples/source_localization_pipeline_mne.signalJourney.json)
 
 ```json
 {

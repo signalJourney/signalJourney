@@ -38,7 +38,7 @@ journeyData = readSignalJourney(filename)
 
 **Example:**
 ```matlab
-fname = '../../schema/examples/basic_preprocessing_pipeline.signalJourney.json';
+fname = '../../schema/examples/basic_preprocessing_pipeline_mne.signalJourney.json';
 try
     data = readSignalJourney(fname);
     disp(data.pipelineInfo);

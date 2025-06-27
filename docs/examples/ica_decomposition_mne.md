@@ -1,6 +1,6 @@
-# Example: ICA Decomposition Pipeline
+# Example: ICA Decomposition Pipeline (MNE-Python)
 
-This page explains the [`ica_decomposition_pipeline.signalJourney.json`](https://github.com/neuromechanist/signalJourney/blob/main/schema/examples/ica_decomposition_pipeline.signalJourney.json) example file, which documents an Independent Component Analysis (ICA) workflow for artifact removal using MNE-Python.
+This page explains the [`ica_decomposition_pipeline_mne.signalJourney.json`](https://github.com/neuromechanist/signalJourney/blob/main/schema/examples/ica_decomposition_pipeline_mne.signalJourney.json) example file, which documents an Independent Component Analysis (ICA) workflow for artifact removal using MNE-Python.
 
 ## Pipeline Overview
 
@@ -15,9 +15,9 @@ This pipeline demonstrates how to apply ICA to remove ocular artifacts (eye move
 
 ```mermaid
 flowchart TD
-    A["1. Load Preprocessed Data<br/>'read_raw_fif'"] --> B["2. Fit ICA<br/>'ICA.fit(FastICA)'"]
-    B --> C["3. Find EOG Components<br/>'find_bads_eog'"]
-    C --> D["4. Apply ICA (Remove Components)<br/>'ica.apply'"]
+    A[Load Preprocessed Data<br/>read_raw_fif] --> B[Fit ICA<br/>ICA.fit(FastICA)]
+    B --> C[Find EOG Components<br/>find_bads_eog]
+    C --> D[Apply ICA (Remove Components)<br/>ica.apply]
 
     %% Input from previous pipeline
     E["📁 sub-01_task-rest_desc-preproc_eeg.fif<br/>From: Basic EEG Preprocessing v1.0.0"] --> A
@@ -41,6 +41,10 @@ flowchart TD
     class F outputFile
     class B1,C1,C2 inlineData
 ```
+
+## JSON Example
+
+See the full JSON file: [`ica_decomposition_pipeline_mne.signalJourney.json`](https://github.com/neuromechanist/signalJourney/blob/main/schema/examples/ica_decomposition_pipeline_mne.signalJourney.json)
 
 ## Key signalJourney Features Demonstrated
 

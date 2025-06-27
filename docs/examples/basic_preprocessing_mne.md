@@ -1,39 +1,30 @@
-# Example: Basic EEG Preprocessing Pipeline
+# Example: Basic EEG Preprocessing Pipeline (MNE-Python)
 
-This page explains the [`basic_preprocessing_pipeline.signalJourney.json`](https://github.com/neuromechanist/signalJourney/blob/main/schema/examples/basic_preprocessing_pipeline.signalJourney.json) example file, which documents a standard EEG preprocessing workflow using MNE-Python.
+This page explains the [`basic_preprocessing_pipeline_mne.signalJourney.json`](https://github.com/neuromechanist/signalJourney/blob/main/schema/examples/basic_preprocessing_pipeline_mne.signalJourney.json) example file, which documents a standard EEG preprocessing workflow using MNE-Python.
 
 ## Pipeline Overview
 
-The basic preprocessing pipeline demonstrates fundamental EEG preprocessing steps:
+The MNE-Python basic preprocessing pipeline demonstrates fundamental EEG preprocessing steps using MNE-Python functions:
 
 - **Load raw data** from FIF format
-- **Apply band-pass filtering** (1-40 Hz) to remove drift and high-frequency noise
-- **Apply notch filtering** (60 Hz) to remove line noise
-- **Set average reference** for EEG channels
-- **Interpolate bad channels** to recover missing data
+- **Apply band-pass filtering** (1-40 Hz) using `raw.filter`
+- **Apply notch filtering** (60 Hz) using `raw.notch_filter`
+- **Set average reference** using `raw.set_eeg_reference`
+- **Interpolate bad channels** using `raw.interpolate_bads`
 
 ## Pipeline Flowchart
 
 ```mermaid
 flowchart TD
-    A["1. Load Raw Data<br/>'read_raw_fif'"] --> B["2. Apply Band-pass Filter<br/>'filter(1-40 Hz)'"]
-    B --> C["3. Apply Notch Filter<br/>'notch_filter(60 Hz)'"]
-    C --> D["4. Set Average Reference<br/>'set_eeg_reference'"]
-    D --> E["5. Interpolate Bad Channels<br/>'interpolate_bads'"]
-
-    %% Input/Output Files
-    F["📁 sub-01_task-rest_raw.fif<br/>Raw EEG data"] --> A
-    E --> G["💾 sub-01_task-rest_desc-preproc_eeg.fif<br/>Preprocessed data"]
-
-    %% Styling
-    classDef processStep fill:#e1f5fe,stroke:#01579b,stroke-width:2px
-    classDef inputFile fill:#fff3e0,stroke:#e65100,stroke-width:2px
-    classDef outputFile fill:#e8f5e8,stroke:#1b5e20,stroke-width:2px
-
-    class A,B,C,D,E processStep
-    class F inputFile
-    class G outputFile
+    A[Load Raw Data<br/>mne.io.read_raw_fif] --> B[Apply Band-pass Filter<br/>raw.filter]
+    B --> C[Apply Notch Filter<br/>raw.notch_filter]
+    C --> D[Set Average Reference<br/>raw.set_eeg_reference]
+    D --> E[Interpolate Bad Channels<br/>raw.interpolate_bads]
 ```
+
+## JSON Example
+
+See the full JSON file: [`basic_preprocessing_pipeline_mne.signalJourney.json`](https://github.com/neuromechanist/signalJourney/blob/main/schema/examples/basic_preprocessing_pipeline_mne.signalJourney.json)
 
 ## Key signalJourney Structure
 

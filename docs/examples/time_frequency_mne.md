@@ -1,6 +1,29 @@
-# Example: Time-Frequency Analysis
+# Example: Time-Frequency Analysis (MNE-Python)
 
-This page explains the [`time_frequency_analysis_pipeline.signalJourney.json`](https://github.com/neuromechanist/signalJourney/blob/main/schema/examples/time_frequency_analysis_pipeline.signalJourney.json) example file, which documents a typical time-frequency analysis using MNE-Python.
+This page explains the [`time_frequency_analysis_pipeline_mne.signalJourney.json`](https://github.com/neuromechanist/signalJourney/blob/main/schema/examples/time_frequency_analysis_pipeline_mne.signalJourney.json) example file, which documents a typical time-frequency analysis using MNE-Python.
+
+## Pipeline Overview
+
+This MNE-Python pipeline demonstrates time-frequency analysis using Morlet wavelets:
+- **Load cleaned data** from ICA decomposition pipeline
+- **Extract event-related epochs**
+- **Compute time-frequency decomposition** using `mne.time_frequency.tfr_morlet`
+- **Apply baseline correction** and save results
+- **Generate visualization plots**
+
+## Pipeline Flowchart
+
+```mermaid
+flowchart TD
+    A[Load Cleaned Data] --> B[Extract Epochs]
+    B --> C[Compute TFR<br/>tfr_morlet]
+    C --> D[Apply Baseline Correction]
+    D --> E[Save Results]
+```
+
+## JSON Example
+
+See the full JSON file: [`time_frequency_analysis_pipeline_mne.signalJourney.json`](https://github.com/neuromechanist/signalJourney/blob/main/schema/examples/time_frequency_analysis_pipeline_mne.signalJourney.json)
 
 ```json
 {
