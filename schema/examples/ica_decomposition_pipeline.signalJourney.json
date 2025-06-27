@@ -81,8 +81,8 @@
         {
           "targetType": "inlineData",
           "format": "mne.preprocessing.ICA",
-          "description": "Fitted ICA object."
-          "data": [[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15],[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15],<fill in the rest, this is just an example>,]
+          "description": "Fitted ICA object.",
+          "data": [[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15],[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]]
          }
       ]
     },
@@ -133,6 +133,10 @@
           "data": [99, 85]
         }
       ],
+      "qualityMetrics": {
+        "eogComponentsIdentified": [0, 3],
+        "numEogComponents": 2
+      }
     },
     {
       "stepId": "4",
@@ -172,9 +176,13 @@
           "description": "ICA cleaned EEG data file."
         }
       ],
+      "qualityMetrics": {
+        "artifactComponentsRemoved": [0, 3],
+        "numComponentsRemoved": 2
+      }
     }
   ],
-  "qualityMetrics": {
+  "summaryMetrics": {
     "numIcaComponents": 15,
     "numArtifactComponentsRemoved": 2
   }
