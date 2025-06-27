@@ -152,9 +152,9 @@ This documentation format enables:
 
 - **Exact reproduction** through complete parameter and dependency documentation
 - **Quality assessment** via comprehensive multi-level metrics
-- **Method comparison** with complete parameter sets
-- **Regulatory compliance** through full audit trails
-- **Educational applications** with complete workflow transparency
+- **Method comparison** with complete parameter sets and summary metrics
+- **Regulatory compliance** through full audit trails of the processing steps and parameters
+- **Storage efficiency** through inline data preservation of key intermediate results, eliminating the need to store both raw and processed datasets
 
 ## References
 
