@@ -1,6 +1,29 @@
-# Example: Connectivity Analysis
+# Example: Connectivity Analysis (MNE-Python)
 
-This page explains the [`connectivity_analysis_pipeline.signalJourney.json`](https://github.com/neuromechanist/signalJourney/blob/main/schema/examples/connectivity_analysis_pipeline.signalJourney.json) example file, which documents a functional connectivity analysis workflow. This pipeline calculates spectral coherence between EEG sensors using the `mne-connectivity` Python package.
+This page explains the [`connectivity_analysis_pipeline_mne.signalJourney.json`](https://github.com/neuromechanist/signalJourney/blob/main/schema/examples/connectivity_analysis_pipeline_mne.signalJourney.json) example file, which documents a functional connectivity analysis workflow. This pipeline calculates spectral coherence between EEG sensors using the MNE-Python and SciPy libraries.
+
+## Pipeline Overview
+
+This MNE-Python pipeline demonstrates connectivity analysis:
+- **Load cleaned data** from ICA decomposition pipeline
+- **Extract epochs** for connectivity analysis
+- **Compute power spectral density**
+- **Calculate coherence matrix**
+- **Generate connectivity report**
+
+## Pipeline Flowchart
+
+```mermaid
+flowchart TD
+    A[Load Cleaned Data] --> B[Extract Epochs]
+    B --> C[Compute PSD]
+    C --> D[Calculate Coherence]
+    D --> E[Generate Report]
+```
+
+## JSON Example
+
+See the full JSON file: [`connectivity_analysis_pipeline_mne.signalJourney.json`](https://github.com/neuromechanist/signalJourney/blob/main/schema/examples/connectivity_analysis_pipeline_mne.signalJourney.json)
 
 ```json
 {

@@ -14,7 +14,7 @@ Use the `readSignalJourney` function to load a JSON file into a MATLAB structure
 
 ```matlab
 % Define the path to your file
-filename = '../../schema/examples/basic_preprocessing_pipeline.signalJourney.json';
+filename = '../../schema/examples/basic_preprocessing_pipeline_mne.signalJourney.json';
 
 try
     journeyData = readSignalJourney(filename);

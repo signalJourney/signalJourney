@@ -19,7 +19,7 @@ from signaljourney_validator import Validator, SignalJourneyValidationError
 # Path to your signalJourney file
 journey_file = Path('path/to/your_pipeline.signalJourney.json') 
 # Or use one of the examples:
-# journey_file = Path('../../schema/examples/basic_preprocessing_pipeline.signalJourney.json')
+# journey_file = Path('../../schema/examples/basic_preprocessing_pipeline_mne.signalJourney.json')
 
 try:
     # Initialize validator (uses the default schema bundled with the package)
