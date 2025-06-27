@@ -101,19 +101,19 @@ nav:
   - Examples:
     - Overview: examples/index.md
     - Basic Preprocessing:
-      - MNE-Python: examples/basic_preprocessing.md
+      - MNE-Python: examples/basic_preprocessing_mne.md
       - EEGLAB: examples/basic_preprocessing_eeglab.md
     - ICA Decomposition:
-      - MNE-Python: examples/ica_decomposition.md
+      - MNE-Python: examples/ica_decomposition_mne.md
       - EEGLAB: examples/ica_decomposition_eeglab.md
     - Time-Frequency Analysis:
-      - MNE-Python: examples/time_frequency.md
+      - MNE-Python: examples/time_frequency_mne.md
       - EEGLAB: examples/time_frequency_eeglab.md
     - Source Localization:
-      - MNE-Python: examples/source_localization.md
+      - MNE-Python: examples/source_localization_mne.md
       - EEGLAB: examples/source_localization_eeglab.md
     - Connectivity Analysis:
-      - MNE-Python: examples/connectivity.md
+      - MNE-Python: examples/connectivity_mne.md
       - EEGLAB: examples/connectivity_eeglab.md
     - Best Practices: examples/best_practices.md
     - Real-World Examples:

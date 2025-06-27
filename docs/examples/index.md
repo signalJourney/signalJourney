@@ -9,11 +9,11 @@ These examples are found in the [`schema/examples/`](https://github.com/neuromec
 
 | Pipeline Type | MNE-Python Implementation | EEGLAB Implementation | Key Features |
 |---------------|---------------------------|------------------------|--------------|
-| **Basic Preprocessing** | [MNE-Python](./basic_preprocessing.md) | [EEGLAB](./basic_preprocessing_eeglab.md) | File I/O, step dependencies, quality metrics |
-| **ICA Decomposition** | [MNE-Python](./ica_decomposition.md) | [EEGLAB](./ica_decomposition_eeglab.md) | Multi-output steps, artifact removal, variables |
-| **Time-Frequency Analysis** | [MNE-Python](./time_frequency.md) | [EEGLAB](./time_frequency_eeglab.md) | Wavelet decomposition, baseline correction |
-| **Source Localization** | [MNE-Python](./source_localization.md) | [EEGLAB](./source_localization_eeglab.md) | Forward modeling, inverse solutions |
-| **Connectivity Analysis** | [MNE-Python](./connectivity.md) | [EEGLAB](./connectivity_eeglab.md) | Cross-channel analysis, network metrics |
+| **Basic Preprocessing** | [MNE-Python](./basic_preprocessing_mne.md) | [EEGLAB](./basic_preprocessing_eeglab.md) | File I/O, step dependencies, quality metrics |
+| **ICA Decomposition** | [MNE-Python](./ica_decomposition_mne.md) | [EEGLAB](./ica_decomposition_eeglab.md) | Multi-output steps, artifact removal, variables |
+| **Time-Frequency Analysis** | [MNE-Python](./time_frequency_mne.md) | [EEGLAB](./time_frequency_eeglab.md) | Wavelet decomposition, baseline correction |
+| **Source Localization** | [MNE-Python](./source_localization_mne.md) | [EEGLAB](./source_localization_eeglab.md) | Forward modeling, inverse solutions |
+| **Connectivity Analysis** | [MNE-Python](./connectivity_mne.md) | [EEGLAB](./connectivity_eeglab.md) | Cross-channel analysis, network metrics |
 
 ### 🔬 Real-World Examples
 Production pipelines demonstrating advanced signalJourney features:
@@ -41,7 +41,7 @@ Production pipelines demonstrating advanced signalJourney features:
 ## Learning Path Recommendations
 
 ### 🎯 For Beginners
-1. Start with **Basic Preprocessing** ([MNE-Python](./basic_preprocessing.md) or [EEGLAB](./basic_preprocessing_eeglab.md))
+1. Start with **Basic Preprocessing** ([MNE-Python](./basic_preprocessing_mne.md) or [EEGLAB](./basic_preprocessing_eeglab.md))
 2. Understand signalJourney structure and common patterns
 3. Learn about quality metrics and parameter documentation
 
