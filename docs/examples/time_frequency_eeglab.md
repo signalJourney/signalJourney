@@ -16,74 +16,169 @@ This EEGLAB pipeline demonstrates time-frequency analysis using EEGLAB's wavelet
 ```mermaid
 flowchart TD
     A[Load Cleaned Data<br/>pop_loadset] --> B[Extract Epochs<br/>pop_epoch]
-    B --> C[Time-Frequency Decomposition<br/>timef function]
-    C --> D[Save TF Results<br/>.mat file]
-    D --> E[Generate Plots<br/>ERSP & ITC]
+    B --> C[Compute ERSP<br/>timef]
+    C --> D[Compute ITC<br/>newtimef]
+    D --> E[Save Results<br/>pop_saveset]
     
-    C --> F[ERSP Matrix<br/>Inline Data]
-    C --> G[ITC Matrix<br/>Variables]
-    C --> H[Power Baseline<br/>Variables]
+    %% Input from previous pipeline
+    F["📁 sub-01_task-rest_desc-cleaned_eeg.set<br/>From: ICA Decomposition Pipeline"] --> A
     
-    style A fill:#e1f5fe
-    style D fill:#f3e5f5
-    style E fill:#f3e5f5
-    style B fill:#fff3e0
-    style C fill:#fff3e0
-    style F fill:#fce4ec
-    style G fill:#fce4ec
-    style H fill:#fce4ec
+    %% Intermediate outputs
+    A --> A1["📊 EEG Structure<br/>ICA-cleaned dataset"]
+    B --> B1["📊 EEG Structure<br/>Epoched data"]
+    C --> C1["📊 ERSP Matrix<br/>Event-related spectral perturbation"]
+    D --> D1["📊 ITC Matrix<br/>Inter-trial coherence"]
+    
+    %% Parameters and settings
+    C --> V1["📊 Frequencies<br/>[3:0.5:30] Hz"]
+    C --> V2["📊 Cycles<br/>[3 0.5] wavelet"]
+    C --> V3["📊 Baseline<br/>[-200 0] ms"]
+    
+    %% Final outputs
+    E --> G["💾 sub-01_task-rest_desc-ersp_eeg.set<br/>ERSP results"]
+    E --> H["💾 sub-01_task-rest_desc-itc_eeg.set<br/>ITC results"]
+    D --> I["💾 sub-01_task-rest_desc-tfr_plot.fig<br/>EEGLAB figure"]
+    
+    %% Quality metrics
+    C --> Q1["📈 Frequency bins: 55<br/>Time points: 200"]
+    D --> Q2["📈 Baseline mode: Relative<br/>Significance: p<0.01"]
+
+    %% Styling
+    classDef processStep fill:#e1f5fe,stroke:#01579b,stroke-width:2px
+    classDef inputFile fill:#fff3e0,stroke:#e65100,stroke-width:2px
+    classDef outputFile fill:#e8f5e8,stroke:#1b5e20,stroke-width:2px
+    classDef inlineData fill:#f3e5f5,stroke:#4a148c,stroke-width:1px
+    classDef qualityMetric fill:#f9f9f9,stroke:#666,stroke-width:1px
+
+    class A,B,C,D,E processStep
+    class F inputFile
+    class G,H,I outputFile
+    class A1,B1,C1,D1,V1,V2,V3 inlineData
+    class Q1,Q2 qualityMetric
 ```
 
-## Key EEGLAB Features
+## Key EEGLAB Features Demonstrated
 
-### Time-Frequency Functions
-- **`timef`**: EEGLAB's comprehensive time-frequency analysis function
-- **Wavelet parameters**: Cycle specification for frequency-dependent resolution
-- **Baseline correction**: Built-in baseline normalization options
-- **Output flexibility**: ERSP, ITC, and power baseline matrices
+### EEGLAB Time-Frequency Functions
+- **`pop_epoch`**: Extract event-related epochs from continuous data
+- **`timef`**: Time-frequency decomposition with Morlet wavelets
+- **`newtimef`**: Enhanced time-frequency analysis with bootstrap statistics
+- **`pop_saveset`**: Save results in EEGLAB dataset format
 
-### signalJourney Documentation
-- **Parameter preservation**: Complete `timef` parameter documentation
-- **Multiple outputs**: ERSP, ITC, and baseline data saved separately
-- **Visualization integration**: Plot generation as documented processing step
+### EEGLAB-Specific Parameters
+- **Wavelet specification**: EEGLAB's [cycles freqs] format
+- **Baseline correction**: Built into `timef` function
+- **Statistical testing**: Bootstrap significance testing
+- **Visualization**: Automatic ERSP and ITC plotting
 
 ## Example JSON Structure
+
+The EEGLAB time-frequency computation demonstrates integrated analysis:
 
 ```json
 {
   "stepId": "3",
-  "name": "Compute Time-Frequency Decomposition",
+  "name": "Compute ERSP",
+  "description": "Calculate event-related spectral perturbation using EEGLAB timef.",
   "software": {
-    "name": "EEGLAB",
+    "name": "EEGLAB", 
     "version": "2023.1",
-    "functionCall": "[ersp, itc, powbase, times, freqs] = timef(EEG.data, EEG.pnts, [EEG.xmin EEG.xmax]*1000, EEG.srate, [3 0.5], 'baseline', [-500 0], 'freqs', [2 40])"
+    "functionCall": "timef(EEG.data, frames, tlimits, srate, cycles, 'baseline', [-200 0], 'plotitc', 'off')"
   },
   "parameters": {
+    "frames": 1000,
+    "tlimits": [-500, 1000],
+    "srate": 500,
     "cycles": [3, 0.5],
-    "baseline": [-500, 0],
-    "freqs": [2, 40],
+    "freqs": [3, 30],
+    "nfreqs": 55,
+    "baseline": [-200, 0],
+    "baselinetype": "relative",
     "plotitc": "off",
-    "plotersp": "off"
+    "plotersp": "on"
   }
 }
 ```
+
+### Integrated Output Documentation
+EEGLAB's `timef` produces multiple outputs simultaneously:
+
+```json
+"outputTargets": [
+  {
+    "targetType": "in-memory",
+    "format": "double",
+    "description": "ERSP matrix (freqs x times x trials).",
+    "variableName": "ersp"
+  },
+  {
+    "targetType": "in-memory", 
+    "format": "double",
+    "description": "ITC matrix (freqs x times).",
+    "variableName": "itc"
+  },
+  {
+    "targetType": "in-memory",
+    "format": "double",
+    "description": "Power base matrix for baseline correction.",
+    "variableName": "powbase"
+  }
+]
+```
+
+## EEGLAB Time-Frequency Features
+
+### Wavelet Parameter System
+- **Cycles specification**: `[min_cycles max_cycles]` format
+- **Automatic scaling**: Cycles increase linearly with frequency
+- **Frequency resolution**: Number of frequency bins automatically calculated
+- **Time resolution**: Determined by cycle parameters and sampling rate
+
+### Baseline Correction Options
+- **Relative**: `(power - baseline) / baseline`
+- **Absolute**: `power - baseline`
+- **Relchange**: `(power - baseline) / baseline * 100`
+- **Log**: `10 * log10(power / baseline)`
+
+### Bootstrap Statistics
+- **Significance testing**: Built-in permutation testing
+- **Multiple comparison correction**: False discovery rate (FDR)
+- **Confidence intervals**: Bootstrap confidence bounds
+- **Alpha level**: Customizable significance threshold
 
 ## EEGLAB vs MNE-Python Comparison
 
 | Aspect | EEGLAB Version | MNE-Python Version |
 |--------|----------------|-------------------|
-| **Function** | `timef` (all-in-one) | `tfr_morlet`, `tfr_multitaper` |
-| **Baseline** | Built-in correction | Separate `apply_baseline` |
-| **Outputs** | ERSP, ITC, power baseline | Power, ITC (separate functions) |
-| **Plotting** | Integrated visualization | External plotting functions |
-| **Flexibility** | Single comprehensive function | Modular approach |
+| **Function** | `timef`, `newtimef` | `tfr_morlet` |
+| **Output** | ERSP + ITC combined | Power only (separate ITC) |
+| **Baseline** | Built into function | Separate `apply_baseline()` |
+| **Statistics** | Bootstrap testing | External stats required |
+| **Visualization** | Automatic EEGLAB plots | matplotlib customization |
+| **File Format** | .set/.mat files | HDF5/NPZ formats |
+
+## EEGLAB-Specific Workflow
+
+### Integrated Analysis Approach
+EEGLAB's `timef` provides:
+1. **Combined ERSP/ITC computation** in single function call
+2. **Automatic baseline correction** with multiple methods
+3. **Built-in statistical testing** via bootstrap procedures
+4. **Immediate visualization** with publication-ready plots
+
+### EEG Dataset Integration
+- **Event information** automatically extracted from EEG.event
+- **Channel locations** used for topographic plotting
+- **Dataset history** updated with analysis parameters
+- **STUDY compatibility** for group-level analysis
 
 ## Usage Notes
 
 This example demonstrates:
-- **EEGLAB time-frequency workflows** using the `timef` function
-- **Complete parameter documentation** for wavelet analysis
-- **Multiple output documentation** (ERSP, ITC, baseline)
-- **Integrated visualization** as part of the processing pipeline
+- **EEGLAB's integrated approach** to time-frequency analysis
+- **Automatic parameter optimization** for wavelet decomposition
+- **Built-in statistical testing** for significance assessment
+- **Multi-output handling** with ERSP, ITC, and baseline data
+- **EEGLAB visualization** with publication-ready plots
 
-The pipeline showcases how signalJourney can document EEGLAB's integrated approach to time-frequency analysis while preserving all parameters for reproducibility. 
+The pipeline showcases EEGLAB's comprehensive time-frequency analysis capabilities with emphasis on ease-of-use and integrated statistical testing while maintaining full parameter documentation for reproducibility. 

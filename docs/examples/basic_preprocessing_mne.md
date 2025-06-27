@@ -16,161 +16,101 @@ The MNE-Python basic preprocessing pipeline demonstrates fundamental EEG preproc
 
 ```mermaid
 flowchart TD
-    A[Load Raw Data<br/>mne.io.read_raw_fif] --> B[Apply Band-pass Filter<br/>raw.filter]
-    B --> C[Apply Notch Filter<br/>raw.notch_filter]
+    A[Load Raw Data<br/>mne.io.read_raw_fif] --> B[Apply Band-pass Filter<br/>raw.filter<br/>1-40 Hz]
+    B --> C[Apply Notch Filter<br/>raw.notch_filter<br/>60 Hz]
     C --> D[Set Average Reference<br/>raw.set_eeg_reference]
     D --> E[Interpolate Bad Channels<br/>raw.interpolate_bads]
+    
+    %% Input from sourcedata
+    F["📁 sub-01_task-rest_raw.fif<br/>Raw EEG data"] --> A
+    
+    %% Intermediate in-memory objects
+    A --> A1["📊 Raw Object<br/>Loaded data"]
+    B --> B1["📊 Raw Object<br/>Band-pass filtered"]
+    C --> C1["📊 Raw Object<br/>Notch filtered"]
+    D --> D1["📊 Raw Object<br/>Average referenced"]
+    
+    %% Final output
+    E --> G["💾 sub-01_task-rest_desc-preproc_eeg.fif<br/>Preprocessed data"]
+    
+    %% Quality metrics
+    D --> Q1["📈 Projection added: true"]
+    E --> Q2["📈 Channels interpolated: [EEG 053, EEG 021]"]
+
+    %% Styling
+    classDef processStep fill:#e1f5fe,stroke:#01579b,stroke-width:2px
+    classDef inputFile fill:#fff3e0,stroke:#e65100,stroke-width:2px
+    classDef outputFile fill:#e8f5e8,stroke:#1b5e20,stroke-width:2px
+    classDef inlineData fill:#f3e5f5,stroke:#4a148c,stroke-width:1px
+    classDef qualityMetric fill:#f9f9f9,stroke:#666,stroke-width:1px
+
+    class A,B,C,D,E processStep
+    class F inputFile
+    class G outputFile
+    class A1,B1,C1,D1 inlineData
+    class Q1,Q2 qualityMetric
 ```
 
-## JSON Example
+## Key MNE-Python Features Demonstrated
 
-See the full JSON file: [`basic_preprocessing_pipeline_mne.signalJourney.json`](https://github.com/neuromechanist/signalJourney/blob/main/schema/examples/basic_preprocessing_pipeline_mne.signalJourney.json)
+### MNE-Python Function Calls
+- **`mne.io.read_raw_fif`**: Load FIF format files with preloading
+- **`raw.filter`**: FIR filtering with linear phase response
+- **`raw.notch_filter`**: Notch filtering for line noise removal
+- **`raw.set_eeg_reference`**: EEG referencing with projection
+- **`raw.interpolate_bads`**: Spherical spline interpolation
 
-## Key signalJourney Structure
+### MNE-Python-Specific Parameters
+- **Filter specifications**: FIR design with 'firwin' method
+- **Reference handling**: Projection-based average referencing
+- **Channel interpolation**: Accurate mode with automatic bad channel reset
 
-### 1. Pipeline Metadata
+## Example JSON Structure
+
+The signalJourney file documents each processing step with:
 
 ```json
 {
-  "sj_version": "0.1.0",
-  "schema_version": "0.1.0",
-  "description": "Example signalJourney file for a basic EEG preprocessing pipeline.",
-  "pipelineInfo": {
-    "name": "Basic EEG Preprocessing",
-    "description": "Standard preprocessing steps including filtering, referencing, and bad channel interpolation using MNE-Python.",
-    "pipelineType": "preprocessing",
-    "version": "1.0.0",
-    "executionDate": "2024-05-02T10:00:00Z"
-  }
-}
-```
-
-The metadata section defines:
-- **signalJourney version compatibility** (`sj_version`, `schema_version`)
-- **Pipeline identification** (name, type, version)
-- **Execution context** (date, description)
-
-### 2. Processing Steps Structure
-
-Each step follows this pattern:
-
-```json
-{
-  "stepId": "1",
-  "name": "Load Raw Data",
-  "description": "Load raw FIF data file.",
+  "stepId": "2",
+  "name": "Apply Band-pass Filter",
+  "description": "Apply a FIR band-pass filter (1-40 Hz).",
   "software": {
     "name": "MNE-Python",
     "version": "1.6.1",
-    "functionCall": "mne.io.read_raw_fif('sub-01_task-rest_raw.fif', preload=True)"
+    "functionCall": "raw.filter(l_freq=1.0, h_freq=40.0, fir_design='firwin')"
   },
   "parameters": {
-    "filename": "sub-01_task-rest_raw.fif",
-    "preload": true
-  },
-  "inputSources": [...],
-  "outputTargets": [...]
+    "l_freq": 1.0,
+    "h_freq": 40.0,
+    "method": "fir",
+    "fir_design": "firwin",
+    "phase": "zero"
+  }
 }
 ```
 
-Key elements:
-- **Step identification** (`stepId`, `name`, `description`)
-- **Software documentation** (exact function calls, versions)
-- **Parameter tracking** (all settings used)
-- **Input/output specification** (data flow)
+### Quality Control Integration
+Each step includes quality metrics specific to MNE-Python processing:
+- Projection status for referencing
+- Interpolated channel tracking
+- BIDS-compatible file naming
 
-### 3. Input Sources
+## MNE-Python vs EEGLAB Comparison
 
-Input sources can be:
+| Aspect | MNE-Python Version | EEGLAB Version |
+|--------|-------------------|----------------|
+| **Data Format** | .fif files | .set/.fdt files |
+| **Filtering** | `filter`, `notch_filter` | `pop_eegfiltnew` |
+| **Referencing** | `set_eeg_reference` | `pop_reref` |
+| **Interpolation** | `interpolate_bads` | `pop_interp` |
+| **Function Style** | Object methods | Pop-up GUI functions |
 
-**File input** (Step 1):
-```json
-"inputSources": [
-  {
-    "sourceType": "file",
-    "location": "../sourcedata/sub-01/eeg/sub-01_task-rest_raw.fif",
-    "entityLabels": {
-      "sub": "01",
-      "task": "rest"
-    }
-  }
-]
-```
+## Usage Notes
 
-**Previous step output** (Steps 2-5):
-```json
-"inputSources": [
-  {
-    "sourceType": "previousStepOutput",
-    "stepId": "1",
-    "outputId": "Loaded raw data object." 
-  }
-]
-```
+This example demonstrates:
+- **MNE-Python workflow patterns** with object-oriented design
+- **Parameter documentation** for reproducible processing
+- **BIDS compatibility** with standardized naming conventions
+- **Quality metrics** relevant to MNE-Python processing
 
-### 4. Output Targets
-
-**In-memory objects** (intermediate results):
-```json
-"outputTargets": [
-  {
-    "targetType": "in-memory",
-    "format": "mne.io.Raw",
-    "description": "Band-pass filtered data."
-  }
-]
-```
-
-**Saved files** (final results):
-```json
-"outputTargets": [
-  {
-    "targetType": "file",
-    "location": "./derivatives/signaljourney/sub-01/eeg/sub-01_task-rest_desc-preproc_eeg.fif",
-    "format": "FIF",
-    "description": "Preprocessed EEG data file."
-  }
-]
-```
-
-### 5. Quality Metrics
-
-Steps can include quality metrics for validation:
-
-```json
-"qualityMetrics": {
-  "channelsInterpolated": ["EEG 053", "EEG 021"],
-  "numChannelsInterpolated": 2
-}
-```
-
-### 6. Dependencies
-
-Steps can depend on previous steps:
-
-```json
-"dependsOn": ["1", "2", "3"]
-```
-
-This ensures proper execution order and data flow.
-
-## Summary Metrics
-
-The pipeline concludes with overall metrics:
-
-```json
-"summaryMetrics": {
-  "finalSamplingRateHz": 1000,
-  "totalChannels": 64,
-  "numBadChannelsDetected": 2
-}
-```
-
-This basic preprocessing example demonstrates:
-- **Linear pipeline structure** (each step feeds into the next)
-- **File input/output** (loading and saving data)
-- **Parameter documentation** (all settings preserved)
-- **Quality tracking** (interpolated channels recorded)
-- **BIDS compatibility** (entity labels, standardized naming)
-
-This foundation can be extended with more complex processing steps, parallel branches, or integration with other pipelines.
+The pipeline serves as a foundation for more complex analysis workflows including ICA decomposition, time-frequency analysis, and source localization.
