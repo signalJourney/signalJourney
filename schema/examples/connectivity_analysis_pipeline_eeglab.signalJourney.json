@@ -1,0 +1,206 @@
+{
+  "sj_version": "0.1.0",
+  "schema_version": "0.1.0",
+  "description": "Example signalJourney file for a connectivity analysis pipeline using EEGLAB coherence functions.",
+  "pipelineInfo": {
+    "name": "Connectivity Analysis (EEGLAB Coherence)",
+    "description": "Calculates spectral coherence between EEG sensor pairs using EEGLAB's mscohere function on epoched data.",
+    "pipelineType": "connectivity",
+    "version": "1.0.0",
+    "executionDate": "2024-05-02T14:00:00Z"
+  },
+  "processingSteps": [
+    {
+      "stepId": "1",
+      "name": "Load Cleaned Data",
+      "description": "Load cleaned continuous EEG data from ICA decomposition pipeline.",
+      "software": {
+        "name": "EEGLAB",
+        "version": "2023.1",
+        "functionCall": "pop_loadset('filename', 'sub-01_task-rest_desc-cleaned_eeg.set', 'filepath', './derivatives/signaljourney/sub-01/eeg/')"
+      },
+      "parameters": {
+        "filename": "sub-01_task-rest_desc-cleaned_eeg.set",
+        "filepath": "./derivatives/signaljourney/sub-01/eeg/"
+      },
+      "inputSources": [
+        {
+          "sourceType": "file",
+          "location": "./derivatives/signaljourney/sub-01/eeg/sub-01_task-rest_desc-cleaned_eeg.set",
+          "entityLabels": {
+            "sub": "01",
+            "task": "rest",
+            "desc": "cleaned"
+          },
+          "pipelineSource": { 
+             "pipelineName": "ICA Decomposition (EEGLAB)", 
+             "pipelineVersion": "1.0.0"
+           }
+        }
+      ],
+      "outputTargets": [
+        {
+          "targetType": "in-memory",
+          "format": "EEGLAB EEG structure",
+          "description": "Loaded cleaned EEG dataset."
+        }
+      ]
+    },
+    {
+      "stepId": "2",
+      "name": "Extract Epochs",
+      "description": "Extract non-overlapping epochs for connectivity analysis.",
+      "dependsOn": ["1"],
+      "software": {
+        "name": "EEGLAB",
+        "version": "2023.1",
+        "functionCall": "pop_epoch(EEG, {}, [-2 2], 'epochinfo', 'yes')"
+      },
+      "parameters": {
+        "events": [],
+        "timelimits": [-2, 2],
+        "epochinfo": "yes",
+        "newname": "epoched_data"
+      },
+      "inputSources": [
+        {
+          "sourceType": "previousStepOutput",
+          "stepId": "1",
+          "outputId": "Loaded cleaned EEG dataset."
+        }
+      ],
+      "outputTargets": [
+        {
+          "targetType": "in-memory",
+          "format": "EEGLAB EEG structure",
+          "description": "Epoched EEG data for connectivity analysis."
+        }
+      ]
+    },
+    {
+      "stepId": "3",
+      "name": "Compute Power Spectral Density",
+      "description": "Calculate power spectral density for each channel using multitaper method.",
+      "dependsOn": ["2"],
+      "software": {
+        "name": "EEGLAB",
+        "version": "2023.1",
+        "functionCall": "[powbase, freqs] = spectopo(EEG.data, 0, EEG.srate, 'freqrange', [1 50], 'electrodes', 'on', 'plot', 'off')"
+      },
+      "parameters": {
+        "freqrange": [1, 50],
+        "electrodes": "on",
+        "plot": "off",
+        "winsize": 512,
+        "overlap": 50
+      },
+      "inputSources": [
+        {
+          "sourceType": "previousStepOutput",
+          "stepId": "2",
+          "outputId": "Epoched EEG data for connectivity analysis."
+        }
+      ],
+      "outputTargets": [
+        {
+          "targetType": "variable",
+          "name": "powbase",
+          "description": "Power spectral density matrix."
+        },
+        {
+          "targetType": "variable",
+          "name": "freqs",
+          "description": "Frequency vector."
+        }
+      ]
+    },
+    {
+      "stepId": "4",
+      "name": "Calculate Coherence Matrix",
+      "description": "Compute coherence between all channel pairs in alpha band (8-13 Hz).",
+      "dependsOn": ["2"],
+      "software": {
+        "name": "MATLAB Signal Processing Toolbox",
+        "version": "9.1",
+        "functionCall": "coh_matrix = compute_coherence_matrix(EEG.data, EEG.srate, [8 13])"
+      },
+      "parameters": {
+        "frequency_band": [8, 13],
+        "window_length": 512,
+        "overlap": 256,
+        "nfft": 512
+      },
+      "inputSources": [
+        {
+          "sourceType": "previousStepOutput",
+          "stepId": "2",
+          "outputId": "Epoched EEG data for connectivity analysis."
+        }
+      ],
+      "outputTargets": [
+        {
+          "targetType": "file",
+          "location": "./derivatives/signaljourney/sub-01/eeg/sub-01_task-rest_desc-cohAlpha_matrix.mat",
+          "format": "MATLAB",
+          "description": "Coherence matrix for alpha band connectivity."
+        },
+        {
+          "targetType": "inlineData",
+          "name": "coherence_matrix",
+          "data": "{{alpha_coherence_matrix}}",
+          "formatDescription": "Square matrix [n_channels x n_channels] of coherence values",
+          "description": "Alpha band coherence connectivity matrix"
+        }
+      ],
+      "qualityMetrics": {
+        "frequencyBandHz": [8.0, 13.0],
+        "method": "mscohere",
+        "windowLength": 512,
+        "overlap": 256
+      }
+    },
+    {
+      "stepId": "5",
+      "name": "Generate Connectivity Report",
+      "description": "Create summary report of connectivity analysis results.",
+      "dependsOn": ["4"],
+      "software": {
+        "name": "EEGLAB",
+        "version": "2023.1",
+        "functionCall": "connectivity_report = generate_connectivity_summary(coh_matrix, EEG.chanlocs)"
+      },
+      "parameters": {
+        "threshold": 0.5,
+        "plot_network": true,
+        "save_figures": true
+      },
+      "inputSources": [
+        {
+          "sourceType": "previousStepOutput",
+          "stepId": "4",
+          "outputId": "Coherence matrix for alpha band connectivity."
+        }
+      ],
+      "outputTargets": [
+        {
+          "targetType": "file",
+          "location": "./derivatives/signaljourney/sub-01/eeg/sub-01_task-rest_desc-cohAlpha_report.html",
+          "format": "HTML",
+          "description": "Connectivity analysis report with visualizations."
+        }
+      ],
+      "qualityMetrics": {
+        "meanCoherence": "{{mean_alpha_coherence}}",
+        "maxCoherence": "{{max_alpha_coherence}}",
+        "numSignificantConnections": "{{num_significant_connections}}"
+      }
+    }
+  ],
+  "summaryMetrics": {
+    "analysisType": "Connectivity",
+    "method": "Coherence (mscohere)",
+    "domain": "sensor",
+    "frequencyBand": "alpha",
+    "numChannels": 64
+  }
+} 
