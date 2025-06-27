@@ -1,27 +1,17 @@
 # Real-World Example: NEMAR EEG Processing Pipeline
 
-This page documents the NEMAR (EEGLAB-based) EEG processing pipeline as represented in [`nemar_pipeline.signalJourney.json`](./nemar_pipeline.signalJourney.json). This is a **production pipeline** used to process OpenNeuro EEG datasets, demonstrating the full power of signalJourney for documenting complex, real-world workflows.
+This example demonstrates the complete NEMAR (EEGLAB-based) EEG processing pipeline documented in [`nemar_pipeline.signalJourney.json`](./nemar_pipeline.signalJourney.json). This production pipeline processes OpenNeuro EEG datasets and showcases advanced signalJourney features including inline data preservation, multi-level quality metrics, and extension schema integration.
 
-## Pipeline Overview
+## Pipeline Architecture
 
-The NEMAR pipeline is a comprehensive EEG preprocessing workflow that processes BIDS-formatted EEG datasets using EEGLAB and its plugins. It demonstrates several advanced signalJourney features:
+The NEMAR pipeline implements a 12-step EEG preprocessing workflow organized into four main processing stages:
 
-- **12-step processing workflow** with complex dependencies
-- **Inline data preservation** for critical intermediate results
-- **Comprehensive quality assessment** at multiple levels
-- **Extension schema integration** for domain-specific metadata
-- **Production-grade parameter documentation**
+1. **Data Import & Validation** (Steps 1-3): BIDS import, status verification, channel location checks
+2. **Channel Selection & Preprocessing** (Steps 4-6): Non-EEG removal, DC offset correction, high-pass filtering  
+3. **Automated Artifact Rejection** (Step 7): Clean Raw Data algorithm, ICA decomposition (Step 8), ICLabel classification (Step 9)
+4. **Quality Assessment & Export** (Steps 10-12): Data quality metrics, power spectral analysis, dataset export
 
-### Key Processing Stages
-
-1. **Data Import & Validation** (Steps 1-3)
-2. **Channel Selection & Preprocessing** (Steps 4-6) 
-3. **Automated Artifact Rejection** (Step 7)
-4. **ICA Decomposition & Classification** (Steps 8-9)
-5. **Quality Assessment & Analysis** (Steps 10-11)
-6. **Results Export** (Step 12)
-
-## Pipeline Flowchart
+## Processing Flow
 
 ```mermaid
 flowchart TD
@@ -66,13 +56,12 @@ flowchart TD
     class J2,L1,L2 savedFile
 ```
 
-## Advanced signalJourney Features Demonstrated
+## Advanced Features
 
-### 1. Inline Data Preservation
+### Inline Data Preservation
 
-The NEMAR pipeline showcases extensive use of `inlineData` to preserve critical intermediate results:
+Critical intermediate results are preserved using `inlineData` targets, enabling post-hoc analysis and reproducibility. Key examples include ICA decomposition matrices, component classifications, and quality control masks:
 
-**ICA Weight Matrix (Step 8):**
 ```json
 {
   "targetType": "inlineData",
@@ -83,24 +72,11 @@ The NEMAR pipeline showcases extensive use of `inlineData` to preserve critical 
 }
 ```
 
-**Component Classifications (Step 9):**
-```json
-{
-  "targetType": "inlineData",
-  "name": "ic_classification",
-  "data": "{{ic_labels_probabilities}}",
-  "formatDescription": "Matrix of classification probabilities [n_components x n_classes]",
-  "description": "ICLabel classification probabilities for each component"
-}
-```
+### Multi-Level Quality Assessment
 
-This approach ensures that **critical analysis results are preserved** within the signalJourney file itself, supporting reproducibility and post-hoc analysis.
+Quality metrics are computed at both step-level and pipeline-level, providing comprehensive quality control:
 
-### 2. Comprehensive Quality Metrics
-
-The pipeline implements quality assessment at multiple levels:
-
-**Step-level Quality (Step 7 - Clean Raw Data):**
+**Step-level metrics** (e.g., Step 7 clean_rawdata):
 ```json
 "qualityMetrics": {
   "percentDataRetained": "{{percent_clean_data}}",
@@ -109,7 +85,7 @@ The pipeline implements quality assessment at multiple levels:
 }
 ```
 
-**Pipeline-level Summary:**
+**Pipeline-level summary**:
 ```json
 "summaryMetrics": {
   "pipelineCompleted": true,
@@ -122,9 +98,9 @@ The pipeline implements quality assessment at multiple levels:
 }
 ```
 
-### 3. Extension Schema Integration
+### Extension Schema Integration
 
-The pipeline uses the NEMAR extension schema for domain-specific metadata:
+Domain-specific metadata is captured using the NEMAR extension schema:
 
 ```json
 "extensions": {
@@ -138,27 +114,23 @@ The pipeline uses the NEMAR extension schema for domain-specific metadata:
 }
 ```
 
-This demonstrates how **domain-specific requirements** can be accommodated within the signalJourney framework.
+### Conditional Algorithm Selection
 
-### 4. Algorithm Selection Logic
-
-Step 8 (ICA Decomposition) shows how algorithm selection can be documented:
+Step 8 demonstrates algorithm selection logic with complete parameter documentation for both AMICA and runica ICA methods:
 
 ```json
 {
   "stepId": "8",
   "name": "Run ICA Decomposition",
-  "description": "Perform Independent Component Analysis using either AMICA (if >=5 channels) or extended Infomax ICA to decompose EEG signals into independent components.",
+  "description": "Perform Independent Component Analysis using either AMICA (if >=5 channels) or extended Infomax ICA",
   "software": {
     "name": "AMICA/EEGLAB",
     "version": "1.7/2023.1", 
-    "functionCall": "runamica17_nsg(EEG, 'batch', 1) OR pop_runica(EEG, 'icatype', 'runica', 'concatcond', 'on', 'extended', 1, 'lrate', 1e-5, 'maxsteps', 2000)"
+    "functionCall": "runamica17_nsg(EEG, 'batch', 1) OR pop_runica(EEG, 'icatype', 'runica', 'extended', 1)"
   },
   "parameters": {
     "method": "{{ica_method}}",
-    "amica_options": {
-      "batch": 1
-    },
+    "amica_options": {"batch": 1},
     "runica_options": {
       "icatype": "runica",
       "concatcond": "on", 
@@ -170,59 +142,25 @@ Step 8 (ICA Decomposition) shows how algorithm selection can be documented:
 }
 ```
 
-This shows how **conditional algorithm selection** and **multiple parameter sets** can be documented.
+## Template Variables and Batch Processing
 
-### 5. Template Variables and Flexibility
+Template variables (e.g., `{{subject}}`, `{{session}}`, `{{openneuro_dataset_id}}`) enable automated batch processing while maintaining complete parameter documentation. This approach supports systematic processing of multiple datasets with consistent methodology.
 
-Throughout the pipeline, template variables (e.g., `{{subject}}`, `{{session}}`, `{{good_data_percentage}}`) demonstrate how signalJourney files can serve as **reusable templates** for batch processing while maintaining complete parameter documentation.
+## Research Applications
 
-## Production Pipeline Characteristics
+This documentation format enables:
 
-This real-world example demonstrates several characteristics of production-grade pipeline documentation:
-
-### Comprehensive Parameter Documentation
-Every parameter for every tool is explicitly documented, from basic settings to complex nested configurations.
-
-### Quality Control Integration  
-Quality metrics are computed and preserved at each critical step, enabling systematic quality assessment.
-
-### Error Handling and Validation
-Steps include validation checks (import status, channel locations) before proceeding with processing.
-
-### Batch Processing Support
-Template variables and extension metadata support automated processing of multiple datasets.
-
-### Compliance and Standards
-BIDS entity labels and standardized naming conventions ensure compatibility with neuroimaging standards.
-
-## Comparison with Schema Examples
-
-| Feature | Schema Examples | NEMAR Pipeline |
-|---------|----------------|----------------|
-| **Steps** | 4-5 simple steps | 12 complex steps |
-| **Dependencies** | Linear chain | Complex multi-input dependencies |
-| **Outputs** | Basic file/memory | Files + inline data + variables |
-| **Quality Metrics** | Minimal | Comprehensive multi-level |
-| **Extensions** | None | Domain-specific (NEMAR) |
-| **Parameters** | Simplified | Production-complete |
-| **Validation** | Basic | Multi-stage validation |
-
-## Usage in Research
-
-This pipeline documentation enables:
-
-1. **Exact Reproduction** - Every parameter and dependency is documented
-2. **Quality Assessment** - Comprehensive metrics enable data quality evaluation  
-3. **Method Comparison** - Complete parameter sets support systematic comparisons
-4. **Regulatory Compliance** - Full audit trail for clinical/regulatory applications
-5. **Educational Value** - Complete workflow documentation for training
+- **Exact reproduction** through complete parameter and dependency documentation
+- **Quality assessment** via comprehensive multi-level metrics
+- **Method comparison** with complete parameter sets
+- **Regulatory compliance** through full audit trails
+- **Educational applications** with complete workflow transparency
 
 ## References
 
-- **NEMAR Pipeline**: [GitHub Repository](https://github.com/sccn/NEMAR-pipeline)
-- **EEGLAB**: [Official Website](https://sccn.ucsd.edu/eeglab/)
-- **Clean Raw Data**: [Plugin Documentation](https://github.com/sccn/clean_rawdata)
-- **ICLabel**: [Plugin Documentation](https://github.com/sccn/ICLabel)
-- **signalJourney**: [Specification](https://github.com/NeurodataWithoutBorders/signalJourney)
+- [NEMAR Pipeline Repository](https://github.com/sccn/NEMAR-pipeline)
+- [EEGLAB](https://sccn.ucsd.edu/eeglab/)
+- [Clean Raw Data Plugin](https://github.com/sccn/clean_rawdata)
+- [ICLabel Plugin](https://github.com/sccn/ICLabel)
 
 This NEMAR example demonstrates the full potential of signalJourney for documenting complex, production-grade signal processing workflows with complete transparency and reproducibility. 

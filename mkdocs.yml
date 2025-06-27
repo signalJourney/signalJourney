@@ -42,7 +42,12 @@ theme:
 markdown_extensions:
   - admonition
   - pymdownx.details
-  - pymdownx.superfences
+  - pymdownx.superfences:
+      # Enable mermaid diagrams with Material theme
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:mermaid2.fence_mermaid_custom
   - pymdownx.tabbed:
       alternate_style: true 
   - toc:
@@ -56,6 +61,8 @@ markdown_extensions:
 # Plugins
 plugins:
   - search
+  - mermaid2:
+      version: 10.6.1
   - mkdocstrings: # Will be configured in subtask 12.3
       handlers:
         python:
@@ -99,6 +106,8 @@ nav:
     - Source Localization: examples/source_localization.md
     - Connectivity: examples/connectivity.md
     - Best Practices: examples/best_practices.md # Added best practices
+    - Real-World Examples:
+      - NEMAR Pipeline: examples/real_world/nemar_pipeline.md
   - API Reference:
     - Python API: api/index.md # This file uses mkdocstrings
     # - MATLAB API: api/matlab_api.md # Add if/when available
