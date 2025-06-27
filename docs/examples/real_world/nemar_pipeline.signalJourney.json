@@ -1,0 +1,560 @@
+{
+  "sj_version": "0.1.0",
+  "schema_version": "0.1.0",
+  "description": "signalJourney representation of the NEMAR (EEGLAB-based) EEG processing pipeline for OpenNeuro datasets.",
+  "pipelineInfo": {
+    "name": "NEMAR EEG Processing Pipeline",
+    "description": "Comprehensive EEG preprocessing, ICA decomposition, and data quality assessment pipeline using EEGLAB/MATLAB tools including clean_rawdata, AMICA/runica, and ICLabel for artifact classification.",
+    "pipelineType": "preprocessing",
+    "version": "1.0.0",
+    "executionDate": "2024-05-02T10:00:00Z",
+    "softwareEnvironment": {
+      "primarySoftware": "EEGLAB",
+      "version": "2023.1",
+      "matlab_version": "R2023a",
+      "plugins": ["clean_rawdata", "ICLabel", "AMICA", "firfilt"]
+    }
+  },
+  "processingSteps": [
+    {
+      "stepId": "1",
+      "name": "Import BIDS Dataset",
+      "description": "Load EEG dataset from BIDS-formatted source using pop_importbids.",
+      "software": {
+        "name": "EEGLAB",
+        "version": "2023.1",
+        "functionCall": "pop_importbids(bidspath, 'subjects', subjects, 'outputdir', outputdir, import_options{:})"
+      },
+      "parameters": {
+        "bidspath": "/path/to/bids/dataset",
+        "subjects": [],
+        "ctffunc": "fileio",
+        "import_options": {}
+      },
+      "inputSources": [
+        {
+          "sourceType": "file",
+          "location": "/path/to/bids/dataset",
+          "format": "BIDS",
+          "description": "BIDS-formatted EEG dataset"
+        }
+      ],
+      "outputTargets": [
+        {
+          "targetType": "in-memory",
+          "format": "ALLEEG",
+          "description": "EEGLAB dataset structure array containing all subjects/sessions"
+        }
+      ]
+    },
+    {
+      "stepId": "2",
+      "name": "Check Import Status",
+      "description": "Verify that the dataset was imported successfully and files exist.",
+      "dependsOn": ["1"],
+      "software": {
+        "name": "EEGLAB/NEMAR",
+        "version": "1.0.0",
+        "functionCall": "check_import validation in eeg_nemar_preprocess"
+      },
+      "parameters": {},
+      "inputSources": [
+        {
+          "sourceType": "previousStepOutput",
+          "stepId": "1",
+          "outputId": "EEGLAB dataset structure array containing all subjects/sessions"
+        }
+      ],
+      "outputTargets": [
+        {
+          "targetType": "variable",
+          "name": "import_status",
+          "description": "Boolean indicating successful import"
+        }
+      ],
+      "qualityMetrics": {
+        "importSuccessful": true
+      }
+    },
+    {
+      "stepId": "3", 
+      "name": "Check Channel Locations",
+      "description": "Verify that channel location information is present and valid for EEG/MEG data.",
+      "dependsOn": ["2"],
+      "software": {
+        "name": "EEGLAB/NEMAR", 
+        "version": "1.0.0",
+        "functionCall": "check_chanloc validation in eeg_nemar_preprocess"
+      },
+      "parameters": {
+        "required_fields": ["theta", "phi", "radius"]
+      },
+      "inputSources": [
+        {
+          "sourceType": "previousStepOutput",
+          "stepId": "1", 
+          "outputId": "EEGLAB dataset structure array containing all subjects/sessions"
+        }
+      ],
+      "outputTargets": [
+        {
+          "targetType": "variable",
+          "name": "chanloc_status",
+          "description": "Boolean indicating valid channel locations"
+        }
+      ],
+      "qualityMetrics": {
+        "channelLocationsValid": true,
+        "numChannelsWithLocations": "{{to_be_filled}}"
+      }
+    },
+    {
+      "stepId": "4",
+      "name": "Remove Non-EEG Channels", 
+      "description": "Remove non-EEG channel types (AUDIO, EOG, ECG, EMG, etc.) and keep only EEG channels for processing.",
+      "dependsOn": ["3"],
+      "software": {
+        "name": "EEGLAB",
+        "version": "2023.1", 
+        "functionCall": "pop_select(EEG, 'rmchantype', rm_chan_types); pop_select(EEG, 'chantype', 'EEG')"
+      },
+      "parameters": {
+        "removed_channel_types": ["AUDIO", "EOG", "ECG", "EMG", "EYEGAZE", "GSR", "HEOG", "MISC", "PPG", "PUPIL", "REF", "RESP", "SYSCLOCK", "TEMP", "TRIG", "VEOG"],
+        "keep_channel_type": "EEG"
+      },
+      "inputSources": [
+        {
+          "sourceType": "previousStepOutput",
+          "stepId": "1",
+          "outputId": "EEGLAB dataset structure array containing all subjects/sessions"
+        }
+      ],
+      "outputTargets": [
+        {
+          "targetType": "in-memory",
+          "format": "EEG",
+          "description": "EEG dataset with only EEG channels"
+        },
+        {
+          "targetType": "inlineData",
+          "name": "removed_channels",
+          "data": "{{channels_removed_list}}",
+          "formatDescription": "List of channel names that were removed",
+          "description": "Channels removed during non-EEG channel filtering"
+        }
+      ],
+      "qualityMetrics": {
+        "channelsRemoved": "{{num_channels_removed}}",
+        "finalChannelCount": "{{final_eeg_channel_count}}"
+      }
+    },
+    {
+      "stepId": "5",
+      "name": "Remove DC Offset",
+      "description": "Remove DC offset from all channels using baseline removal.",
+      "dependsOn": ["4"],
+      "software": {
+        "name": "EEGLAB",
+        "version": "2023.1",
+        "functionCall": "pop_rmbase(EEG, [])"
+      },
+      "parameters": {
+        "baseline_window": []
+      },
+      "inputSources": [
+        {
+          "sourceType": "previousStepOutput", 
+          "stepId": "4",
+          "outputId": "EEG dataset with only EEG channels"
+        }
+      ],
+      "outputTargets": [
+        {
+          "targetType": "in-memory",
+          "format": "EEG", 
+          "description": "DC offset corrected EEG data"
+        }
+      ]
+    },
+    {
+      "stepId": "6",
+      "name": "High-pass Filter",
+      "description": "Apply 0.5 Hz high-pass filter to remove low-frequency drifts.",
+      "dependsOn": ["5"],
+      "software": {
+        "name": "EEGLAB",
+        "version": "2023.1",
+        "functionCall": "pop_eegfiltnew(EEG, 'locutoff', 0.5)"
+      },
+      "parameters": {
+        "locutoff": 0.5,
+        "filter_type": "FIR",
+        "filter_order": "auto"
+      },
+      "inputSources": [
+        {
+          "sourceType": "previousStepOutput",
+          "stepId": "5", 
+          "outputId": "DC offset corrected EEG data"
+        }
+      ],
+      "outputTargets": [
+        {
+          "targetType": "in-memory",
+          "format": "EEG",
+          "description": "High-pass filtered EEG data"
+        }
+      ]
+    },
+    {
+      "stepId": "7", 
+      "name": "Clean Raw Data",
+      "description": "Apply automated artifact rejection using clean_rawdata plugin to remove bad channels, time periods, and line noise.",
+      "dependsOn": ["6"],
+      "software": {
+        "name": "clean_rawdata",
+        "version": "1.4",
+        "functionCall": "pop_clean_rawdata(EEG, 'FlatlineCriterion', 4, 'ChannelCriterion', 0.85, 'LineNoiseCriterion', 4, 'Highpass', 'off', 'BurstCriterion', 20, 'WindowCriterion', 0.25, 'BurstRejection', 'on', 'Distance', 'Euclidian', 'WindowCriterionTolerances', [-Inf 7], 'fusechanrej', 1)"
+      },
+      "parameters": {
+        "FlatlineCriterion": 4,
+        "ChannelCriterion": 0.85,
+        "LineNoiseCriterion": 4, 
+        "Highpass": "off",
+        "BurstCriterion": 20,
+        "WindowCriterion": 0.25,
+        "BurstRejection": "on",
+        "Distance": "Euclidian",
+        "WindowCriterionTolerances": [null, 7],
+        "fusechanrej": 1
+      },
+      "inputSources": [
+        {
+          "sourceType": "previousStepOutput",
+          "stepId": "6",
+          "outputId": "High-pass filtered EEG data"
+        }
+      ],
+      "outputTargets": [
+        {
+          "targetType": "in-memory",
+          "format": "EEG",
+          "description": "Cleaned EEG data with artifacts removed"
+        },
+        {
+          "targetType": "inlineData",
+          "name": "clean_sample_mask",
+          "data": "{{sample_mask_array}}",
+          "formatDescription": "Boolean array indicating clean time samples",
+          "description": "Sample-wise mask of clean (true) vs rejected (false) time points"
+        },
+        {
+          "targetType": "inlineData", 
+          "name": "clean_channel_mask",
+          "data": "{{channel_mask_array}}",
+          "formatDescription": "Boolean array indicating clean channels", 
+          "description": "Channel-wise mask of clean (true) vs rejected (false) channels"
+        },
+        {
+          "targetType": "inlineData",
+          "name": "rejected_channels",
+          "data": "{{rejected_channel_list}}",
+          "formatDescription": "List of channel names that were rejected",
+          "description": "Channels rejected by clean_rawdata algorithm"
+        }
+      ],
+      "qualityMetrics": {
+        "percentDataRetained": "{{percent_clean_data}}",
+        "percentChannelsRetained": "{{percent_clean_channels}}",
+        "channelsRejected": "{{num_rejected_channels}}"
+      }
+    },
+    {
+      "stepId": "8",
+      "name": "Run ICA Decomposition",
+      "description": "Perform Independent Component Analysis using either AMICA (if >=5 channels) or extended Infomax ICA to decompose EEG signals into independent components.",
+      "dependsOn": ["7"],
+      "software": {
+        "name": "AMICA/EEGLAB",
+        "version": "1.7/2023.1", 
+        "functionCall": "runamica17_nsg(EEG, 'batch', 1) OR pop_runica(EEG, 'icatype', 'runica', 'concatcond', 'on', 'extended', 1, 'lrate', 1e-5, 'maxsteps', 2000)"
+      },
+      "parameters": {
+        "method": "{{ica_method}}",
+        "amica_options": {
+          "batch": 1
+        },
+        "runica_options": {
+          "icatype": "runica",
+          "concatcond": "on", 
+          "extended": 1,
+          "lrate": 1e-5,
+          "maxsteps": 2000
+        }
+      },
+      "inputSources": [
+        {
+          "sourceType": "previousStepOutput",
+          "stepId": "7",
+          "outputId": "Cleaned EEG data with artifacts removed"
+        }
+      ],
+      "outputTargets": [
+        {
+          "targetType": "in-memory",
+          "format": "EEG",
+          "description": "EEG data with ICA decomposition"
+        },
+        {
+          "targetType": "inlineData",
+          "name": "ica_weights",
+          "data": "{{ica_weights_matrix}}",
+          "formatDescription": "Matrix of ICA unmixing weights [n_components x n_channels]",
+          "description": "ICA unmixing weight matrix"
+        },
+        {
+          "targetType": "inlineData",
+          "name": "ica_sphere", 
+          "data": "{{ica_sphere_matrix}}",
+          "formatDescription": "Sphering matrix [n_channels x n_channels]",
+          "description": "Data sphering transformation matrix"
+        },
+        {
+          "targetType": "inlineData",
+          "name": "ica_components",
+          "data": "{{ica_component_activations}}",
+          "formatDescription": "Independent component activations [n_components x n_timepoints]", 
+          "description": "Time courses of independent components"
+        }
+      ],
+      "qualityMetrics": {
+        "numICAComponents": "{{num_ica_components}}",
+        "icaConverged": "{{ica_convergence_status}}",
+        "icaMethod": "{{ica_method_used}}"
+      }
+    },
+    {
+      "stepId": "9",
+      "name": "ICLabel Classification",
+      "description": "Classify independent components using ICLabel to identify brain vs artifact components (eye, muscle, heart, line noise, channel noise, other).",
+      "dependsOn": ["8"],
+      "software": {
+        "name": "ICLabel",
+        "version": "1.4",
+        "functionCall": "pop_iclabel(EEG, 'default'); pop_icflag(EEG, [NaN NaN;0.9 1;0.9 1;NaN NaN;NaN NaN;NaN NaN;NaN NaN])"
+      },
+      "parameters": {
+        "classification_method": "default",
+        "flagging_thresholds": {
+          "brain": [null, null],
+          "muscle": [0.9, 1.0],
+          "eye": [0.9, 1.0], 
+          "heart": [null, null],
+          "line_noise": [null, null],
+          "channel_noise": [null, null],
+          "other": [null, null]
+        }
+      },
+      "inputSources": [
+        {
+          "sourceType": "previousStepOutput",
+          "stepId": "8",
+          "outputId": "EEG data with ICA decomposition"
+        }
+      ],
+      "outputTargets": [
+        {
+          "targetType": "in-memory",
+          "format": "EEG",
+          "description": "EEG data with classified and flagged ICA components"
+        },
+        {
+          "targetType": "inlineData",
+          "name": "ic_classification",
+          "data": "{{ic_labels_probabilities}}",
+          "formatDescription": "Matrix of classification probabilities [n_components x n_classes]",
+          "description": "ICLabel classification probabilities for each component"
+        },
+        {
+          "targetType": "inlineData",
+          "name": "flagged_components",
+          "data": "{{flagged_component_indices}}",
+          "formatDescription": "List of component indices flagged as artifacts",
+          "description": "Independent components flagged for rejection based on ICLabel classification"
+        }
+      ],
+      "qualityMetrics": {
+        "numComponentsFlagged": "{{num_flagged_components}}",
+        "brainComponentsRetained": "{{num_brain_components}}",
+        "artifactComponentsIdentified": {
+          "muscle": "{{num_muscle_components}}",
+          "eye": "{{num_eye_components}}",
+          "heart": "{{num_heart_components}}",
+          "line_noise": "{{num_line_noise_components}}",
+          "channel_noise": "{{num_channel_noise_components}}",
+          "other": "{{num_other_components}}"
+        }
+      }
+    },
+    {
+      "stepId": "10",
+      "name": "Data Quality Assessment", 
+      "description": "Compute comprehensive data quality metrics including percentage of good data, channels, and ICs retained after cleaning.",
+      "dependsOn": ["9"],
+      "software": {
+        "name": "EEGLAB/NEMAR",
+        "version": "1.0.0",
+        "functionCall": "eeg_nemar_dataqual(EEG, 'logdir', eeg_logdir, 'legacy', false)"
+      },
+      "parameters": {
+        "metrics_computed": ["goodDataPercent", "goodChansPercent", "goodICAPercent", "lineNoiseMetrics"]
+      },
+      "inputSources": [
+        {
+          "sourceType": "previousStepOutput",
+          "stepId": "9", 
+          "outputId": "EEG data with classified and flagged ICA components"
+        }
+      ],
+      "outputTargets": [
+        {
+          "targetType": "file",
+          "location": "{{output_dir}}/{{subject}}_{{session}}_{{task}}_dataqual.json",
+          "format": "JSON",
+          "description": "Data quality metrics report"
+        },
+        {
+          "targetType": "inlineData",
+          "name": "data_quality_metrics",
+          "data": {
+            "goodDataPercent": "{{good_data_percentage}}",
+            "goodChansPercent": "{{good_channels_percentage}}", 
+            "goodICAPercent": "{{good_ica_percentage}}",
+            "lineNoiseMagnitude": "{{line_noise_db}}",
+            "nGoodData": "{{num_good_timepoints}}",
+            "nGoodChans": "{{num_good_channels}}",
+            "nGoodICs": "{{num_good_ics}}"
+          },
+          "formatDescription": "Data quality metrics as computed by NEMAR pipeline",
+          "description": "Comprehensive data quality assessment results"
+        }
+      ],
+      "qualityMetrics": {
+        "dataQualityComputed": true,
+        "goodDataThreshold": 75.0,
+        "goodChannelsThreshold": 80.0,
+        "goodICAThreshold": 70.0
+      }
+    },
+    {
+      "stepId": "11",
+      "name": "Power Spectral Analysis", 
+      "description": "Compute power spectral density to assess line noise magnitude and overall signal quality.",
+      "dependsOn": ["10"],
+      "software": {
+        "name": "EEGLAB",
+        "version": "2023.1",
+        "functionCall": "spectopo(EEG.data, 0, EEG.srate, 'freqrange', [1 70], 'chanlocs', EEG.chanlocs, 'percent', 10, 'plot', 'off')"
+      },
+      "parameters": {
+        "frequency_range": [1, 70],
+        "percent_channels": 10,
+        "line_noise_frequencies": [50, 60]
+      },
+      "inputSources": [
+        {
+          "sourceType": "previousStepOutput",
+          "stepId": "9",
+          "outputId": "EEG data with classified and flagged ICA components"
+        }
+      ],
+      "outputTargets": [
+        {
+          "targetType": "inlineData",
+          "name": "power_spectrum",
+          "data": "{{power_spectral_density}}",
+          "formatDescription": "Power spectral density [channels x frequencies]",
+          "description": "Power spectrum across all channels and frequencies"
+        },
+        {
+          "targetType": "inlineData",
+          "name": "line_noise_assessment",
+          "data": {
+            "line_noise_magnitude_50hz": "{{line_noise_50hz}}",
+            "line_noise_magnitude_60hz": "{{line_noise_60hz}}",
+            "dominant_line_noise_freq": "{{dominant_line_noise}}"
+          },
+          "formatDescription": "Line noise assessment results",
+          "description": "Assessment of 50/60 Hz line noise contamination"
+        }
+      ]
+    },
+    {
+      "stepId": "12", 
+      "name": "Save Processed Dataset",
+      "description": "Save the fully processed EEG dataset with all preprocessing, ICA, and quality metrics to disk.",
+      "dependsOn": ["11"],
+      "software": {
+        "name": "EEGLAB", 
+        "version": "2023.1",
+        "functionCall": "pop_saveset(EEG, 'filepath', EEG.filepath, 'filename', EEG.filename, 'savemode', 'onefile')"
+      },
+      "parameters": {
+        "savemode": "onefile",
+        "include_ica": true,
+        "include_quality_metrics": true
+      },
+      "inputSources": [
+        {
+          "sourceType": "previousStepOutput",
+          "stepId": "11",
+          "outputId": "EEG data with classified and flagged ICA components"
+        }
+      ],
+      "outputTargets": [
+        {
+          "targetType": "file", 
+          "location": "{{output_dir}}/{{subject}}_{{session}}_{{task}}_desc-processed_eeg.set",
+          "format": "EEGLAB (.set/.fdt)",
+          "description": "Fully processed EEG dataset with all analysis results",
+          "entityLabels": {
+            "sub": "{{subject}}",
+            "ses": "{{session}}", 
+            "task": "{{task}}",
+            "desc": "processed"
+          }
+        },
+        {
+          "targetType": "file",
+          "location": "{{output_dir}}/{{subject}}_{{session}}_{{task}}_pipeline_status.csv", 
+          "format": "CSV",
+          "description": "Pipeline execution status for each processing step"
+        }
+      ]
+    }
+  ],
+  "summaryMetrics": {
+    "pipelineCompleted": true,
+    "totalProcessingSteps": 12,
+    "finalSamplingRateHz": "{{final_sampling_rate}}",
+    "finalChannelCount": "{{final_channel_count}}",
+    "finalDataDurationSec": "{{final_duration_seconds}}",
+    "icaComponentsComputed": "{{total_ica_components}}",
+    "artifactComponentsRemoved": "{{total_artifact_components}}",
+    "overallDataQuality": {
+      "goodDataPercent": "{{overall_good_data_percent}}",
+      "goodChannelsPercent": "{{overall_good_channels_percent}}",
+      "goodICAPercent": "{{overall_good_ica_percent}}"
+    },
+    "processingTimeMinutes": "{{total_processing_time}}"
+  },
+  "extensions": {
+    "nemar": {
+      "dataset_id": "{{openneuro_dataset_id}}",
+      "processing_cluster": "SDSC Expanse",
+      "eeglab_plugins": ["clean_rawdata", "ICLabel", "AMICA", "firfilt"],
+      "custom_code_applied": "{{custom_dataset_code}}",
+      "batch_processing": true
+    }
+  }
+} 
