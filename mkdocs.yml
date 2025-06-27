@@ -100,12 +100,22 @@ nav:
     - Validating Pipelines: tutorials/validating.md
   - Examples:
     - Overview: examples/index.md
-    - Basic Preprocessing: examples/basic_preprocessing.md
-    - ICA Decomposition: examples/ica_decomposition.md
-    - Time-Frequency: examples/time_frequency.md
-    - Source Localization: examples/source_localization.md
-    - Connectivity: examples/connectivity.md
-    - Best Practices: examples/best_practices.md # Added best practices
+    - Basic Preprocessing:
+      - MNE-Python: examples/basic_preprocessing.md
+      - EEGLAB: examples/basic_preprocessing_eeglab.md
+    - ICA Decomposition:
+      - MNE-Python: examples/ica_decomposition.md
+      - EEGLAB: examples/ica_decomposition_eeglab.md
+    - Time-Frequency Analysis:
+      - MNE-Python: examples/time_frequency.md
+      - EEGLAB: examples/time_frequency_eeglab.md
+    - Source Localization:
+      - MNE-Python: examples/source_localization.md
+      - EEGLAB: examples/source_localization_eeglab.md
+    - Connectivity Analysis:
+      - MNE-Python: examples/connectivity.md
+      - EEGLAB: examples/connectivity_eeglab.md
+    - Best Practices: examples/best_practices.md
     - Real-World Examples:
       - NEMAR Pipeline: examples/real_world/nemar_pipeline.md
   - API Reference:

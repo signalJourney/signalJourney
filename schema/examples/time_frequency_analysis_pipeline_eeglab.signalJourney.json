@@ -1,0 +1,221 @@
+{
+  "sj_version": "0.1.0",
+  "schema_version": "0.1.0",
+  "description": "Example signalJourney file for a time-frequency analysis pipeline using EEGLAB.",
+  "pipelineInfo": {
+    "name": "Time-Frequency Analysis (EEGLAB Wavelets)",
+    "description": "Calculates time-frequency representation using EEGLAB's timef function with wavelet decomposition and baseline correction.",
+    "pipelineType": "time-frequency",
+    "version": "1.0.0",
+    "executionDate": "2024-05-02T12:00:00Z"
+  },
+  "processingSteps": [
+    {
+      "stepId": "1",
+      "name": "Load Cleaned Data",
+      "description": "Load cleaned continuous EEG data from ICA decomposition pipeline.",
+      "software": {
+        "name": "EEGLAB",
+        "version": "2023.1",
+        "functionCall": "pop_loadset('filename', 'sub-01_task-rest_desc-cleaned_eeg.set', 'filepath', './derivatives/signaljourney/sub-01/eeg/')"
+      },
+      "parameters": {
+        "filename": "sub-01_task-rest_desc-cleaned_eeg.set",
+        "filepath": "./derivatives/signaljourney/sub-01/eeg/"
+      },
+      "inputSources": [
+        {
+          "sourceType": "file",
+          "location": "./derivatives/signaljourney/sub-01/eeg/sub-01_task-rest_desc-cleaned_eeg.set",
+          "entityLabels": {
+            "sub": "01",
+            "task": "rest",
+            "desc": "cleaned"
+          },
+          "pipelineSource": { 
+             "pipelineName": "ICA Decomposition (EEGLAB)", 
+             "pipelineVersion": "1.0.0"
+           }
+        }
+      ],
+      "outputTargets": [
+        {
+          "targetType": "in-memory",
+          "format": "EEGLAB EEG structure",
+          "description": "Loaded cleaned EEG dataset."
+        }
+      ]
+    },
+    {
+      "stepId": "2",
+      "name": "Extract Event-Related Epochs",
+      "description": "Extract epochs around specific events for time-frequency analysis.",
+      "dependsOn": ["1"],
+      "software": {
+        "name": "EEGLAB",
+        "version": "2023.1",
+        "functionCall": "pop_epoch(EEG, {'ConditionA'}, [-0.5 2], 'epochinfo', 'yes')"
+      },
+      "parameters": {
+        "events": ["ConditionA"],
+        "timelimits": [-0.5, 2.0],
+        "epochinfo": "yes",
+        "newname": "epoched_for_tf"
+      },
+      "inputSources": [
+        {
+          "sourceType": "previousStepOutput",
+          "stepId": "1",
+          "outputId": "Loaded cleaned EEG dataset."
+        }
+      ],
+      "outputTargets": [
+        {
+          "targetType": "in-memory",
+          "format": "EEGLAB EEG structure",
+          "description": "Epoched EEG data for time-frequency analysis."
+        }
+      ]
+    },
+    {
+      "stepId": "3",
+      "name": "Compute Time-Frequency Decomposition",
+      "description": "Calculate time-frequency representation using wavelet decomposition for all channels.",
+      "dependsOn": ["2"],
+      "software": {
+        "name": "EEGLAB",
+        "version": "2023.1",
+        "functionCall": "[ersp, itc, powbase, times, freqs] = timef(EEG.data, EEG.pnts, [EEG.xmin EEG.xmax]*1000, EEG.srate, [3 0.5], 'baseline', [-500 0], 'freqs', [2 40], 'plotitc', 'off', 'plotersp', 'off')"
+      },
+      "parameters": {
+        "cycles": [3, 0.5],
+        "baseline": [-500, 0],
+        "freqs": [2, 40],
+        "nfreqs": 39,
+        "timesout": 200,
+        "plotitc": "off",
+        "plotersp": "off",
+        "winsize": null,
+        "padratio": 2
+      },
+      "inputSources": [
+        {
+          "sourceType": "previousStepOutput",
+          "stepId": "2",
+          "outputId": "Epoched EEG data for time-frequency analysis."
+        }
+      ],
+      "outputTargets": [
+        {
+          "targetType": "variable",
+          "name": "ersp",
+          "description": "Event-related spectral perturbation matrix."
+        },
+        {
+          "targetType": "variable",
+          "name": "itc",
+          "description": "Inter-trial coherence matrix."
+        },
+        {
+          "targetType": "variable",
+          "name": "powbase",
+          "description": "Baseline power spectrum."
+        },
+        {
+          "targetType": "inlineData",
+          "name": "ersp_data",
+          "data": "{{ersp_matrix}}",
+          "formatDescription": "Time-frequency power matrix [n_freqs x n_times]",
+          "description": "Event-related spectral perturbation data"
+        }
+      ]
+    },
+    {
+      "stepId": "4",
+      "name": "Save Time-Frequency Results",
+      "description": "Save time-frequency decomposition results to file for each channel.",
+      "dependsOn": ["3"],
+      "software": {
+        "name": "EEGLAB",
+        "version": "2023.1",
+        "functionCall": "save('sub-01_task-rest_desc-tfrWavelet_tf.mat', 'ersp', 'itc', 'powbase', 'times', 'freqs', 'EEG')"
+      },
+      "parameters": {
+        "save_ersp": true,
+        "save_itc": true,
+        "save_powbase": true,
+        "save_metadata": true
+      },
+      "inputSources": [
+        {
+          "sourceType": "previousStepOutput",
+          "stepId": "3",
+          "outputId": "Event-related spectral perturbation matrix."
+        }
+      ],
+      "outputTargets": [
+        {
+          "targetType": "file",
+          "location": "./derivatives/signaljourney/sub-01/eeg/sub-01_task-rest_desc-tfrWavelet_tf.mat",
+          "format": "MATLAB",
+          "description": "Time-frequency decomposition results file."
+        }
+      ],
+      "qualityMetrics": {
+        "baselinePeriodMs": [-500, 0],
+        "frequencyRangeHz": [2, 40],
+        "timeResolutionMs": 12.5,
+        "frequencyResolution": 1.0
+      }
+    },
+    {
+      "stepId": "5",
+      "name": "Generate Time-Frequency Plots",
+      "description": "Create visualization plots for time-frequency results.",
+      "dependsOn": ["4"],
+      "software": {
+        "name": "EEGLAB",
+        "version": "2023.1",
+        "functionCall": "timef(EEG.data, EEG.pnts, [EEG.xmin EEG.xmax]*1000, EEG.srate, [3 0.5], 'baseline', [-500 0], 'freqs', [2 40], 'plotitc', 'on', 'plotersp', 'on')"
+      },
+      "parameters": {
+        "plot_ersp": true,
+        "plot_itc": true,
+        "save_figures": true,
+        "figure_format": "png"
+      },
+      "inputSources": [
+        {
+          "sourceType": "previousStepOutput",
+          "stepId": "4",
+          "outputId": "Time-frequency decomposition results file."
+        }
+      ],
+      "outputTargets": [
+        {
+          "targetType": "file",
+          "location": "./derivatives/signaljourney/sub-01/figures/sub-01_task-rest_desc-tfrWavelet_ersp.png",
+          "format": "PNG",
+          "description": "ERSP time-frequency plot."
+        },
+        {
+          "targetType": "file",
+          "location": "./derivatives/signaljourney/sub-01/figures/sub-01_task-rest_desc-tfrWavelet_itc.png",
+          "format": "PNG",
+          "description": "ITC time-frequency plot."
+        }
+      ],
+      "qualityMetrics": {
+        "plotGenerated": true,
+        "frequencyRange": [2, 40],
+        "timeRange": [-500, 2000]
+      }
+    }
+  ],
+  "summaryMetrics": {
+    "analysisType": "Time-Frequency",
+    "method": "Wavelet Decomposition (timef)",
+    "frequencyRangeHz": [2.0, 40.0],
+    "timeRangeMs": [-500, 2000]
+  }
+} 

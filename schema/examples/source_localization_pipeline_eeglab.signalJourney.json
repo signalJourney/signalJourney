@@ -1,0 +1,243 @@
+{
+  "sj_version": "0.1.0",
+  "schema_version": "0.1.0",
+  "description": "Example signalJourney file for a source localization pipeline using EEGLAB dipfit plugin.",
+  "pipelineInfo": {
+    "name": "Source Localization (DIPFIT)",
+    "description": "Performs source localization using equivalent dipole modeling with EEGLAB's dipfit plugin on ICA components.",
+    "pipelineType": "source-localization",
+    "version": "1.0.0",
+    "executionDate": "2024-05-02T13:00:00Z"
+  },
+  "processingSteps": [
+    {
+      "stepId": "1",
+      "name": "Load ICA Dataset",
+      "description": "Load the dataset with ICA decomposition for dipole fitting.",
+      "software": {
+        "name": "EEGLAB",
+        "version": "2023.1",
+        "functionCall": "pop_loadset('filename', 'sub-01_task-rest_desc-ica_eeg.set', 'filepath', './derivatives/signaljourney/sub-01/eeg/')"
+      },
+      "parameters": {
+        "filename": "sub-01_task-rest_desc-ica_eeg.set",
+        "filepath": "./derivatives/signaljourney/sub-01/eeg/"
+      },
+      "inputSources": [
+        {
+          "sourceType": "file",
+          "location": "./derivatives/signaljourney/sub-01/eeg/sub-01_task-rest_desc-ica_eeg.set",
+          "entityLabels": {
+            "sub": "01",
+            "task": "rest",
+            "desc": "ica"
+          },
+          "pipelineSource": { 
+             "pipelineName": "ICA Decomposition (EEGLAB)", 
+             "pipelineVersion": "1.0.0"
+           }
+        }
+      ],
+      "outputTargets": [
+        {
+          "targetType": "in-memory",
+          "format": "EEGLAB EEG structure",
+          "description": "Loaded EEG dataset with ICA decomposition."
+        }
+      ]
+    },
+    {
+      "stepId": "2",
+      "name": "Initialize DIPFIT Settings",
+      "description": "Set up DIPFIT with head model and electrode locations.",
+      "dependsOn": ["1"],
+      "software": {
+        "name": "EEGLAB DIPFIT",
+        "version": "4.3",
+        "functionCall": "pop_dipfit_settings(EEG, 'hdmfile', 'standard_BEM/standard_vol.mat', 'coordformat', 'MNI', 'mrifile', 'standard_BEM/standard_mri.mat', 'chanfile', 'standard_BEM/elec/standard_1005.elc')"
+      },
+      "parameters": {
+        "hdmfile": "standard_BEM/standard_vol.mat",
+        "coordformat": "MNI",
+        "mrifile": "standard_BEM/standard_mri.mat",
+        "chanfile": "standard_BEM/elec/standard_1005.elc",
+        "coord_transform": [0, 0, 0, 0, 0, 0, 1, 1, 1]
+      },
+      "inputSources": [
+        {
+          "sourceType": "previousStepOutput",
+          "stepId": "1",
+          "outputId": "Loaded EEG dataset with ICA decomposition."
+        },
+        {
+          "sourceType": "resource",
+          "location": "EEGLAB standard head model templates"
+        }
+      ],
+      "outputTargets": [
+        {
+          "targetType": "in-memory",
+          "format": "EEGLAB EEG structure",
+          "description": "EEG dataset with dipfit settings initialized."
+        }
+      ]
+    },
+    {
+      "stepId": "3",
+      "name": "Coregister Electrodes",
+      "description": "Coregister electrode locations to the head model.",
+      "dependsOn": ["2"],
+      "software": {
+        "name": "EEGLAB DIPFIT",
+        "version": "4.3",
+        "functionCall": "pop_dipfit_gridsearch(EEG, [1:EEG.nbchan], [-85:17:85], [-85:17:85], [-85:17:85], 40)"
+      },
+      "parameters": {
+        "xgrid": [-85, 17, 85],
+        "ygrid": [-85, 17, 85],
+        "zgrid": [-85, 17, 85],
+        "threshold": 40
+      },
+      "inputSources": [
+        {
+          "sourceType": "previousStepOutput",
+          "stepId": "2",
+          "outputId": "EEG dataset with dipfit settings initialized."
+        }
+      ],
+      "outputTargets": [
+        {
+          "targetType": "in-memory",
+          "format": "EEGLAB EEG structure",
+          "description": "EEG dataset with coregistered electrode locations."
+        }
+      ]
+    },
+    {
+      "stepId": "4",
+      "name": "Fit Dipoles to ICA Components",
+      "description": "Perform dipole fitting for all ICA components using grid search.",
+      "dependsOn": ["3"],
+      "software": {
+        "name": "EEGLAB DIPFIT",
+        "version": "4.3",
+        "functionCall": "pop_dipfit_gridsearch(EEG, [1:size(EEG.icawinv,2)], [-85:17:85], [-85:17:85], [-85:17:85], 40)"
+      },
+      "parameters": {
+        "components": "all",
+        "xgrid": [-85, 17, 85],
+        "ygrid": [-85, 17, 85], 
+        "zgrid": [-85, 17, 85],
+        "threshold": 40
+      },
+      "inputSources": [
+        {
+          "sourceType": "previousStepOutput",
+          "stepId": "3",
+          "outputId": "EEG dataset with coregistered electrode locations."
+        }
+      ],
+      "outputTargets": [
+        {
+          "targetType": "in-memory",
+          "format": "EEGLAB EEG structure",
+          "description": "EEG dataset with initial dipole fits."
+        }
+      ]
+    },
+    {
+      "stepId": "5",
+      "name": "Optimize Dipole Fits",
+      "description": "Optimize dipole locations using nonlinear search for good initial fits.",
+      "dependsOn": ["4"],
+      "software": {
+        "name": "EEGLAB DIPFIT",
+        "version": "4.3",
+        "functionCall": "pop_dipfit_nonlinear(EEG, 'component', find([EEG.dipfit.model.rv] < 0.15))"
+      },
+      "parameters": {
+        "component_selection": "rv < 0.15",
+        "threshold": 0.15,
+        "optimization_method": "nonlinear"
+      },
+      "inputSources": [
+        {
+          "sourceType": "previousStepOutput",
+          "stepId": "4",
+          "outputId": "EEG dataset with initial dipole fits."
+        }
+      ],
+      "outputTargets": [
+        {
+          "targetType": "in-memory",
+          "format": "EEGLAB EEG structure",
+          "description": "EEG dataset with optimized dipole fits."
+        }
+      ],
+      "qualityMetrics": {
+        "dipoles_optimized": "{{num_optimized_dipoles}}",
+        "mean_residual_variance": "{{mean_rv_after_optimization}}",
+        "max_residual_variance": "{{max_rv_after_optimization}}"
+      }
+    },
+    {
+      "stepId": "6",
+      "name": "Save Dipole Results",
+      "description": "Save the dipole fitting results and generate summary report.",
+      "dependsOn": ["5"],
+      "software": {
+        "name": "EEGLAB",
+        "version": "2023.1",
+        "functionCall": "pop_saveset(EEG, 'filename', 'sub-01_task-rest_desc-dipfit_eeg.set', 'filepath', './derivatives/signaljourney/sub-01/eeg/')"
+      },
+      "parameters": {
+        "save_dataset": true,
+        "generate_report": true,
+        "plot_dipoles": true
+      },
+      "inputSources": [
+        {
+          "sourceType": "previousStepOutput",
+          "stepId": "5",
+          "outputId": "EEG dataset with optimized dipole fits."
+        }
+      ],
+      "outputTargets": [
+        {
+          "targetType": "file",
+          "location": "./derivatives/signaljourney/sub-01/eeg/sub-01_task-rest_desc-dipfit_eeg.set",
+          "format": "EEGLAB dataset",
+          "description": "EEG dataset with dipole fitting results."
+        },
+        {
+          "targetType": "inlineData",
+          "name": "dipole_locations",
+          "data": "{{dipole_coordinates_mni}}",
+          "formatDescription": "Array of dipole coordinates in MNI space [n_components x 3]",
+          "description": "Fitted dipole locations for all components"
+        },
+        {
+          "targetType": "inlineData",
+          "name": "residual_variances",
+          "data": "{{component_residual_variances}}",
+          "formatDescription": "Array of residual variance values [n_components x 1]",
+          "description": "Goodness of fit for each component dipole"
+        }
+      ],
+      "qualityMetrics": {
+        "total_components_fitted": "{{total_components}}",
+        "good_dipoles_rv_15": "{{num_good_dipoles_15}}",
+        "good_dipoles_rv_20": "{{num_good_dipoles_20}}",
+        "mean_residual_variance_all": "{{mean_rv_all_components}}"
+      }
+    }
+  ],
+  "summaryMetrics": {
+    "analysisType": "Source Localization",
+    "method": "Equivalent Dipole Modeling (DIPFIT)",
+    "headModel": "Standard BEM",
+    "coordinateSystem": "MNI",
+    "numComponentsAnalyzed": "{{total_ica_components}}",
+    "numAcceptableDipoles": "{{num_dipoles_rv_15}}"
+  }
+} 

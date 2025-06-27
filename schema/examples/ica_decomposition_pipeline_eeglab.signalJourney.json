@@ -1,0 +1,217 @@
+{
+  "sj_version": "0.1.0",
+  "schema_version": "0.1.0",
+  "description": "Example signalJourney file for an ICA decomposition pipeline using EEGLAB.",
+  "pipelineInfo": {
+    "name": "ICA Decomposition (EEGLAB)",
+    "description": "Applies ICA using extended Infomax, identifies artifact components using ICLabel, and removes them from the preprocessed data.",
+    "pipelineType": "ica",
+    "version": "1.0.0",
+    "executionDate": "2024-05-02T11:00:00Z"
+  },
+  "processingSteps": [
+    {
+      "stepId": "1",
+      "name": "Load Preprocessed Data",
+      "description": "Load the output from the basic preprocessing pipeline.",
+      "software": {
+        "name": "EEGLAB",
+        "version": "2023.1",
+        "functionCall": "pop_loadset('filename', 'sub-01_task-rest_desc-preproc_eeg.set', 'filepath', './derivatives/signaljourney/sub-01/eeg/')"
+      },
+      "parameters": {
+        "filename": "sub-01_task-rest_desc-preproc_eeg.set",
+        "filepath": "./derivatives/signaljourney/sub-01/eeg/"
+      },
+      "inputSources": [
+        {
+          "sourceType": "file",
+          "location": "./derivatives/signaljourney/sub-01/eeg/sub-01_task-rest_desc-preproc_eeg.set",
+          "entityLabels": {
+            "sub": "01",
+            "task": "rest",
+            "desc": "preproc"
+          },
+          "pipelineSource": { 
+             "pipelineName": "Basic EEG Preprocessing (EEGLAB)",
+             "pipelineVersion": "1.0.0"
+           }
+        }
+      ],
+      "outputTargets": [
+        {
+          "targetType": "in-memory",
+          "format": "EEGLAB EEG structure",
+          "description": "Loaded preprocessed EEG dataset."
+        }
+      ]
+    },
+    {
+      "stepId": "2",
+      "name": "Run ICA Decomposition",
+      "description": "Perform Independent Component Analysis using extended Infomax algorithm.",
+      "dependsOn": ["1"],
+      "software": {
+        "name": "EEGLAB",
+        "version": "2023.1",
+        "functionCall": "pop_runica(EEG, 'icatype', 'runica', 'extended', 1, 'stop', 1e-7, 'maxsteps', 512)"
+      },
+      "parameters": {
+        "icatype": "runica",
+        "extended": 1,
+        "stop": 1e-7,
+        "maxsteps": 512,
+        "pca": 15
+      },
+      "inputSources": [
+        {
+          "sourceType": "previousStepOutput",
+          "stepId": "1",
+          "outputId": "Loaded preprocessed EEG dataset."
+        }
+      ],
+      "outputTargets": [
+        {
+          "targetType": "in-memory",
+          "format": "EEGLAB EEG structure",
+          "description": "EEG dataset with ICA decomposition."
+        },
+        {
+          "targetType": "inlineData",
+          "name": "ica_weights",
+          "data": "{{ica_weights_matrix}}",
+          "formatDescription": "Matrix of ICA unmixing weights [n_components x n_channels]",
+          "description": "ICA unmixing weight matrix"
+        },
+        {
+          "targetType": "inlineData",
+          "name": "ica_sphere",
+          "data": "{{ica_sphere_matrix}}",
+          "formatDescription": "Sphering matrix for data whitening [n_channels x n_channels]",
+          "description": "ICA sphering matrix"
+        }
+      ]
+    },
+    {
+      "stepId": "3",
+      "name": "ICLabel Component Classification",
+      "description": "Classify ICA components using ICLabel to identify artifact components.",
+      "dependsOn": ["2"],
+      "software": {
+        "name": "EEGLAB ICLabel",
+        "version": "1.4",
+        "functionCall": "EEG = iclabel(EEG)"
+      },
+      "parameters": {
+        "classification_model": "default"
+      },
+      "inputSources": [
+        {
+          "sourceType": "previousStepOutput",
+          "stepId": "2",
+          "outputId": "EEG dataset with ICA decomposition."
+        }
+      ],
+      "outputTargets": [
+        {
+          "targetType": "in-memory",
+          "format": "EEGLAB EEG structure",
+          "description": "EEG dataset with ICLabel classifications."
+        },
+        {
+          "targetType": "inlineData",
+          "name": "ic_classification",
+          "data": "{{component_probabilities}}",
+          "formatDescription": "Probability matrix [n_components x 7_categories]",
+          "description": "ICLabel component classification probabilities"
+        }
+      ]
+    },
+    {
+      "stepId": "4",
+      "name": "Identify Artifact Components",
+      "description": "Identify components classified as eye or muscle artifacts based on ICLabel probabilities.",
+      "dependsOn": ["3"],
+      "software": {
+        "name": "EEGLAB",
+        "version": "2023.1",
+        "functionCall": "flagged_components = find(EEG.etc.ic_classification.ICLabel.classifications(:,3) > 0.8 | EEG.etc.ic_classification.ICLabel.classifications(:,2) > 0.8)"
+      },
+      "parameters": {
+        "eye_threshold": 0.8,
+        "muscle_threshold": 0.8,
+        "other_artifact_threshold": 0.9
+      },
+      "inputSources": [
+        {
+          "sourceType": "previousStepOutput",
+          "stepId": "3",
+          "outputId": "EEG dataset with ICLabel classifications."
+        }
+      ],
+      "outputTargets": [
+        {
+          "targetType": "variable",
+          "name": "flagged_components",
+          "description": "Indices of components flagged as artifacts."
+        },
+        {
+          "targetType": "inlineData",
+          "name": "flagged_components",
+          "data": [1, 4],
+          "description": "Component indices identified as artifacts"
+        }
+      ],
+      "qualityMetrics": {
+        "artifactComponentsIdentified": [1, 4],
+        "numArtifactComponents": 2,
+        "eyeComponents": [1],
+        "muscleComponents": [4]
+      }
+    },
+    {
+      "stepId": "5",
+      "name": "Remove Artifact Components",
+      "description": "Remove identified artifact components from the EEG data.",
+      "dependsOn": ["3", "4"],
+      "software": {
+        "name": "EEGLAB",
+        "version": "2023.1",
+        "functionCall": "pop_subcomp(EEG, flagged_components, 0)"
+      },
+      "parameters": {
+        "components": [1, 4],
+        "plottype": 0
+      },
+      "inputSources": [
+        {
+          "sourceType": "previousStepOutput",
+          "stepId": "3",
+          "outputId": "EEG dataset with ICLabel classifications."
+        },
+        {
+          "sourceType": "previousStepOutput",
+          "stepId": "4",
+          "outputId": "Indices of components flagged as artifacts."
+        }
+      ],
+      "outputTargets": [
+        {
+          "targetType": "file",
+          "location": "./derivatives/signaljourney/sub-01/eeg/sub-01_task-rest_desc-cleaned_eeg.set",
+          "format": "EEGLAB dataset",
+          "description": "ICA cleaned EEG dataset file."
+        }
+      ],
+      "qualityMetrics": {
+        "artifactComponentsRemoved": [1, 4],
+        "numComponentsRemoved": 2
+      }
+    }
+  ],
+  "summaryMetrics": {
+    "numIcaComponents": 15,
+    "numArtifactComponentsRemoved": 2,
+    "percentDataVarianceRetained": 95.2
+  }
+} 
