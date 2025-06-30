@@ -6,7 +6,7 @@
 [![Code style: ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 <!-- [![PyPI version](https://badge.fury.io/py/signaljourney-validator.svg)](https://badge.fury.io/py/signaljourney-validator) TODO: Activate once published -->
 
-**Track the journey of your biosignals with detailed, reproducible, machine-readable and human-readable steps.**
+**Track biosignal processing with detailed, reproducible, machine-readable and human-readable steps.**
 
 ## Overview
 
