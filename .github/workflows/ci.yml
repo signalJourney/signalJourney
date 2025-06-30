@@ -45,7 +45,7 @@ jobs:
       uses: codecov/codecov-action@v4.0.1
       with:
         token: ${{ secrets.CODECOV_TOKEN }} # Optional: for private repos
-        slug: neuromechanist/signalJourney # Optional: explicitly specify repo slug
+        slug: signalJourney/signalJourney # Optional: explicitly specify repo slug
 
   # Placeholder Job for MATLAB tests (requires self-hosted runner or MATLAB license setup)
   # matlab-tests:
@@ -102,11 +102,13 @@ jobs:
       - name: Build docs site
         run: mkdocs build # Build the site into the ./site directory
 
-      - name: Deploy to GitHub Pages
+      - name: Deploy to signalJourney.github.io
         uses: peaceiris/actions-gh-pages@v4
         with:
-          github_token: ${{ secrets.GH_PAGES_TOKEN }} # Use the PAT secret
+          personal_token: ${{ secrets.GH_PAGES_TOKEN }} # Use the PAT secret for cross-repo access
+          external_repository: signalJourney/signalJourney.github.io # Deploy to the dedicated docs repo
+          publish_branch: main # Deploy to main branch of signalJourney.github.io
           publish_dir: ./site # Directory containing built site
-          # Optional: configure user name and email for commit
-          # user_name: 'github-actions[bot]'
-          # user_email: 'github-actions[bot]@users.noreply.github.com' 
+          user_name: 'github-actions[bot]'
+          user_email: 'github-actions[bot]@users.noreply.github.com'
+          commit_message: 'Deploy documentation from signalJourney/signalJourney@${{ github.sha }}' 

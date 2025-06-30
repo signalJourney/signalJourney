@@ -8,7 +8,7 @@ We welcome contributions in various forms, from reporting bugs and suggesting en
 
 *   **Code of Conduct:** Before contributing, please read our [Code of Conduct (`CODE_OF_CONDUCT.md`)](CODE_OF_CONDUCT.md). We expect all contributors to adhere to its principles.
 *   **License:** By contributing, you agree that your contributions will be licensed under the [BSD 3-Clause License (`LICENSE`)](LICENSE).
-*   **Issues:** Check the [GitHub Issues](https://github.com/neuromechanist/signalJourney/issues) for existing bug reports or feature requests.
+*   **Issues:** Check the [GitHub Issues](https://github.com/signalJourney/signalJourney/issues) for existing bug reports or feature requests.
 
 ## Development Setup
 
@@ -50,13 +50,13 @@ To contribute code changes, you'll need a local development environment:
     ```
 6.  **Commit:** Commit your changes with a clear and descriptive commit message.
 7.  **Push:** Push your branch to your fork on GitHub.
-8.  **Pull Request:** Open a pull request against the `main` branch of the `neuromechanist/signalJourney` repository.
+8.  **Pull Request:** Open a pull request against the `main` branch of the `signalJourney/signalJourney` repository.
     *   Clearly describe the purpose and details of your changes in the PR description.
     *   Link to any relevant GitHub issues (e.g., `Fixes #123`).
 
 ## Reporting Bugs
 
-*   Use the [GitHub Issues](https://github.com/neuromechanist/signalJourney/issues) page.
+*   Use the [GitHub Issues](https://github.com/signalJourney/signalJourney/issues) page.
 *   Provide a clear title and description.
 *   Include steps to reproduce the bug.
 *   Mention the version of `signaljourney_validator` you are using.
@@ -64,7 +64,7 @@ To contribute code changes, you'll need a local development environment:
 
 ## Suggesting Enhancements
 
-*   Use the [GitHub Issues](https://github.com/neuromechanist/signalJourney/issues) page.
+*   Use the [GitHub Issues](https://github.com/signalJourney/signalJourney/issues) page.
 *   Provide a clear title and detailed description of the proposed enhancement and its motivation.
 *   Explain the use case and potential benefits.
 

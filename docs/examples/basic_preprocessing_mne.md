@@ -1,6 +1,6 @@
 # Example: Basic EEG Preprocessing Pipeline (MNE-Python)
 
-This page explains the [`basic_preprocessing_pipeline_mne.signalJourney.json`](https://github.com/neuromechanist/signalJourney/blob/main/schema/examples/basic_preprocessing_pipeline_mne.signalJourney.json) example file, which documents a standard EEG preprocessing workflow using MNE-Python.
+This page explains the [`basic_preprocessing_pipeline_mne.signalJourney.json`](https://github.com/signalJourney/signalJourney/blob/main/schema/examples/basic_preprocessing_pipeline_mne.signalJourney.json) example file, which documents a standard EEG preprocessing workflow using MNE-Python.
 
 ## Pipeline Overview
 

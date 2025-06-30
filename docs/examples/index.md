@@ -5,7 +5,7 @@ Welcome to the signalJourney examples! These examples demonstrate how to documen
 ## Example Categories
 
 ### 📚 Schema Examples
-These examples are found in the [`schema/examples/`](https://github.com/neuromechanist/signalJourney/tree/main/schema/examples) directory and demonstrate core signalJourney features with implementations in both MNE-Python and EEGLAB:
+These examples are found in the [`schema/examples/`](https://github.com/signalJourney/signalJourney/tree/main/schema/examples) directory and demonstrate core signalJourney features with implementations in both MNE-Python and EEGLAB:
 
 | Pipeline Type | MNE-Python Implementation | EEGLAB Implementation | Key Features |
 |---------------|---------------------------|------------------------|--------------|

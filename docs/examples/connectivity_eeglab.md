@@ -1,6 +1,6 @@
 # Example: Connectivity Analysis (EEGLAB)
 
-This page explains the [`connectivity_analysis_pipeline_eeglab.signalJourney.json`](https://github.com/neuromechanist/signalJourney/blob/main/schema/examples/connectivity_analysis_pipeline_eeglab.signalJourney.json) example file, which documents spectral connectivity analysis using EEGLAB and MATLAB functions.
+This page explains the [`connectivity_analysis_pipeline_eeglab.signalJourney.json`](https://github.com/signalJourney/signalJourney/blob/main/schema/examples/connectivity_analysis_pipeline_eeglab.signalJourney.json) example file, which documents spectral connectivity analysis using EEGLAB and MATLAB functions.
 
 ## Pipeline Overview
 

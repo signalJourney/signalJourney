@@ -1,6 +1,6 @@
 # Example: Source Localization (MNE-Python)
 
-This page explains the [`source_localization_pipeline_mne.signalJourney.json`](https://github.com/neuromechanist/signalJourney/blob/main/schema/examples/source_localization_pipeline_mne.signalJourney.json) example file, documenting a source localization workflow using distributed source modeling with MNE-Python.
+This page explains the [`source_localization_pipeline_mne.signalJourney.json`](https://github.com/signalJourney/signalJourney/blob/main/schema/examples/source_localization_pipeline_mne.signalJourney.json) example file, documenting a source localization workflow using distributed source modeling with MNE-Python.
 
 ## Pipeline Overview
 

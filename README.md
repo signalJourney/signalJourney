@@ -1,8 +1,8 @@
 # Signal Journey: Mapping the path from raw to processed biosignals
 
 [![License: BSD 3-Clause](https://img.shields.io/badge/License-BSD_3--Clause-blue.svg)](LICENSE)
-[![Docs](https://img.shields.io/badge/docs-mkdocs-green)](https://neuromechanist.github.io/signalJourney/)
-[![Tests](https://github.com/neuromechanist/signalJourney/actions/workflows/ci.yml/badge.svg)](https://github.com/neuromechanist/signalJourney/actions/workflows/ci.yml)
+[![Docs](https://img.shields.io/badge/docs-mkdocs-green)](https://signaljourney.github.io/)
+[![Tests](https://github.com/signalJourney/signalJourney/actions/workflows/ci.yml/badge.svg)](https://github.com/signalJourney/signalJourney/actions/workflows/ci.yml)
 [![Code style: ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 <!-- [![PyPI version](https://badge.fury.io/py/signaljourney-validator.svg)](https://badge.fury.io/py/signaljourney-validator) TODO: Activate once published -->
 
@@ -16,7 +16,7 @@ This repository contains:
 
 1.  **The Signal Journey Specification:** Formal definition of the `signalJourney.json` format ([`schema/signalJourney.schema.json`](schema/signalJourney.schema.json)).
 2.  **Python Validator (`signaljourney_validator`):** A library and CLI tool to validate `.json` files against the schema ([`src/signaljourney_validator`](src/signaljourney_validator)).
-3.  **Documentation:** Comprehensive guides, tutorials, and examples ([`docs/`](docs/), published at [neuromechanist.github.io/signalJourney](https://neuromechanist.github.io/signalJourney/)).
+3.  **Documentation:** Comprehensive guides, tutorials, and examples ([`docs/`](docs/), published at [signaljourney.github.io](https://signaljourney.github.io/)).
 4.  **Examples:** Illustrative `signalJourney.json` files ([`schema/examples/`](schema/examples/)).
 5.  **MATLAB Tools:** Basic utilities for working with Signal Journey structs in MATLAB ([`scripts/matlab/`](scripts/matlab/)).
 
@@ -72,7 +72,7 @@ Signal Journey is designed to complement the Brain Imaging Data Structure (BIDS)
 
 The full documentation, built with MkDocs, is available online:
 
-**[neuromechanist.github.io/signalJourney](https://neuromechanist.github.io/signalJourney/)**
+**[signaljourney.github.io](https://signaljourney.github.io/)**
 
 To build the documentation locally:
 ```bash

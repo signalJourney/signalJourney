@@ -1,9 +1,9 @@
 site_name: Signal Journey
-site_url: https://neuromechanist.github.io/signalJourney/
+site_url: https://signaljourney.github.io/
 site_description: Documentation for the signalJourney specification and tools.
 
-repo_url: https://github.com/neuromechanist/signalJourney/
-repo_name: neuromechanist/signalJourney
+repo_url: https://github.com/signalJourney/signalJourney/
+repo_name: signalJourney/signalJourney
 edit_uri: edit/main/docs/
 
 # Theme Configuration
