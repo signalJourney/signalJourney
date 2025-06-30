@@ -31,9 +31,9 @@ dependencies = [
 ]
 
 [project.urls]
-"Homepage" = "https://neuromechanist.github.io/signaljourney"
-"Repository" = "https://github.com/neuromechanist/signaljourney" # Added Repository URL
-"Bug Tracker" = "https://github.com/neuromechanist/signaljourney/issues"
+"Homepage" = "https://signaljourney.github.io/"
+"Repository" = "https://github.com/signalJourney/signalJourney" # Added Repository URL
+"Bug Tracker" = "https://github.com/signalJourney/signalJourney/issues"
 
 [project.optional-dependencies]
 dev = [

@@ -1,6 +1,6 @@
 # Example: Time-Frequency Analysis (EEGLAB)
 
-This page explains the [`time_frequency_analysis_pipeline_eeglab.signalJourney.json`](https://github.com/neuromechanist/signalJourney/blob/main/schema/examples/time_frequency_analysis_pipeline_eeglab.signalJourney.json) example file, which documents time-frequency decomposition using EEGLAB's `timef` function.
+This page explains the [`time_frequency_analysis_pipeline_eeglab.signalJourney.json`](https://github.com/signalJourney/signalJourney/blob/main/schema/examples/time_frequency_analysis_pipeline_eeglab.signalJourney.json) example file, which documents time-frequency decomposition using EEGLAB's `timef` function.
 
 ## Pipeline Overview
 

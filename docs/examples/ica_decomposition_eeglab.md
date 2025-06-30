@@ -1,6 +1,6 @@
 # Example: ICA Decomposition Pipeline (EEGLAB)
 
-This page explains the [`ica_decomposition_pipeline_eeglab.signalJourney.json`](https://github.com/neuromechanist/signalJourney/blob/main/schema/examples/ica_decomposition_pipeline_eeglab.signalJourney.json) example file, which documents an Independent Component Analysis (ICA) workflow for artifact removal using EEGLAB.
+This page explains the [`ica_decomposition_pipeline_eeglab.signalJourney.json`](https://github.com/signalJourney/signalJourney/blob/main/schema/examples/ica_decomposition_pipeline_eeglab.signalJourney.json) example file, which documents an Independent Component Analysis (ICA) workflow for artifact removal using EEGLAB.
 
 ## Pipeline Overview
 

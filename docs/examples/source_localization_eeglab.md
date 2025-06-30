@@ -1,6 +1,6 @@
 # Example: Source Localization (EEGLAB)
 
-This page explains the [`source_localization_pipeline_eeglab.signalJourney.json`](https://github.com/neuromechanist/signalJourney/blob/main/schema/examples/source_localization_pipeline_eeglab.signalJourney.json) example file, which documents equivalent dipole modeling using EEGLAB's DIPFIT plugin.
+This page explains the [`source_localization_pipeline_eeglab.signalJourney.json`](https://github.com/signalJourney/signalJourney/blob/main/schema/examples/source_localization_pipeline_eeglab.signalJourney.json) example file, which documents equivalent dipole modeling using EEGLAB's DIPFIT plugin.
 
 ## Pipeline Overview
 

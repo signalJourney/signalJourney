@@ -1,6 +1,6 @@
 # Example: Time-Frequency Analysis (MNE-Python)
 
-This page explains the [`time_frequency_analysis_pipeline_mne.signalJourney.json`](https://github.com/neuromechanist/signalJourney/blob/main/schema/examples/time_frequency_analysis_pipeline_mne.signalJourney.json) example file, which documents a typical time-frequency analysis using MNE-Python.
+This page explains the [`time_frequency_analysis_pipeline_mne.signalJourney.json`](https://github.com/signalJourney/signalJourney/blob/main/schema/examples/time_frequency_analysis_pipeline_mne.signalJourney.json) example file, which documents a typical time-frequency analysis using MNE-Python.
 
 ## Pipeline Overview
 

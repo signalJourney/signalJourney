@@ -1,6 +1,6 @@
 # Example: Basic EEG Preprocessing Pipeline (EEGLAB)
 
-This page explains the [`basic_preprocessing_pipeline_eeglab.signalJourney.json`](https://github.com/neuromechanist/signalJourney/blob/main/schema/examples/basic_preprocessing_pipeline_eeglab.signalJourney.json) example file, which documents a standard EEG preprocessing workflow using EEGLAB.
+This page explains the [`basic_preprocessing_pipeline_eeglab.signalJourney.json`](https://github.com/signalJourney/signalJourney/blob/main/schema/examples/basic_preprocessing_pipeline_eeglab.signalJourney.json) example file, which documents a standard EEG preprocessing workflow using EEGLAB.
 
 ## Pipeline Overview
 
