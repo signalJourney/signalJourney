@@ -26,21 +26,28 @@ The library primarily revolves around two classes:
 
 ### Initialization
 
-Create an instance of the `Validator` class. By default, it loads the schema bundled with the package.
+Create an instance of the `Validator` class. By default, it uses version-based schema selection, automatically detecting the appropriate schema version from each file being validated.
 
 ```python
 from signaljourney_validator import Validator
 
-# Use the default bundled schema
+# Use version-based validation (auto-detects schema version from files)
 validator = Validator()
 ```
 
-You can also provide a path to a custom schema file or a dictionary containing the schema during initialization:
+You can also specify a particular schema version to use for all validations:
+
+```python
+# Use a specific schema version
+validator_v010 = Validator(schema_version="0.1.0")
+```
+
+For advanced use cases, you can provide a path to a custom schema file or a dictionary containing the schema:
 
 ```python
 from pathlib import Path
 
-# Use a custom schema file
+# Use a custom schema file (bypasses version-based validation)
 custom_schema_file = Path('./path/to/your_schema.json')
 validator_custom_file = Validator(schema=custom_schema_file)
 
@@ -104,6 +111,42 @@ The `validate()` method is used to check data against the loaded schema. It acce
             if error.suggestion:
                 print(f"    Suggestion: {error.suggestion}")
     ```
+
+### Version-Based Validation
+
+The validator automatically detects the `schema_version` field in signalJourney files and uses the appropriate schema version for validation. This enables backward compatibility and multi-version support.
+
+```python
+from signaljourney_validator import Validator
+
+# Create validator that auto-detects schema versions
+validator = Validator()
+
+# Validate files with different schema versions
+file_v010 = {"schema_version": "0.1.0", "description": "Old format", ...}
+file_v020 = {"schema_version": "0.2.0", "description": "New format", ...}
+
+# Both files will be validated against their respective schema versions
+errors_v010 = validator.validate(file_v010, raise_exceptions=False)
+errors_v020 = validator.validate(file_v020, raise_exceptions=False)
+```
+
+You can also query version information:
+
+```python
+# Check what versions are supported
+print("Supported versions:", validator.get_supported_versions())
+
+# Get the current default version
+print("Latest version:", validator.get_latest_version())
+```
+
+To disable auto-detection and use the validator's configured schema:
+
+```python
+# This will use the validator's schema regardless of the file's schema_version
+errors = validator.validate(data, auto_detect_version=False)
+```
 
 ### BIDS Context Validation (Experimental)
 

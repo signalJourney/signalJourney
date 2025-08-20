@@ -22,7 +22,7 @@ While often aligned with the `sj_version`, the `schema_version` might increment 
 *   **MINOR:** Incremented for backward-compatible additions to the schema (e.g., adding new optional fields, adding new enum values).
 *   **PATCH:** Incremented for backward-compatible fixes or refinements to the schema definitions (e.g., improving descriptions, tightening patterns) that do not change validation outcomes for previously valid files.
 
-Validation tools should ideally use the `schema_version` declared in the file to select the appropriate schema definition for validation.
+The signalJourney validator automatically uses the `schema_version` declared in the file to select the appropriate schema definition for validation. This enables backward compatibility with older versions while supporting new features in newer versions.
 
 ## Pipeline Version (`pipelineInfo.version`)
 

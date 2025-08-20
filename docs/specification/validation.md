@@ -6,6 +6,16 @@ The signalJourney specification is formally defined by a JSON Schema ([`signalJo
 
 Any valid signalJourney file **MUST** conform to the structure and constraints defined in the official JSON Schema corresponding to the `schema_version` specified within the file.
 
+### Version-Based Validation
+
+The signalJourney validator supports multiple schema versions simultaneously. When validating a file:
+
+1. **Automatic Version Detection**: The validator reads the `schema_version` field from the signalJourney file and automatically loads the corresponding schema for validation.
+2. **Backward Compatibility**: Files using older schema versions continue to validate correctly against their corresponding schemas.
+3. **Version Support**: The validator maintains schemas for all released versions in a version registry, allowing seamless validation across different specification versions.
+
+If no `schema_version` is specified in the file, or if an unsupported version is detected, the validator provides clear error messages indicating the available supported versions.
+
 Tools like the [`signaljourney-validator`](../guides/validator_python.md) library leverage this schema to check for:
 
 *   **Presence of required fields:** Ensures all mandatory fields (e.g., `sj_version`, `pipelineInfo`, `processingSteps`) are included.
