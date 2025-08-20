@@ -95,18 +95,18 @@ class TestSchemaVersionCLI:
         # Create a dummy schema file
         schema_file = tmp_path / "dummy.json"
         schema_file.write_text('{"title": "dummy"}')
-        
+
         # Create a dummy data file
         data_file = tmp_path / "data.json"
         data_file.write_text('{"schema_version": "0.1.0"}')
-        
+
         result = runner.invoke(cli, [
-            "validate", 
+            "validate",
             "--schema", str(schema_file),
             "--schema-version", "0.1.0",
             str(data_file)
         ])
-        
+
         assert result.exit_code == 1
         assert "Cannot specify both --schema and --schema-version" in result.output
 
@@ -116,7 +116,7 @@ class TestSchemaVersionCLI:
         schema_dir = tmp_path / "schema"
         version_dir = schema_dir / "versions" / "0.1.0"
         version_dir.mkdir(parents=True)
-        
+
         # Create a simple test schema
         test_schema = {
             "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -130,7 +130,7 @@ class TestSchemaVersionCLI:
         }
         schema_file = version_dir / "signalJourney.schema.json"
         schema_file.write_text(json.dumps(test_schema))
-        
+
         # Create valid test data
         test_data = {
             "schema_version": "0.1.0",
@@ -138,19 +138,19 @@ class TestSchemaVersionCLI:
         }
         data_file = tmp_path / "test.json"
         data_file.write_text(json.dumps(test_data))
-        
+
         # Mock the schema directory by temporarily creating the expected structure
         # In a real test, we'd need to either use the actual schema dir or mock it
         # For now, this test demonstrates the CLI structure
-        
+
         # Note: This test may fail without proper schema setup
         # but demonstrates the expected CLI behavior
         result = runner.invoke(cli, [
             "validate",
-            "--schema-version", "0.1.0", 
+            "--schema-version", "0.1.0",
             str(data_file)
         ])
-        
+
         # The exact exit code depends on whether the schema version is found
         # In practice, this would work with proper schema registry setup
         if result.exit_code == 0:
