@@ -132,7 +132,7 @@ def validate(
             "Error: --bids-root is required when using the --bids flag.", err=True
         )
         sys.exit(1)
-    
+
     if schema and schema_version:
         click.echo(
             "Error: Cannot specify both --schema and --schema-version. "
@@ -225,7 +225,7 @@ def validate(
                 try:
                     # Create validator with schema version support
                     validator_instance = Validator(
-                        schema=schema, 
+                        schema=schema,
                         schema_version=schema_version
                     )
                 except Exception as e:

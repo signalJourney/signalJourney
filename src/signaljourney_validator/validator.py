@@ -115,13 +115,13 @@ class Validator:
             schema: Path to the schema file, the schema dictionary, or None
                     to use version-based schema loading. External file $refs will be
                     automatically inlined during initialization.
-            schema_version: Specific schema version to use (e.g., "0.1.0"). 
+            schema_version: Specific schema version to use (e.g., "0.1.0").
                            If None, will auto-detect from data during validation.
             schema_dir: Custom schema directory path. If None, uses default.
         """
         self._registry = SchemaVersionRegistry(schema_dir)
         self._schema_version = schema_version
-        
+
         if schema is not None:
             # Use provided schema (legacy behavior)
             schema_path = self._get_schema_path(schema)
@@ -147,7 +147,7 @@ class Validator:
                 schema_path = self._registry.get_schema_path(latest_version)
                 initial_schema = self._registry.load_schema(latest_version)
                 base_resolve_path = schema_path.parent
-            except Exception as e:
+            except Exception:
                 # Fallback to legacy schema path if registry fails
                 schema_path = DEFAULT_SCHEMA_PATH
                 initial_schema = self._load_schema_dict(None, schema_path)
@@ -204,10 +204,10 @@ class Validator:
     def _create_validator_for_version(self, version: str) -> Draft202012Validator:
         """
         Create a validator for a specific schema version.
-        
+
         Args:
             version: Schema version string
-            
+
         Returns:
             Configured validator for the specified version
         """
@@ -216,14 +216,14 @@ class Validator:
                 f"Schema version '{version}' is not supported. "
                 f"Available versions: {self._registry.get_supported_versions()}"
             )
-        
+
         schema_path = self._registry.get_schema_path(version)
         schema_dict = self._registry.load_schema(version)
-        
+
         # Inline external $refs
         loaded_cache = {}
         resolved_schema = inline_refs(schema_dict, schema_path.parent, loaded_cache)
-        
+
         # Create and return validator
         Draft202012Validator.check_schema(resolved_schema)
         return Draft202012Validator(schema=resolved_schema)
@@ -290,7 +290,7 @@ class Validator:
         # --- Version Detection and Validator Selection ---
         validator_to_use = self._validator
         detected_version = None
-        
+
         if auto_detect_version:
             try:
                 detected_version = self._registry.detect_schema_version(instance)
@@ -312,11 +312,11 @@ class Validator:
                                 validator_value=self._registry.get_supported_versions(),
                                 instance_value=detected_version,
                             )]
-                    
+
                     # Use version-specific validator if different from current
                     if detected_version != self._schema_version:
                         validator_to_use = self._create_validator_for_version(detected_version)
-                        
+
                 elif self._schema_version is None:
                     # No version detected and no default configured
                     error_msg = (
@@ -334,7 +334,7 @@ class Validator:
                             validator_value=True,
                             instance_value=None,
                         )]
-                        
+
             except (FileNotFoundError, IOError) as e:
                 # Re-raise file system errors
                 raise e
@@ -440,15 +440,15 @@ class Validator:
         #     ))
 
         return errors
-    
+
     def get_supported_versions(self) -> List[str]:
         """Get list of supported schema versions."""
         return self._registry.get_supported_versions()
-    
+
     def get_current_version(self) -> Optional[str]:
         """Get the currently configured schema version."""
         return self._schema_version
-    
+
     def get_latest_version(self) -> Optional[str]:
         """Get the latest available schema version."""
         return self._registry.get_latest_version()
