@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "parameter.schema.json",
+  "title": "Parameter Definition",
+  "description": "Reusable definition for a parameter.",
+  "type": "object",
+  "properties": {
+    "name": {"type": "string"},
+    "value": {},
+    "description": {"type": "string"},
+    "unit": {"type": "string"},
+    "dataType": {
+      "type": "string",
+      "description": "Optional JSON schema type hint for the value (e.g., 'number', 'string', 'boolean', 'array', 'object'). Aids validation.",
+      "enum": ["string", "number", "integer", "boolean", "array", "object", "null"]
+    }
+  },
+  "required": ["name", "value"]
+} 

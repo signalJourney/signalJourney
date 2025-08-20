@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "softwareDetails.schema.json",
+  "title": "Software Details",
+  "description": "Reusable definition for software details.",
+  "type": "object",
+  "properties": {
+    "name": {"type": "string"},
+    "version": {"type": "string"},
+    "url": {"type": "string", "format": "uri"}
+  },
+  "required": ["name", "version"]
+} 
