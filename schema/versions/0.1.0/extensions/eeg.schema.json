@@ -1,0 +1,11 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://signaljourney.neurodata.io/schema/extensions/eeg.schema.json",
+  "title": "EEG Extension",
+  "description": "Namespace for EEG-specific properties.",
+  "type": "object",
+  "properties": {
+    
+  },
+  "additionalProperties": true
+} 
