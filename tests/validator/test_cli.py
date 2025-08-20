@@ -100,12 +100,17 @@ class TestSchemaVersionCLI:
         data_file = tmp_path / "data.json"
         data_file.write_text('{"schema_version": "0.1.0"}')
 
-        result = runner.invoke(cli, [
-            "validate",
-            "--schema", str(schema_file),
-            "--schema-version", "0.1.0",
-            str(data_file)
-        ])
+        result = runner.invoke(
+            cli,
+            [
+                "validate",
+                "--schema",
+                str(schema_file),
+                "--schema-version",
+                "0.1.0",
+                str(data_file),
+            ],
+        )
 
         assert result.exit_code == 1
         assert "Cannot specify both --schema and --schema-version" in result.output
@@ -125,17 +130,14 @@ class TestSchemaVersionCLI:
             "required": ["schema_version", "description"],
             "properties": {
                 "schema_version": {"type": "string", "const": "0.1.0"},
-                "description": {"type": "string"}
-            }
+                "description": {"type": "string"},
+            },
         }
         schema_file = version_dir / "signalJourney.schema.json"
         schema_file.write_text(json.dumps(test_schema))
 
         # Create valid test data
-        test_data = {
-            "schema_version": "0.1.0",
-            "description": "Test file"
-        }
+        test_data = {"schema_version": "0.1.0", "description": "Test file"}
         data_file = tmp_path / "test.json"
         data_file.write_text(json.dumps(test_data))
 
@@ -145,11 +147,9 @@ class TestSchemaVersionCLI:
 
         # Note: This test may fail without proper schema setup
         # but demonstrates the expected CLI behavior
-        result = runner.invoke(cli, [
-            "validate",
-            "--schema-version", "0.1.0",
-            str(data_file)
-        ])
+        result = runner.invoke(
+            cli, ["validate", "--schema-version", "0.1.0", str(data_file)]
+        )
 
         # The exact exit code depends on whether the schema version is found
         # In practice, this would work with proper schema registry setup
