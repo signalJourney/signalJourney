@@ -297,43 +297,51 @@ class Validator:
                 if detected_version:
                     if not self._registry.is_version_supported(detected_version):
                         error_msg = (
-                            f"Detected schema version '{detected_version}' is not supported. "
-                            f"Available versions: {self._registry.get_supported_versions()}"
+                            f"Detected schema version '{detected_version}' is not "
+                            f"supported. Available versions: "
+                            f"{self._registry.get_supported_versions()}"
                         )
                         if raise_exceptions:
                             raise SignalJourneyValidationError(error_msg)
                         else:
                             # Return a validation error
-                            return [ValidationErrorDetail(
-                                message=error_msg,
-                                path=["schema_version"],
-                                schema_path=[],
-                                validator="version_support",
-                                validator_value=self._registry.get_supported_versions(),
-                                instance_value=detected_version,
-                            )]
+                            return [
+                                ValidationErrorDetail(
+                                    message=error_msg,
+                                    path=["schema_version"],
+                                    schema_path=[],
+                                    validator="version_support",
+                                    validator_value=self._registry.get_supported_versions(),
+                                    instance_value=detected_version,
+                                )
+                            ]
 
                     # Use version-specific validator if different from current
                     if detected_version != self._schema_version:
-                        validator_to_use = self._create_validator_for_version(detected_version)
+                        validator_to_use = self._create_validator_for_version(
+                            detected_version
+                        )
 
                 elif self._schema_version is None:
                     # No version detected and no default configured
                     error_msg = (
-                        "No schema_version field found in data and no default version configured. "
-                        "Please specify a schema_version in your signalJourney file."
+                        "No schema_version field found in data and no default version "
+                        "configured. Please specify a schema_version in your "
+                        "signalJourney file."
                     )
                     if raise_exceptions:
                         raise SignalJourneyValidationError(error_msg)
                     else:
-                        return [ValidationErrorDetail(
-                            message=error_msg,
-                            path=["schema_version"],
-                            schema_path=[],
-                            validator="required",
-                            validator_value=True,
-                            instance_value=None,
-                        )]
+                        return [
+                            ValidationErrorDetail(
+                                message=error_msg,
+                                path=["schema_version"],
+                                schema_path=[],
+                                validator="required",
+                                validator_value=True,
+                                instance_value=None,
+                            )
+                        ]
 
             except (FileNotFoundError, IOError) as e:
                 # Re-raise file system errors
@@ -344,14 +352,16 @@ class Validator:
                 if raise_exceptions:
                     raise SignalJourneyValidationError(error_msg) from e
                 else:
-                    return [ValidationErrorDetail(
-                        message=error_msg,
-                        path=["schema_version"],
-                        schema_path=[],
-                        validator="version_detection",
-                        validator_value=None,
-                        instance_value=instance.get("schema_version"),
-                    )]
+                    return [
+                        ValidationErrorDetail(
+                            message=error_msg,
+                            path=["schema_version"],
+                            schema_path=[],
+                            validator="version_detection",
+                            validator_value=None,
+                            instance_value=instance.get("schema_version"),
+                        )
+                    ]
 
         schema_errors: List[ValidationErrorDetail] = []
         bids_errors: List[ValidationErrorDetail] = []
@@ -359,7 +369,9 @@ class Validator:
         # --- Schema Validation ---
         # Use the selected validator's iter_errors method
         try:
-            errors = sorted(validator_to_use.iter_errors(instance), key=lambda e: e.path)
+            errors = sorted(
+                validator_to_use.iter_errors(instance), key=lambda e: e.path
+            )
             if errors:
                 for error in errors:
                     # Convert jsonschema error to our custom format

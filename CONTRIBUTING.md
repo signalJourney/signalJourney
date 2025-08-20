@@ -30,6 +30,12 @@ To contribute code changes, you'll need a local development environment:
     pip install -e .[dev,test,docs]
     ```
     This installs the `signaljourney_validator` package in editable mode (`-e`) along with all optional dependencies required for testing, linting, and building documentation.
+    
+4.  **Set up Pre-commit Hooks:** Install pre-commit hooks to automatically check code quality:
+    ```bash
+    pre-commit install
+    ```
+    This will automatically run linting, formatting, and validation checks before each commit.
 
 ## Making Changes
 
@@ -41,18 +47,29 @@ To contribute code changes, you'll need a local development environment:
     ```
 4.  **Testing:** Add tests for any new functionality or bug fixes in the `tests/` directory. Run the full test suite with `pytest`:
     ```bash
-    pytest
+    pytest tests/ -v --cov=src --cov-report=term-missing
     ```
     Ensure all tests pass and aim for good test coverage.
-5.  **Documentation:** If your changes affect the specification, validator behavior, or user-facing features, update the documentation in the `docs/` directory. You can preview the documentation locally:
+    
+5.  **Validation:** If you modify schema or examples, validate all example files:
+    ```bash
+    signaljourney-validate validate schema/examples/
+    ```
+6.  **Documentation:** If your changes affect the specification, validator behavior, or user-facing features, update the documentation in the `docs/` directory. You can preview the documentation locally:
     ```bash
     mkdocs serve
     ```
-6.  **Commit:** Commit your changes with a clear and descriptive commit message.
-7.  **Push:** Push your branch to your fork on GitHub.
-8.  **Pull Request:** Open a pull request against the `main` branch of the `signalJourney/signalJourney` repository.
+7.  **Commit:** Commit your changes with a clear and descriptive commit message. Pre-commit hooks will automatically run and check your code.
+8.  **Push:** Push your branch to your fork on GitHub.
+9.  **Pull Request:** Open a pull request against the `main` branch of the `signalJourney/signalJourney` repository.
     *   Clearly describe the purpose and details of your changes in the PR description.
     *   Link to any relevant GitHub issues (e.g., `Fixes #123`).
+    *   Wait for CI checks to pass - your PR must pass all automated tests including:
+        - Python tests (3.9-3.12)
+        - Code linting and formatting
+        - Example validation
+        - Security scanning
+        - Documentation building
 
 ## Reporting Bugs
 
