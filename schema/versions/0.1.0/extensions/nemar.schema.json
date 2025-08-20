@@ -1,0 +1,11 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://signaljourney.neurodata.io/schema/extensions/nemar.schema.json",
+  "title": "NEMAR Namespace",
+  "description": "Namespace for NEMAR-specific properties (e.g., pipeline IDs).",
+  "type": "object",
+  "properties": {
+    
+  },
+  "additionalProperties": true
+} 

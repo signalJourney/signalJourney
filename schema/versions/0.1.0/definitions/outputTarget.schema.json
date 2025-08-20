@@ -1,0 +1,107 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "outputTarget.schema.json",
+  "title": "Output Target",
+  "description": "Defines the target location or method for storing the output of a processing step. Supports file paths or inline data storage.",
+  "type": "object",
+  "required": [
+    "targetType",
+    "description"
+  ],
+  "properties": {
+    "targetType": {
+      "description": "Type of the output target.",
+      "type": "string",
+      "enum": [
+        "file",
+        "in-memory",
+        "variable",
+        "report",
+        "userDefined",
+        "inlineData"
+      ]
+    },
+    "description": {
+      "description": "A descriptive identifier for this output, used by subsequent steps.",
+      "type": "string"
+    },
+    "location": {
+      "description": "Path where the output file or report was saved (conditional).",
+      "type": "string"
+    },
+    "format": {
+      "description": "File format, in-memory data type, or report format (conditional).",
+      "type": "string"
+    },
+    "entityLabels": {
+      "description": "Key-value pairs representing BIDS-like entities (conditional).",
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "name": {
+      "description": "Name of the variable stored (conditional).",
+      "type": "string"
+    },
+    "details": {
+      "description": "Description of the user-defined output (conditional).",
+      "type": "string"
+    },
+    "data": {
+      "description": "The actual data stored inline (conditional).",
+      "type": ["object", "array", "string", "number", "boolean"]
+    },
+    "encoding": {
+      "description": "Encoding of the inline data (e.g., utf-8, base64) (conditional).",
+      "type": "string",
+      "default": "utf-8"
+    },
+    "formatDescription": {
+      "description": "Describes the format or structure of the inline data (conditional).",
+      "type": "string"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "targetType": { "const": "file" } }
+      },
+      "then": {
+        "required": ["location"]
+      }
+    },
+    {
+      "if": {
+        "properties": { "targetType": { "const": "variable" } }
+      },
+      "then": {
+        "required": ["name"]
+      }
+    },
+    {
+      "if": {
+        "properties": { "targetType": { "const": "report" } }
+      },
+      "then": {
+
+      }
+    },
+    {
+      "if": {
+        "properties": { "targetType": { "const": "userDefined" } }
+      },
+      "then": {
+        "required": ["details"]
+      }
+    },
+    {
+      "if": {
+        "properties": { "targetType": { "const": "inlineData" } }
+      },
+      "then": {
+        "required": ["data"]
+      }
+    }
+  ]
+} 

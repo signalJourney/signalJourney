@@ -81,7 +81,7 @@
         {
           "targetType": "inlineData",
           "format": "mne.preprocessing.ICA",
-          "description": "Fitted ICA object.",
+          "description": "Fitted ICA object inline data.",
           "data": [[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15],[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]]
          }
       ]
@@ -120,6 +120,7 @@
         {
           "targetType": "inlineData",
           "name": "eog_indices",
+          "description": "Inline data for EOG component indices.",
           "data": [0, 3]
         },
         {
@@ -130,6 +131,7 @@
         {
           "targetType": "inlineData",
           "name": "eog_scores",
+          "description": "Inline data for EOG component scores.",
           "data": [99, 85]
         }
       ],

@@ -6,6 +6,7 @@ import jsonschema
 from jsonschema import Draft202012Validator
 
 from .errors import SignalJourneyValidationError, ValidationErrorDetail
+from .schema_registry import SchemaVersionRegistry
 
 # Type alias for JSON dictionary
 JsonDict = Dict[str, Any]
@@ -93,41 +94,70 @@ class Validator:
     """
     Validates a signalJourney JSON file or dictionary against the schema.
     Optionally performs BIDS context validation.
+    Supports version-based schema validation.
     """
 
     _schema: JsonDict
     _validator: Draft202012Validator
+    _registry: SchemaVersionRegistry
+    _schema_version: Optional[str]
 
     def __init__(
         self,
         schema: Optional[Union[Path, str, JsonDict]] = None,
+        schema_version: Optional[str] = None,
+        schema_dir: Optional[Path] = None,
     ):
         """
         Initializes the Validator.
 
         Args:
             schema: Path to the schema file, the schema dictionary, or None
-                    to use the default schema. External file $refs will be
+                    to use version-based schema loading. External file $refs will be
                     automatically inlined during initialization.
+            schema_version: Specific schema version to use (e.g., "0.1.0").
+                           If None, will auto-detect from data during validation.
+            schema_dir: Custom schema directory path. If None, uses default.
         """
-        schema_path = self._get_schema_path(schema)
-        initial_schema = self._load_schema_dict(schema, schema_path)
+        self._registry = SchemaVersionRegistry(schema_dir)
+        self._schema_version = schema_version
 
-        # For simplicity, let's assume if it's a dict, it might not have relative refs,
-        # or we use the default schema path's directory as a fallback base.
-        base_resolve_path = (
-            schema_path.parent if schema_path else DEFAULT_SCHEMA_PATH.parent
-        )
+        if schema is not None:
+            # Use provided schema (legacy behavior)
+            schema_path = self._get_schema_path(schema)
+            initial_schema = self._load_schema_dict(schema, schema_path)
+            base_resolve_path = (
+                schema_path.parent if schema_path else DEFAULT_SCHEMA_PATH.parent
+            )
+        elif schema_version is not None:
+            # Use specific version from registry
+            if not self._registry.is_version_supported(schema_version):
+                raise ValueError(
+                    f"Schema version '{schema_version}' is not supported. "
+                    f"Available versions: {self._registry.get_supported_versions()}"
+                )
+            schema_path = self._registry.get_schema_path(schema_version)
+            initial_schema = self._registry.load_schema(schema_version)
+            base_resolve_path = schema_path.parent
+        else:
+            # Use latest version as default
+            try:
+                latest_version = self._registry.get_latest_version()
+                self._schema_version = latest_version
+                schema_path = self._registry.get_schema_path(latest_version)
+                initial_schema = self._registry.load_schema(latest_version)
+                base_resolve_path = schema_path.parent
+            except Exception:
+                # Fallback to legacy schema path if registry fails
+                schema_path = DEFAULT_SCHEMA_PATH
+                initial_schema = self._load_schema_dict(None, schema_path)
+                base_resolve_path = schema_path.parent
 
         # Inline external $refs
         print("\n--- Inlining schema refs within Validator ---")
         loaded_cache = {}
         self._schema = inline_refs(initial_schema, base_resolve_path, loaded_cache)
         print("--- Inlining complete --- \n")
-
-        # Debug: Check if refs are actually gone (optional)
-        # import pprint
-        # pprint.pprint(self._schema)
 
         # Initialize the validator with the resolved schema.
         try:
@@ -171,14 +201,42 @@ class Validator:
         except Exception as e:
             raise IOError(f"Error reading schema file {load_path}: {e}") from e
 
+    def _create_validator_for_version(self, version: str) -> Draft202012Validator:
+        """
+        Create a validator for a specific schema version.
+
+        Args:
+            version: Schema version string
+
+        Returns:
+            Configured validator for the specified version
+        """
+        if not self._registry.is_version_supported(version):
+            raise ValueError(
+                f"Schema version '{version}' is not supported. "
+                f"Available versions: {self._registry.get_supported_versions()}"
+            )
+
+        schema_path = self._registry.get_schema_path(version)
+        schema_dict = self._registry.load_schema(version)
+
+        # Inline external $refs
+        loaded_cache = {}
+        resolved_schema = inline_refs(schema_dict, schema_path.parent, loaded_cache)
+
+        # Create and return validator
+        Draft202012Validator.check_schema(resolved_schema)
+        return Draft202012Validator(schema=resolved_schema)
+
     def validate(
         self,
         data: Union[Path, str, JsonDict],
         raise_exceptions: bool = True,
         bids_context: Optional[Path] = None,
+        auto_detect_version: bool = True,
     ) -> List[ValidationErrorDetail]:
         """
-        Validates the given data against the loaded signalJourney schema.
+        Validates the given data against the appropriate signalJourney schema.
 
         Args:
             data: Path to the JSON file, the JSON string, a dictionary
@@ -189,6 +247,9 @@ class Validator:
             bids_context: Optional Path to the BIDS dataset root directory.
                           If provided, enables BIDS context validation checks
                           (e.g., file existence relative to the root).
+            auto_detect_version: If True (default), automatically detects the schema
+                                version from the data and uses the appropriate schema.
+                                If False, uses the validator's configured schema.
 
         Returns:
             A list of ValidationErrorDetail objects if raise_exceptions is False
@@ -199,6 +260,7 @@ class Validator:
                                       raise_exceptions is True.
             FileNotFoundError: If data file/path does not exist.
             TypeError: If data is not a Path, string, or dictionary.
+            ValueError: If detected schema version is not supported.
         """
         instance: JsonDict
         file_path_context: Optional[Path] = None  # For BIDS checks
@@ -225,14 +287,79 @@ class Validator:
         else:
             raise TypeError("Data must be a Path, string, or dictionary.")
 
+        # --- Version Detection and Validator Selection ---
+        validator_to_use = self._validator
+        detected_version = None
+
+        if auto_detect_version:
+            try:
+                detected_version = self._registry.detect_schema_version(instance)
+                if detected_version:
+                    if not self._registry.is_version_supported(detected_version):
+                        error_msg = (
+                            f"Detected schema version '{detected_version}' is not supported. "
+                            f"Available versions: {self._registry.get_supported_versions()}"
+                        )
+                        if raise_exceptions:
+                            raise SignalJourneyValidationError(error_msg)
+                        else:
+                            # Return a validation error
+                            return [ValidationErrorDetail(
+                                message=error_msg,
+                                path=["schema_version"],
+                                schema_path=[],
+                                validator="version_support",
+                                validator_value=self._registry.get_supported_versions(),
+                                instance_value=detected_version,
+                            )]
+
+                    # Use version-specific validator if different from current
+                    if detected_version != self._schema_version:
+                        validator_to_use = self._create_validator_for_version(detected_version)
+
+                elif self._schema_version is None:
+                    # No version detected and no default configured
+                    error_msg = (
+                        "No schema_version field found in data and no default version configured. "
+                        "Please specify a schema_version in your signalJourney file."
+                    )
+                    if raise_exceptions:
+                        raise SignalJourneyValidationError(error_msg)
+                    else:
+                        return [ValidationErrorDetail(
+                            message=error_msg,
+                            path=["schema_version"],
+                            schema_path=[],
+                            validator="required",
+                            validator_value=True,
+                            instance_value=None,
+                        )]
+
+            except (FileNotFoundError, IOError) as e:
+                # Re-raise file system errors
+                raise e
+            except Exception as e:
+                # Handle version detection errors
+                error_msg = f"Error during schema version detection: {e}"
+                if raise_exceptions:
+                    raise SignalJourneyValidationError(error_msg) from e
+                else:
+                    return [ValidationErrorDetail(
+                        message=error_msg,
+                        path=["schema_version"],
+                        schema_path=[],
+                        validator="version_detection",
+                        validator_value=None,
+                        instance_value=instance.get("schema_version"),
+                    )]
+
         schema_errors: List[ValidationErrorDetail] = []
         bids_errors: List[ValidationErrorDetail] = []
 
         # --- Schema Validation ---
-        # Use the internal validator's iter_errors method
+        # Use the selected validator's iter_errors method
         try:
-            # The validator now uses the registry passed during __init__
-            errors = sorted(self._validator.iter_errors(instance), key=lambda e: e.path)
+            errors = sorted(validator_to_use.iter_errors(instance), key=lambda e: e.path)
             if errors:
                 for error in errors:
                     # Convert jsonschema error to our custom format
@@ -313,6 +440,18 @@ class Validator:
         #     ))
 
         return errors
+
+    def get_supported_versions(self) -> List[str]:
+        """Get list of supported schema versions."""
+        return self._registry.get_supported_versions()
+
+    def get_current_version(self) -> Optional[str]:
+        """Get the currently configured schema version."""
+        return self._schema_version
+
+    def get_latest_version(self) -> Optional[str]:
+        """Get the latest available schema version."""
+        return self._registry.get_latest_version()
 
 
 # Example usage when run directly
