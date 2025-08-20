@@ -1,11 +1,11 @@
 /* Increase logo size in header */
 .md-header__button.md-logo img {
-    height: 48px !important;
+    height: 64px !important;
     width: auto !important;
 }
 
 .md-header__button.md-logo svg {
-    height: 48px !important;
+    height: 64px !important;
     width: auto !important;
 }
 
