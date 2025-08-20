@@ -11,14 +11,14 @@
 
 /* Adjust header height to accommodate larger logo */
 .md-header {
-    height: 4.5rem !important;
+    height: 3.5rem !important;
 }
 
 /* Ensure logo is vertically centered */
 .md-header__button.md-logo {
     display: flex !important;
     align-items: center !important;
-    padding: 0.5rem !important;
+    padding: 0.3rem !important;
     margin-right: 1rem !important;
 }
 
