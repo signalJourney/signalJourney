@@ -3,32 +3,79 @@
   "schema_version": "0.1.0",
   "description": "A simple preprocessing pipeline: filtering.",
   "pipelineInfo": {
-    "pipeline_name": "Basic Filter"
+    "name": "Basic Filter",
+    "description": "A simple preprocessing pipeline that applies a high-pass filter to EEG data",
+    "version": "1.0.0",
+    "pipelineType": "preprocessing",
+    "executionDate": "2024-05-02T09:00:00Z"
   },
   "processingSteps": [
     {
       "stepId": "load-data",
       "name": "Load Raw Data",
       "description": "Load the initial raw dataset.",
-      "software": {"name": "MNE-Python", "version": "1.6.0"},
-      "outputTargets": ["raw_data"]
+      "software": {
+        "name": "MNE-Python", 
+        "version": "1.6.0",
+        "functionCall": "raw = mne.io.read_raw_fif('sub-01_task-rest_raw.fif', preload=True)"
+      },
+      "parameters": {
+        "filename": "sub-01_task-rest_raw.fif",
+        "preload": true
+      },
+      "inputSources": [
+        {
+          "sourceType": "file",
+          "location": "../sourcedata/sub-01/eeg/sub-01_task-rest_raw.fif",
+          "entityLabels": {
+            "sub": "01",
+            "task": "rest"
+          }
+        }
+      ],
+      "outputTargets": [
+        {
+          "targetType": "in-memory",
+          "format": "mne.io.Raw",
+          "description": "Loaded raw EEG data."
+        }
+      ]
     },
     {
       "stepId": "highpass",
       "name": "High-pass Filter",
       "description": "Apply a 1 Hz high-pass filter.",
-      "software": {"name": "MNE-Python", "version": "1.6.0"},
-      "parameters": [
-        {"name": "l_freq", "value": 1.0, "unit": "Hz"},
-        {"name": "h_freq", "value": null},
-        {"name": "method", "value": "fir"}
+      "software": {
+        "name": "MNE-Python", 
+        "version": "1.6.0",
+        "functionCall": "raw.filter(l_freq=1.0, h_freq=None, method='fir')"
+      },
+      "parameters": {
+        "l_freq": 1.0,
+        "h_freq": null,
+        "method": "fir"
+      },
+      "inputSources": [
+        {
+          "sourceType": "previousStepOutput",
+          "stepId": "load-data",
+          "outputId": "Loaded raw EEG data."
+        }
       ],
-      "inputSources": ["load-data"],
-      "outputTargets": ["filtered_data"],
+      "outputTargets": [
+        {
+          "targetType": "file",
+          "location": "./derivatives/signaljourney/sub-01/eeg/sub-01_task-rest_desc-filtered_eeg.fif",
+          "format": "FIF",
+          "description": "High-pass filtered EEG data file."
+        }
+      ],
       "dependsOn": ["load-data"]
     }
   ],
   "summaryMetrics": {
-     "pipelineRuntimeMinutes": 0.5
+     "pipelineRuntimeMinutes": 0.5,
+     "finalSamplingRateHz": 1000,
+     "totalChannels": 64
   }
 } 
