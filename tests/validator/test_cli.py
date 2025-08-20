@@ -117,44 +117,22 @@ class TestSchemaVersionCLI:
 
     def test_schema_version_validation(self, runner, tmp_path):
         """Test validation with specific schema version."""
-        # Create a test schema directory structure
-        schema_dir = tmp_path / "schema"
-        version_dir = schema_dir / "versions" / "0.1.0"
-        version_dir.mkdir(parents=True)
-
-        # Create a simple test schema
-        test_schema = {
-            "$schema": "https://json-schema.org/draft/2020-12/schema",
-            "title": "Test Schema",
-            "type": "object",
-            "required": ["schema_version", "description"],
-            "properties": {
-                "schema_version": {"type": "string", "const": "0.1.0"},
-                "description": {"type": "string"},
-            },
-        }
-        schema_file = version_dir / "signalJourney.schema.json"
-        schema_file.write_text(json.dumps(test_schema))
-
-        # Create valid test data
+        # Create a minimal test file that follows signalJourney structure
+        # but will fail validation due to missing required fields
         test_data = {"schema_version": "0.1.0", "description": "Test file"}
         data_file = tmp_path / "test.json"
         data_file.write_text(json.dumps(test_data))
 
-        # Mock the schema directory by temporarily creating the expected structure
-        # In a real test, we'd need to either use the actual schema dir or mock it
-        # For now, this test demonstrates the CLI structure
-
-        # Note: This test may fail without proper schema setup
-        # but demonstrates the expected CLI behavior
+        # Test with schema version that should trigger version-based validation
+        # This will fail because the test data doesn't have all required fields
+        # but demonstrates that the CLI properly handles --schema-version flag
         result = runner.invoke(
             cli, ["validate", "--schema-version", "0.1.0", str(data_file)]
         )
 
-        # The exact exit code depends on whether the schema version is found
-        # In practice, this would work with proper schema registry setup
-        if result.exit_code == 0:
-            assert "PASSED" in result.output
-        else:
-            # Expect version not supported error
-            assert "not supported" in result.output or "CRITICAL ERROR" in result.output
+        # Should fail validation due to missing required fields,
+        # but this proves --schema-version flag works correctly
+        assert result.exit_code == 1
+        assert "FAILED" in result.output
+        # Should show that it's using the correct schema version
+        assert "0.1.0" in result.output or "schema_version" in result.output
