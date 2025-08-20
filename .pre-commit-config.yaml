@@ -1,0 +1,43 @@
+# Pre-commit hooks for signalJourney project
+# See https://pre-commit.com for more information
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: '\.md$'
+      - id: end-of-file-fixer
+        exclude: '\.md$'
+      - id: check-yaml
+      - id: check-json
+        exclude: '^tests/schemas/examples/invalid/'
+      - id: check-merge-conflict
+      - id: debug-statements
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.7.4
+    hooks:
+      - id: ruff
+        name: ruff-lint
+        args: [--fix, --unsafe-fixes]
+        files: '^src/|^tests/|^scripts/'
+        types: [python]
+      - id: ruff-format
+        name: ruff-format
+        files: '^src/|^tests/|^scripts/'
+        types: [python]
+
+  - repo: local
+    hooks:
+      - id: validate-examples
+        name: Validate signalJourney examples
+        entry: python -m signaljourney_validator.validate_examples_hook
+        language: system
+        files: '^schema/examples/.*\.json$'
+        pass_filenames: true
+      - id: validate-schema-consistency
+        name: Validate schema consistency
+        entry: python -c "import sys, json; [json.load(open(f)) for f in sys.argv[1:] if f.endswith('.schema.json')]"
+        language: system
+        files: '\.schema\.json$'
+        pass_filenames: true

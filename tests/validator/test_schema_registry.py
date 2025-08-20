@@ -50,7 +50,8 @@ class TestSchemaVersionRegistry:
         for version in ["0.1.0", "0.2.0", "1.0.0"]:
             version_dir = versions_dir / version
             version_dir.mkdir()
-            (version_dir / "signalJourney.schema.json").write_text(f'{{"title": "v{version}"}}')
+            schema_content = f'{{"title": "v{version}"}}'
+            (version_dir / "signalJourney.schema.json").write_text(schema_content)
 
         registry = SchemaVersionRegistry(tmp_path / "schema")
         assert registry.get_latest_version() == "1.0.0"
@@ -145,14 +146,9 @@ class TestVersionBasedValidator:
             "type": "object",
             "required": ["schema_version", "description"],
             "properties": {
-                "schema_version": {
-                    "type": "string",
-                    "const": version
-                },
-                "description": {
-                    "type": "string"
-                }
-            }
+                "schema_version": {"type": "string", "const": version},
+                "description": {"type": "string"},
+            },
         }
 
         schema_file = schema_dir / "signalJourney.schema.json"
@@ -183,10 +179,7 @@ class TestVersionBasedValidator:
         validator = Validator(schema_dir=schema_dir)
 
         # Test data with matching schema version
-        test_data = {
-            "schema_version": "0.1.0",
-            "description": "Test description"
-        }
+        test_data = {"schema_version": "0.1.0", "description": "Test description"}
 
         # Should validate successfully
         errors = validator.validate(test_data, raise_exceptions=False)
@@ -199,10 +192,7 @@ class TestVersionBasedValidator:
         validator = Validator(schema_dir=schema_dir)
 
         # Test data with unsupported version
-        test_data = {
-            "schema_version": "0.2.0",
-            "description": "Test description"
-        }
+        test_data = {"schema_version": "0.2.0", "description": "Test description"}
 
         errors = validator.validate(test_data, raise_exceptions=False)
         assert len(errors) == 1
@@ -218,9 +208,7 @@ class TestVersionBasedValidator:
         validator._schema_version = None  # Force no default
 
         # Test data without schema_version
-        test_data = {
-            "description": "Test description"
-        }
+        test_data = {"description": "Test description"}
 
         errors = validator.validate(test_data, raise_exceptions=False)
         assert len(errors) == 1
@@ -241,8 +229,8 @@ class TestVersionBasedValidator:
             "required": ["schema_version", "description"],
             "properties": {
                 "schema_version": {"type": "string", "const": "0.1.0"},
-                "description": {"type": "string"}
-            }
+                "description": {"type": "string"},
+            },
         }
         (v010_dir / "signalJourney.schema.json").write_text(json.dumps(v010_schema))
 
@@ -257,8 +245,8 @@ class TestVersionBasedValidator:
             "properties": {
                 "schema_version": {"type": "string", "const": "0.2.0"},
                 "description": {"type": "string"},
-                "new_field": {"type": "string"}
-            }
+                "new_field": {"type": "string"},
+            },
         }
         (v020_dir / "signalJourney.schema.json").write_text(json.dumps(v020_schema))
 
@@ -266,18 +254,12 @@ class TestVersionBasedValidator:
         validator = Validator(schema_dir=schema_base)
 
         # Test data for v0.1.0 (should pass)
-        data_v010 = {
-            "schema_version": "0.1.0",
-            "description": "Test v0.1.0"
-        }
+        data_v010 = {"schema_version": "0.1.0", "description": "Test v0.1.0"}
         errors = validator.validate(data_v010, raise_exceptions=False)
         assert len(errors) == 0
 
         # Test data for v0.2.0 without new_field (should fail)
-        data_v020_incomplete = {
-            "schema_version": "0.2.0",
-            "description": "Test v0.2.0"
-        }
+        data_v020_incomplete = {"schema_version": "0.2.0", "description": "Test v0.2.0"}
         errors = validator.validate(data_v020_incomplete, raise_exceptions=False)
         assert len(errors) == 1
         assert "required" in errors[0].message.lower()
@@ -286,7 +268,7 @@ class TestVersionBasedValidator:
         data_v020_complete = {
             "schema_version": "0.2.0",
             "description": "Test v0.2.0",
-            "new_field": "Required field"
+            "new_field": "Required field",
         }
         errors = validator.validate(data_v020_complete, raise_exceptions=False)
         assert len(errors) == 0
@@ -301,9 +283,11 @@ class TestVersionBasedValidator:
         # (but will fail because const doesn't match)
         test_data = {
             "schema_version": "0.2.0",  # Different version
-            "description": "Test description"
+            "description": "Test description",
         }
 
-        errors = validator.validate(test_data, raise_exceptions=False, auto_detect_version=False)
+        errors = validator.validate(
+            test_data, raise_exceptions=False, auto_detect_version=False
+        )
         # Should get validation error because const doesn't match
         assert len(errors) >= 1

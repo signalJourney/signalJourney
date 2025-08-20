@@ -47,7 +47,7 @@ class SchemaVersionRegistry:
 
         # Sort versions using semantic versioning
         try:
-            versions.sort(key=lambda v: tuple(map(int, v.split('.'))))
+            versions.sort(key=lambda v: tuple(map(int, v.split("."))))
         except ValueError:
             # Fall back to string sort if versions don't follow semantic versioning
             versions.sort()

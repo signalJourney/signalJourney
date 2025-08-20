@@ -53,7 +53,7 @@ def cli():
     "--schema-version",
     type=str,
     help="Specific schema version to use (e.g., '0.1.0'). If not specified, "
-         "auto-detects from each file's schema_version field.",
+    "auto-detects from each file's schema_version field.",
 )
 @click.option(
     "--recursive",
@@ -137,7 +137,8 @@ def validate(
         click.echo(
             "Error: Cannot specify both --schema and --schema-version. "
             "Use --schema for custom schema files or --schema-version for "
-            "version-based validation.", err=True
+            "version-based validation.",
+            err=True,
         )
         sys.exit(1)
 
@@ -225,8 +226,7 @@ def validate(
                 try:
                     # Create validator with schema version support
                     validator_instance = Validator(
-                        schema=schema,
-                        schema_version=schema_version
+                        schema=schema, schema_version=schema_version
                     )
                 except Exception as e:
                     # Handle potential errors during Validator initialization
