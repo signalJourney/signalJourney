@@ -50,6 +50,12 @@ def cli():
     help="Path to a custom JSON schema file to validate against.",
 )
 @click.option(
+    "--schema-version",
+    type=str,
+    help="Specific schema version to use (e.g., '0.1.0'). If not specified, "
+         "auto-detects from each file's schema_version field.",
+)
+@click.option(
     "--recursive",
     "-r",
     is_flag=True,
@@ -85,6 +91,7 @@ def cli():
 def validate(
     path: Path,
     schema: Path,
+    schema_version: str,
     recursive: bool,
     output_format: str,
     verbose: bool,
@@ -95,13 +102,17 @@ def validate(
     Validate one or more signalJourney JSON files.
 
     Checks conformance against the official signalJourney schema (or a custom schema
-    if provided via --schema).
+    if provided via --schema). Supports version-based validation using --schema-version.
 
     Examples:
 
-    Validate a single file:
+    Validate a single file (auto-detects schema version):
 
         signaljourney-validate path/to/sub-01_task-rest_signalJourney.json
+
+    Validate with specific schema version:
+
+        signaljourney-validate --schema-version 0.1.0 path/to/file.json
 
     Validate all files in a directory (non-recursively):
 
@@ -119,6 +130,14 @@ def validate(
     if bids and not bids_root:
         click.echo(
             "Error: --bids-root is required when using the --bids flag.", err=True
+        )
+        sys.exit(1)
+    
+    if schema and schema_version:
+        click.echo(
+            "Error: Cannot specify both --schema and --schema-version. "
+            "Use --schema for custom schema files or --schema-version for "
+            "version-based validation.", err=True
         )
         sys.exit(1)
 
@@ -204,8 +223,11 @@ def validate(
                 # Create validator ONCE using the schema path (or None for default)
                 # Validator internal __init__ now handles registry setup.
                 try:
-                    # Pass schema path/None
-                    validator_instance = Validator(schema=schema)
+                    # Create validator with schema version support
+                    validator_instance = Validator(
+                        schema=schema, 
+                        schema_version=schema_version
+                    )
                 except Exception as e:
                     # Handle potential errors during Validator initialization
                     # (e.g., schema loading)
