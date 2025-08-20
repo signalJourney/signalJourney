@@ -1,7 +1,7 @@
 {
   "sj_version": "0.1",
-  "schema_version": "0.2.0",
-  "description": "Invalid: sj_version bad pattern (schema v0.2.0)",
+  "schema_version": "0.1.0",
+  "description": "Invalid: sj_version bad pattern (schema v0.1.0)",
   "pipelineInfo": {
     "name": "ExampleInvalidPatternPipeline",
     "description": "Pipeline for testing invalid sj_version pattern.",
