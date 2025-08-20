@@ -64,12 +64,27 @@ signaljourney-validate [OPTIONS] PATH
     Validating: path/to/project/derivatives/pipeline2.signalJourney.json ... OK
     ```
 
+*   **Validate with specific schema version (overrides auto-detection):**
+    ```bash
+    signaljourney-validate --schema-version 0.1.0 my_file.signalJourney.json
+    ```
+    Output:
+    ```
+    Validating: my_file.signalJourney.json ... OK
+    ```
+    This forces validation against the 0.1.0 schema regardless of the `schema_version` field in the file.
+
 ## Options
 
-*   `-s, --schema PATH`: Validate against a custom JSON schema file instead of the default one bundled with the package.
+*   `-s, --schema PATH`: Validate against a custom JSON schema file instead of using version-based schema selection.
     ```bash
     signaljourney-validate -s path/to/custom_schema.json my_file.signalJourney.json
     ```
+*   `--schema-version VERSION`: Validate using a specific schema version (e.g., '0.1.0') instead of auto-detecting from the file's `schema_version` field.
+    ```bash
+    signaljourney-validate --schema-version 0.1.0 my_file.signalJourney.json
+    ```
+    **Note**: Cannot be used together with `--schema`.
 *   `-r, --recursive`: Recursively search for `*_signalJourney.json` files in subdirectories when `PATH` is a directory.
 *   `-o, --output-format [text|json]`: Specify the output format. Defaults to `text` (human-readable). Use `json` for machine-readable output.
     ```bash
