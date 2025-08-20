@@ -7,13 +7,7 @@
     "description": "Comprehensive EEG preprocessing, ICA decomposition, and data quality assessment pipeline using EEGLAB/MATLAB tools including clean_rawdata, AMICA/runica, and ICLabel for artifact classification.",
     "pipelineType": "preprocessing",
     "version": "1.0.0",
-    "executionDate": "2024-05-02T10:00:00Z",
-    "softwareEnvironment": {
-      "primarySoftware": "EEGLAB",
-      "version": "2023.1",
-      "matlab_version": "R2023a",
-      "plugins": ["clean_rawdata", "ICLabel", "AMICA", "firfilt"]
-    }
+    "executionDate": "2024-05-02T10:00:00Z"
   },
   "processingSteps": [
     {
@@ -77,12 +71,12 @@
       }
     },
     {
-      "stepId": "3", 
+      "stepId": "3",
       "name": "Check Channel Locations",
       "description": "Verify that channel location information is present and valid for EEG/MEG data.",
       "dependsOn": ["2"],
       "software": {
-        "name": "EEGLAB/NEMAR", 
+        "name": "EEGLAB/NEMAR",
         "version": "1.0.0",
         "functionCall": "check_chanloc validation in eeg_nemar_preprocess"
       },
@@ -92,7 +86,7 @@
       "inputSources": [
         {
           "sourceType": "previousStepOutput",
-          "stepId": "1", 
+          "stepId": "1",
           "outputId": "EEGLAB dataset structure array containing all subjects/sessions"
         }
       ],
@@ -110,12 +104,12 @@
     },
     {
       "stepId": "4",
-      "name": "Remove Non-EEG Channels", 
+      "name": "Remove Non-EEG Channels",
       "description": "Remove non-EEG channel types (AUDIO, EOG, ECG, EMG, etc.) and keep only EEG channels for processing.",
       "dependsOn": ["3"],
       "software": {
         "name": "EEGLAB",
-        "version": "2023.1", 
+        "version": "2023.1",
         "functionCall": "pop_select(EEG, 'rmchantype', rm_chan_types); pop_select(EEG, 'chantype', 'EEG')"
       },
       "parameters": {
@@ -163,7 +157,7 @@
       },
       "inputSources": [
         {
-          "sourceType": "previousStepOutput", 
+          "sourceType": "previousStepOutput",
           "stepId": "4",
           "outputId": "EEG dataset with only EEG channels"
         }
@@ -171,7 +165,7 @@
       "outputTargets": [
         {
           "targetType": "in-memory",
-          "format": "EEG", 
+          "format": "EEG",
           "description": "DC offset corrected EEG data"
         }
       ]
@@ -194,7 +188,7 @@
       "inputSources": [
         {
           "sourceType": "previousStepOutput",
-          "stepId": "5", 
+          "stepId": "5",
           "outputId": "DC offset corrected EEG data"
         }
       ],
@@ -207,7 +201,7 @@
       ]
     },
     {
-      "stepId": "7", 
+      "stepId": "7",
       "name": "Clean Raw Data",
       "description": "Apply automated artifact rejection using clean_rawdata plugin to remove bad channels, time periods, and line noise.",
       "dependsOn": ["6"],
@@ -219,7 +213,7 @@
       "parameters": {
         "FlatlineCriterion": 4,
         "ChannelCriterion": 0.85,
-        "LineNoiseCriterion": 4, 
+        "LineNoiseCriterion": 4,
         "Highpass": "off",
         "BurstCriterion": 20,
         "WindowCriterion": 0.25,
@@ -249,10 +243,10 @@
           "description": "Sample-wise mask of clean (true) vs rejected (false) time points"
         },
         {
-          "targetType": "inlineData", 
+          "targetType": "inlineData",
           "name": "clean_channel_mask",
           "data": "{{channel_mask_array}}",
-          "formatDescription": "Boolean array indicating clean channels", 
+          "formatDescription": "Boolean array indicating clean channels",
           "description": "Channel-wise mask of clean (true) vs rejected (false) channels"
         },
         {
@@ -276,7 +270,7 @@
       "dependsOn": ["7"],
       "software": {
         "name": "AMICA/EEGLAB",
-        "version": "1.7/2023.1", 
+        "version": "1.7/2023.1",
         "functionCall": "runamica17_nsg(EEG, 'batch', 1) OR pop_runica(EEG, 'icatype', 'runica', 'concatcond', 'on', 'extended', 1, 'lrate', 1e-5, 'maxsteps', 2000)"
       },
       "parameters": {
@@ -286,7 +280,7 @@
         },
         "runica_options": {
           "icatype": "runica",
-          "concatcond": "on", 
+          "concatcond": "on",
           "extended": 1,
           "lrate": 1e-5,
           "maxsteps": 2000
@@ -314,7 +308,7 @@
         },
         {
           "targetType": "inlineData",
-          "name": "ica_sphere", 
+          "name": "ica_sphere",
           "data": "{{ica_sphere_matrix}}",
           "formatDescription": "Sphering matrix [n_channels x n_channels]",
           "description": "Data sphering transformation matrix"
@@ -323,7 +317,7 @@
           "targetType": "inlineData",
           "name": "ica_components",
           "data": "{{ica_component_activations}}",
-          "formatDescription": "Independent component activations [n_components x n_timepoints]", 
+          "formatDescription": "Independent component activations [n_components x n_timepoints]",
           "description": "Time courses of independent components"
         }
       ],
@@ -348,7 +342,7 @@
         "flagging_thresholds": {
           "brain": [null, null],
           "muscle": [0.9, 1.0],
-          "eye": [0.9, 1.0], 
+          "eye": [0.9, 1.0],
           "heart": [null, null],
           "line_noise": [null, null],
           "channel_noise": [null, null],
@@ -398,7 +392,7 @@
     },
     {
       "stepId": "10",
-      "name": "Data Quality Assessment", 
+      "name": "Data Quality Assessment",
       "description": "Compute comprehensive data quality metrics including percentage of good data, channels, and ICs retained after cleaning.",
       "dependsOn": ["9"],
       "software": {
@@ -412,7 +406,7 @@
       "inputSources": [
         {
           "sourceType": "previousStepOutput",
-          "stepId": "9", 
+          "stepId": "9",
           "outputId": "EEG data with classified and flagged ICA components"
         }
       ],
@@ -428,7 +422,7 @@
           "name": "data_quality_metrics",
           "data": {
             "goodDataPercent": "{{good_data_percentage}}",
-            "goodChansPercent": "{{good_channels_percentage}}", 
+            "goodChansPercent": "{{good_channels_percentage}}",
             "goodICAPercent": "{{good_ica_percentage}}",
             "lineNoiseMagnitude": "{{line_noise_db}}",
             "nGoodData": "{{num_good_timepoints}}",
@@ -448,7 +442,7 @@
     },
     {
       "stepId": "11",
-      "name": "Power Spectral Analysis", 
+      "name": "Power Spectral Analysis",
       "description": "Compute power spectral density to assess line noise magnitude and overall signal quality.",
       "dependsOn": ["10"],
       "software": {
@@ -490,12 +484,12 @@
       ]
     },
     {
-      "stepId": "12", 
+      "stepId": "12",
       "name": "Save Processed Dataset",
       "description": "Save the fully processed EEG dataset with all preprocessing, ICA, and quality metrics to disk.",
       "dependsOn": ["11"],
       "software": {
-        "name": "EEGLAB", 
+        "name": "EEGLAB",
         "version": "2023.1",
         "functionCall": "pop_saveset(EEG, 'filepath', EEG.filepath, 'filename', EEG.filename, 'savemode', 'onefile')"
       },
@@ -513,20 +507,20 @@
       ],
       "outputTargets": [
         {
-          "targetType": "file", 
+          "targetType": "file",
           "location": "{{output_dir}}/{{subject}}_{{session}}_{{task}}_desc-processed_eeg.set",
           "format": "EEGLAB (.set/.fdt)",
           "description": "Fully processed EEG dataset with all analysis results",
           "entityLabels": {
             "sub": "{{subject}}",
-            "ses": "{{session}}", 
+            "ses": "{{session}}",
             "task": "{{task}}",
             "desc": "processed"
           }
         },
         {
           "targetType": "file",
-          "location": "{{output_dir}}/{{subject}}_{{session}}_{{task}}_pipeline_status.csv", 
+          "location": "{{output_dir}}/{{subject}}_{{session}}_{{task}}_pipeline_status.csv",
           "format": "CSV",
           "description": "Pipeline execution status for each processing step"
         }
@@ -557,4 +551,4 @@
       "batch_processing": true
     }
   }
-} 
+}
