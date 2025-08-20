@@ -38,10 +38,14 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "pytest>=7.0",
+    "pytest-cov>=4.0.0",
     "mypy>=1.0",
     "ruff>=0.1.0", # Combines flake8, black, isort etc. - recommended
     "fuzzywuzzy>=0.18", # For suggestions
     "python-Levenshtein>=0.12", # Optional but improves fuzzywuzzy speed
+    "pre-commit>=3.0.0", # Pre-commit hooks
+    "bandit>=1.7.0", # Security linting
+    "safety>=2.0.0", # Dependency vulnerability checking
     "build", # For building the package
     "twine" # For uploading to PyPI
 ]
