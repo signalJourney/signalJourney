@@ -1,7 +1,7 @@
 {
   "sj_version": "0.1.0",
-  "schema_version": "0.2.0",
-  "description": "Minimal valid Signal Journey file (schema v0.2.0)",
+  "schema_version": "0.1.0",
+  "description": "Minimal valid Signal Journey file (schema v0.1.0)",
   "pipelineInfo": {
     "name": "ExampleMinimalPipeline",
     "description": "A minimal example pipeline for testing.",
