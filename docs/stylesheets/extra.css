@@ -1,0 +1,33 @@
+/* Increase logo size in header */
+.md-header__button.md-logo img {
+    height: 64px !important;
+    width: auto !important;
+}
+
+.md-header__button.md-logo svg {
+    height: 64px !important;
+    width: auto !important;
+}
+
+/* Adjust header height to accommodate larger logo */
+.md-header {
+    height: 4.5rem !important;
+}
+
+/* Ensure logo is vertically centered */
+.md-header__button.md-logo {
+    display: flex !important;
+    align-items: center !important;
+    padding: 0.5rem !important;
+    margin-right: 1rem !important;
+}
+
+/* Adjust content positioning to account for larger header */
+.md-container {
+    padding-top: 0 !important;
+}
+
+/* Adjust the site name positioning */
+.md-header__title {
+    margin-left: 0.5rem !important;
+}

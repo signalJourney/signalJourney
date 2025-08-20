@@ -134,8 +134,8 @@ exclude_docs: |
   README.md # Usually want project README outside docs
 
 # Optional: Add extra CSS or JS
-# extra_css:
-#   - stylesheets/extra.css
+extra_css:
+  - stylesheets/extra.css
 # extra_javascript:
 #   - javascript/extra.js
 
