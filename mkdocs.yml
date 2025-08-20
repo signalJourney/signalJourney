@@ -9,13 +9,13 @@ edit_uri: edit/main/docs/
 # Theme Configuration
 theme:
   name: material
-  # logo: docs/_static/logo.png # Path relative to docs_dir
+  logo: _static/logo.svg # Path relative to docs_dir
   # favicon: docs/_static/favicon.png # Path relative to docs_dir
   palette:
     # Palette toggle for light mode
     - scheme: default
       toggle:
-        icon: material/brightness-7 
+        icon: material/brightness-7
         name: Switch to dark mode
     # Palette toggle for dark mode
     - scheme: slate
@@ -42,21 +42,13 @@ theme:
 markdown_extensions:
   - admonition
   - pymdownx.details
-  - pymdownx.superfences:
-      # Enable mermaid diagrams with Material theme
-      custom_fences:
-        - name: mermaid
-          class: mermaid
-          format: !!python/name:mermaid2.fence_mermaid_custom
+  - pymdownx.superfences
   - pymdownx.tabbed:
-      alternate_style: true 
+      alternate_style: true
   - toc:
       permalink: true
   - attr_list # Add attributes to Markdown elements
   - md_in_html # Allow Markdown within HTML blocks
-  - pymdownx.emoji:
-      emoji_index: !!python/name:material.extensions.emoji.twemoji
-      emoji_generator: !!python/name:material.extensions.emoji.to_svg
 
 # Plugins
 plugins:
@@ -148,4 +140,4 @@ exclude_docs: |
 #   - javascript/extra.js
 
 # Copyright notice
-copyright: Copyright &copy; 2025 signalJourney Contributors 
+copyright: Copyright &copy; 2025 signalJourney Contributors
