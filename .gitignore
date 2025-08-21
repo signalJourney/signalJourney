@@ -115,4 +115,5 @@ ipython_config.py
 site/
 docs_backup_*/
 
-# EnvironmentsCLAUDE.md
+# Environments
+CLAUDE.md
