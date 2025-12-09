@@ -9,6 +9,7 @@ repos:
       - id: end-of-file-fixer
         exclude: '\.md$'
       - id: check-yaml
+        args: [--unsafe]
       - id: check-json
         exclude: '^tests/schemas/examples/invalid/'
       - id: check-merge-conflict
