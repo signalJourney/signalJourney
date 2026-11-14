@@ -1,6 +1,6 @@
-# signaljourney-validator
+# signalJourney
 
-[![PyPI version](https://badge.fury.io/py/signaljourney-validator.svg)](https://badge.fury.io/py/signaljourney-validator) <!-- TODO: Update badge URL if name changes -->
+[![PyPI version](https://badge.fury.io/py/signaljourney.svg)](https://badge.fury.io/py/signaljourney)
 <!-- [![Build Status](https://travis-ci.org/signal-journey/specification.svg?branch=main)](https://travis-ci.org/signal-journey/specification) --> <!-- TODO: Add CI badge -->
 <!-- [![Coverage Status](https://coveralls.io/repos/github/signal-journey/specification/badge.svg?branch=main)](https://coveralls.io/github/signal-journey/specification?branch=main) --> <!-- TODO: Add coverage badge -->
 
@@ -11,13 +11,22 @@ This validator helps ensure that your signalJourney files conform to the specifi
 ## Installation
 
 ```bash
-pip install signaljourney-validator
+pip install signalJourney
+# or
+uv add signalJourney
+```
+
+The distribution is named `signalJourney` (PyPI normalizes it to `signaljourney`), but the import package is still `signaljourney_validator` and the command is still `signaljourney-validate`.
+Renaming the import package would break every existing `import`, so it is a separate decision.
+
+```python
+from signaljourney_validator import Validator
 ```
 
 To include optional suggestion features (using fuzzy matching):
 
 ```bash
-pip install signaljourney-validator[suggestions]
+pip install "signalJourney[suggestions]"
 ```
 
 ## Packaged Schema, Errors and Logging

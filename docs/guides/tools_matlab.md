@@ -141,7 +141,7 @@ convertedData = convertSignalJourneyVersion(data, targetVersion)
 
 ## Limitations
 
-*   **Validation:** `validateSignalJourney` performs only basic structural and type checks. It does **not** fully validate against the official JSON schema. For rigorous validation, use the Python `signaljourney-validator` library or CLI tool.
+*   **Validation:** `validateSignalJourney` performs only basic structural and type checks. It does **not** fully validate against the official JSON schema. For rigorous validation, use the Python `signalJourney` library or CLI tool.
 *   **Version Conversion:** Not yet implemented.
 
 *(Content to be added)* 

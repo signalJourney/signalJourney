@@ -169,6 +169,6 @@ You can add more detail:
 
 ## 6. Validation
 
-Once you have created your file, it's highly recommended to validate it against the schema using a tool like the [`signaljourney-validator`](../guides/validator_python.md) to catch errors in structure or types.
+Once you have created your file, it's highly recommended to validate it against the schema using a tool like the [`signalJourney`](../guides/validator_python.md) to catch errors in structure or types.
 
 This covers the basics of creating a signalJourney file manually. Remember to consult the [Specification Fields](../specification/fields.md) documentation for details on all available fields. 

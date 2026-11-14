@@ -3,7 +3,8 @@ name: Publish to PyPI
 # Runs when a version tag is pushed. Publishing uses PyPI trusted publishing
 # (OpenID Connect), so no token or password secret is stored in this repository.
 # One-time setup by a maintainer: register this workflow (publish.yml) and the
-# environment name "pypi" as a trusted publisher of the project on PyPI, and
+# environment name "pypi" as a trusted publisher of the PyPI project named
+# "signalJourney" (normalized "signaljourney"), and
 # create the "pypi" environment in the repository settings.
 
 on:
@@ -82,7 +83,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: pypi
-      url: https://pypi.org/p/signaljourney-validator
+      url: https://pypi.org/p/signaljourney
     permissions:
       id-token: write # required for trusted publishing
     steps:

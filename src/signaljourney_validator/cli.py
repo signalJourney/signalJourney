@@ -15,9 +15,7 @@ JsonDict = Dict[str, Any]
 
 
 @click.group(context_settings=dict(help_option_names=["-h", "--help"]))
-@click.version_option(
-    package_name="signaljourney-validator", prog_name="signaljourney-validate"
-)
+@click.version_option(package_name="signalJourney", prog_name="signaljourney-validate")
 def cli():
     """
     Signal Journey Validator CLI.

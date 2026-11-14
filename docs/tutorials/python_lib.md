@@ -1,11 +1,11 @@
-# Tutorial: Using the Python Library (`signaljourney-validator`)
+# Tutorial: Using the Python Library (`signalJourney`)
 
-The `signaljourney-validator` Python library provides programmatic ways to validate your signalJourney JSON files.
+The `signalJourney` Python library provides programmatic ways to validate your signalJourney JSON files.
 
 **Prerequisites:**
 
 *   Python 3.9+ installed.
-*   The `signaljourney-validator` library installed (`pip install signaljourney-validator`).
+*   The `signalJourney` library installed (`pip install signalJourney`).
 *   A signalJourney JSON file to validate (e.g., one created manually or an example file).
 
 ## 1. Basic Validation
@@ -155,4 +155,4 @@ except Exception as e:
      print(f"An unexpected error occurred: {e}")
 ```
 
-This covers the main ways to use the `signaljourney-validator` library for validating your files programmatically. For detailed information on the available functions and classes, refer to the [Python API documentation](../api/index.md). 
+This covers the main ways to use the `signalJourney` library for validating your files programmatically. For detailed information on the available functions and classes, refer to the [Python API documentation](../api/index.md). 

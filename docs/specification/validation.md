@@ -16,7 +16,7 @@ The signalJourney validator supports multiple schema versions simultaneously. Wh
 
 If no `schema_version` is specified in the file, or if an unsupported version is detected, the validator provides clear error messages indicating the available supported versions.
 
-Tools like the [`signaljourney-validator`](../guides/validator_python.md) library leverage this schema to check for:
+Tools like the [`signalJourney`](../guides/validator_python.md) library leverage this schema to check for:
 
 *   **Presence of required fields:** Ensures all mandatory fields (e.g., `sj_version`, `pipelineInfo`, `processingSteps`) are included.
 *   **Correct data types:** Verifies that field values match their expected types (string, number, boolean, object, array).
@@ -36,4 +36,4 @@ While the JSON Schema enforces structural validity, dedicated validation tools m
     *   Consistency with BIDS naming conventions where applicable.
 *   **Semantic Checks:** Potentially checking for logical consistency, such as ensuring parameter values are reasonable for the specified software function (though this is often complex).
 
-Refer to the documentation for specific validation tools (like [`signaljourney-validator`](../guides/validator_python.md)) for details on the checks they perform. 
+Refer to the documentation for specific validation tools (like [`signalJourney`](../guides/validator_python.md)) for details on the checks they perform. 

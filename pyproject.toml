@@ -3,7 +3,7 @@ requires = ["setuptools>=62.3"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "signaljourney_validator"
+name = "signalJourney"
 version = "0.0.1"
 authors = [
 { name="Seyed Yahya Shirazi", email="shirazi@ieee.org" }

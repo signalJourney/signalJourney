@@ -78,6 +78,7 @@ The tag name must equal the `version` in `pyproject.toml` and `__version__` in `
 Set both versions in a pull request, merge it, then push a new tag with that name.
 A tag name that is already taken (for example `v0.1.0`) cannot be reused, so pick a version whose tag does not exist yet.
 Publishing uses PyPI trusted publishing in the GitHub environment `pypi`; no token is stored in the repository.
+The PyPI project is named `signalJourney` (normalized `signaljourney`); the import package `signaljourney_validator` and the command `signaljourney-validate` keep their names.
 
 ## Reporting Bugs
 

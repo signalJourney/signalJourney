@@ -4,7 +4,7 @@
 [![Docs](https://img.shields.io/badge/docs-mkdocs-green)](https://signaljourney.github.io/)
 [![Tests](https://github.com/signalJourney/signalJourney/actions/workflows/ci.yml/badge.svg)](https://github.com/signalJourney/signalJourney/actions/workflows/ci.yml)
 [![Code style: ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
-<!-- [![PyPI version](https://badge.fury.io/py/signaljourney-validator.svg)](https://badge.fury.io/py/signaljourney-validator) TODO: Activate once published -->
+<!-- [![PyPI version](https://badge.fury.io/py/signaljourney.svg)](https://badge.fury.io/py/signaljourney) TODO: Activate once published -->
 
 **Track biosignal processing with detailed, reproducible, machine-readable and human-readable steps.**
 
@@ -47,8 +47,11 @@ The `signaljourney_validator` package provides a CLI tool for easy validation.
 
 1.  **Installation:**
     ```bash
-    pip install signaljourney_validator
+    pip install signalJourney
+    # or
+    uv add signalJourney
     ```
+    The distribution is named `signalJourney` (PyPI normalizes it to `signaljourney`), but the import package is still `signaljourney_validator` and the command is still `signaljourney-validate`; renaming the import package would break existing code, so it is a separate decision.
     *(Note: the first PyPI release is pending; until then install from a Git URL. Releases are published to PyPI from version tags.)*
     The schema is packaged with the validator, so an installed copy validates without a repository checkout.
 
