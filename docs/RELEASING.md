@@ -10,14 +10,15 @@ Everything after the tag push is automatic, and `scripts/release_check.py` is th
 - **The version has one source**: `__version__` in `src/signaljourney_validator/__init__.py`.
   `pyproject.toml` declares `dynamic = ["version"]` and reads it, so one edit per release cannot drift.
 - **The tag equals `v` + `__version__`**, which equals the version in the built wheel and sdist, and the newest dated entry of `CHANGELOG.md`.
-  That entry must not be empty.
+  That entry must not be empty, and `## [Unreleased]` must be empty, so nothing unreleased can ship under a tagged version's notes.
+  The changelog structure and the `pyproject.toml` version rules are checked again at tag time.
 - **The GitHub release is titled exactly with the tag** (`v0.2.0`), and its notes are the changelog entry.
 - **A tag is never moved, reused or deleted.**
   To fix a bad release, release the next version.
   An existing PyPI file name can never be uploaded again, so a reused version cannot be published even if the tag could be.
 - **Every code change updates the changelog.**
   A pull request that touches `src/`, `pyproject.toml` or `MANIFEST.in` must change `CHANGELOG.md` inside `## [Unreleased]`, or carry the label `no-changelog`.
-  The `Changelog` workflow checks this, and it also requires the Keep a Changelog headings (`Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Security`) and an untouched `0.1.0` section, which predates these rules and is frozen.
+  The `Changelog` workflow checks this (moving a file out of `src/` counts as a change), and it also requires the Keep a Changelog headings (`Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Security`) and an untouched `0.1.0` section, which predates these rules and is frozen.
 
 ## Making a release
 
@@ -27,7 +28,7 @@ Everything after the tag push is automatic, and `scripts/release_check.py` is th
    ```bash
    uv run python scripts/release_check.py static
    uv run python scripts/release_check.py notes X.Y.Z      # the release notes
-   uv build && uv run python scripts/release_check.py tag vX.Y.Z --dist dist/
+   uv build && uv run python scripts/release_check.py tag vX.Y.Z --dist dist/   # needs [Unreleased] empty
    uv run --with pytest --with pytest-cov pytest tests/test_release_check.py -q
    ```
 3. Merge the pull request once `Continuous Integration` and `Changelog` are green.
@@ -46,7 +47,7 @@ Everything after the tag push is automatic, and `scripts/release_check.py` is th
 | `check` | The tagged commit is on `main`, and `release_check.py tag` passes. |
 | `build` | `uv build`, a check that the installed wheel carries every schema file and validates an example, `release_check.py tag --dist dist/`, and an upload of `dist/`. |
 | `testpypi` | Publishes `dist/` to TestPyPI (environment `testpypi`). |
-| `smoke-testpypi` | In a fresh virtual environment, installs `signalJourney==X.Y.Z` from TestPyPI with `--no-deps`, installs `jsonschema` and `click` from PyPI, then validates a packaged example. It retries up to 5 times, 30 seconds apart, while the index catches up. No dependency ever comes from TestPyPI. |
+| `smoke-testpypi` | First requires every file in `dist/` to have the same sha256 as the file TestPyPI holds for that version (`release_check.py digests`); a difference fails the run at once. Then, in a fresh virtual environment, installs `signalJourney==X.Y.Z` from TestPyPI with `--no-deps`, installs the package's own `Requires-Dist` from PyPI, runs `uv pip check`, and validates a packaged example. It retries up to 5 times, 30 seconds apart, only while the index does not list the files yet. No dependency ever comes from TestPyPI. |
 | `pypi` | Publishes the same `dist/` to PyPI (environment `pypi`). |
 | `release` | Creates the GitHub release with `--title "$TAG"` and the changelog entry as notes. This is the only job that can write to the repository. |
 
@@ -55,24 +56,42 @@ Both indexes must have `publish.yml` registered as a trusted publisher of the pr
 
 ## When a run stops half way
 
-Use **Re-run failed jobs**, not **Re-run all jobs**: the finished jobs keep their results, whereas a full re-run would upload the same files to PyPI a second time, which PyPI refuses.
+Use **Re-run failed jobs**, not **Re-run all jobs**.
+Builds are not reproducible, so a full re-run builds different bytes: TestPyPI keeps the first upload of each file (`skip-existing`), and PyPI refuses a second upload of a file name, so the files could no longer be the ones that were smoke-tested.
+The digest comparison in `smoke-testpypi` exists to catch exactly that, and it fails closed.
+Finished jobs keep their results and their `dist` artifact, which is why a failed-job re-run is safe.
 
 - **`check` or `build` failed.** Nothing was published.
   Fix the cause on `main` through a pull request, then release the next version, because a tag is never moved.
-- **`testpypi` or `smoke-testpypi` failed.** PyPI has not been touched.
-  If the cause is a transient index delay, re-run the failed job.
-  Otherwise fix it and release the next version; TestPyPI may keep the failed version.
-- **`pypi` failed.** Re-run it after the cause is gone.
-  If PyPI refuses the files as already existing, the version is already on PyPI, and the `release` job was skipped.
-  Create the release by hand with the same title and notes:
+- **`testpypi` failed.** PyPI has not been touched.
+  Re-run the failed job; if it cannot succeed, fix the cause and release the next version.
+- **`smoke-testpypi` failed on a digest mismatch.** TestPyPI holds other bytes than this run built, usually because an earlier run of the same tag uploaded first.
+  Nothing reached PyPI, and it must not: bump the version through a release pull request and push a new tag.
+  Never re-tag, and never retry past a mismatch.
+- **`smoke-testpypi` failed for another reason** (an index delay beyond the retries, a broken install).
+  PyPI has not been touched.
+  Re-run the failed job for a delay; otherwise fix the cause and release the next version, and TestPyPI may keep the failed version.
+- **`pypi` failed.** Re-run the failed job after the cause is gone.
+  If PyPI reports that files already exist, check what it holds: `https://pypi.org/project/signaljourney/X.Y.Z/#files`.
+  - *Everything was uploaded* (the wheel and the sdist, with the digests of the `dist` artifact): the version is complete and the `release` job was skipped; create the release by hand.
+  - *Only one file was accepted* (for example the wheel, not the sdist): the version cannot be completed, because PyPI never accepts a file name twice and a rebuilt file would differ from the smoke-tested one.
+    Yank that version on PyPI with a note that it is incomplete, and release the next version.
+    Do not upload the missing file by hand.
+  To create the release by hand with the same title and notes:
   ```bash
   uv run python scripts/release_check.py notes X.Y.Z > notes.md
   gh release create vX.Y.Z --title vX.Y.Z --notes-file notes.md --verify-tag
   ```
-- **`release` failed.** Re-run it: an existing release is edited to the same title and notes, so the result is the same.
+- **`release` failed.** Re-run the failed job: an existing release is edited to the same title and notes, so the result is the same.
 
 A version published to PyPI cannot be replaced.
 A broken release is yanked on PyPI and superseded by the next version.
+
+## How the checks are protected
+
+The `Changelog` workflow runs the base branch's copy of `scripts/release_check.py` against a pull request, so a pull request cannot weaken the check that judges it.
+The pull request's own copy is exercised by its tests in `Continuous Integration`.
+The first pull request that introduces the script has no base copy, and is judged by its own.
 
 ## Recommended repository settings
 
