@@ -103,11 +103,43 @@ The first pull request that introduces the script has no base copy, and is judge
 What enforces the rules is the repository: a ruleset on `main` that requires the `Changelog` and `Continuous Integration` checks and a review from the code owners of `.github/workflows/` and `scripts/release_check.py` (add those paths to a `CODEOWNERS` file and turn on "Require review from Code Owners").
 Without that review, the checks stop mistakes, not a determined change to the checks themselves.
 
+## Documentation site
+
+The documentation site is built with MkDocs from `docs/` and `mkdocs.yml`, and deployed by `.github/workflows/docs.yml` to the pages repository.
+It deploys on every push to `main`, once a week, and on demand (run the `Documentation` workflow by hand).
+The `Docs build` job of `Continuous Integration` builds the site with `mkdocs build --strict` on every pull request and push, so a broken docs change is found before the merge.
+
+The deploy uses a fine-grained personal token with the Contents permission set to read and write on the pages repository only.
+It is stored as the repository secret `GH_PAGES_TOKEN`, and no other workflow uses it.
+A fine-grained token has an expiry date, and an expired token makes every deploy fail.
+
+To rotate the token:
+
+1. Create a new fine-grained personal token that has access to the pages repository only, with the Contents permission set to read and write.
+2. Replace the repository secret `GH_PAGES_TOKEN` with it.
+3. Re-run the failed `Documentation` run, or start a new one by hand, and check that the deploy job passes.
+
+The workflow reports on itself with two issues, both labeled `docs-deploy`:
+
+- **Docs deploy is failing.** A job of the `Documentation` workflow failed, most often because the token expired or was revoked.
+  There is one such issue, and each further failed run adds a comment to it.
+  A later successful run closes it with the comment "recovered".
+- **Docs deploy token expires on YYYY-MM-DD.** The token expires in less than 30 days.
+  Rotate it as above; the issue closes by itself once a run sees the new expiry date.
+  The date comes from the `github-authentication-token-expiration` response header.
+  If the response has no such header, the log of the `Watch the deploy token expiry` job says that the token has no expiry date, and no issue is opened.
+
+GitHub disables scheduled workflows of a public repository after 60 days without repository activity, which would silence the weekly run exactly when nobody is looking.
+Every run of `docs.yml` therefore re-enables the workflow through the API (`PUT /repos/{owner}/{repo}/actions/workflows/docs.yml/enable`), the `keepalive` job being the only one with `actions: write`.
+This is the keepalive pattern used across the community.
+GitHub does not document that the call resets the inactivity timer, so it is a best effort and not a guarantee.
+If the weekly run ever stops, the site goes stale without an alert, so a push to `main` or a manual run after a long idle stretch is the check.
+
 ## Recommended repository settings
 
 These belong to the repository owner; nothing in the workflows changes them.
 
 - A tag ruleset on `v*` (pattern `v[0-9]*.[0-9]*.[0-9]*`) that limits creation to maintainers and blocks update and deletion.
 - Required reviewers on the `pypi` environment, so a tag push waits for a person before anything reaches PyPI.
-- A `main` ruleset that requires the `Continuous Integration` jobs and the `Changelog` check, and requires a code-owner review of `.github/workflows/` and `scripts/release_check.py` (with those paths in `CODEOWNERS`).
+- A `main` ruleset that requires the `Continuous Integration` jobs (including `Docs build`) and the `Changelog` check, and requires a code-owner review of `.github/workflows/` and `scripts/release_check.py` (with those paths in `CODEOWNERS`).
 - Trusted publishers registered for `publish.yml` with the environments `testpypi` and `pypi`.
