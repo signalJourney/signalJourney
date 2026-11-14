@@ -191,3 +191,22 @@ jobs:
   #     #   name: matlab-test-results
   #     #   path: test-results/matlab-results.xml
   #     run: echo "MATLAB artifact upload would go here"
+
+  # Builds the documentation site on every pull request and push, so a broken docs
+  # change is found before the merge. The deployment is docs.yml.
+  docs-build:
+    name: Docs build
+    runs-on: ubuntu-24.04
+
+    steps:
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      with:
+        fetch-depth: 0 # git-revision-date-localized-plugin reads the history
+        persist-credentials: false
+
+    - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+      with:
+        python-version: '3.11'
+
+    - name: Build the site, treating warnings as errors
+      run: uv run --with-requirements docs/requirements.txt mkdocs build --strict
