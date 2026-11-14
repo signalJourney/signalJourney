@@ -1,0 +1,36 @@
+name: Changelog
+
+# A pull request that changes src/, pyproject.toml or MANIFEST.in must change
+# CHANGELOG.md inside "## [Unreleased]", unless it carries the label no-changelog.
+# The structure of CHANGELOG.md and the frozen 0.1.0 section are checked on every
+# pull request (scripts/release_check.py, docs/RELEASING.md).
+
+on:
+  pull_request:
+    branches: [ main ]
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+
+permissions:
+  contents: read
+
+jobs:
+  changelog:
+    name: Changelog
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # the merge base of the pull request is needed
+          persist-credentials: false
+
+      - name: Check CHANGELOG.md against the pull request
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
+        run: |
+          labels=()
+          while IFS= read -r name; do
+            if [ -n "$name" ]; then labels+=(--label "$name"); fi
+          done < <(python3 -c 'import json, os; print("\n".join(json.loads(os.environ["LABELS"])))')
+          python3 scripts/release_check.py changelog --base "$BASE_SHA" --head "$HEAD_SHA" "${labels[@]}"
