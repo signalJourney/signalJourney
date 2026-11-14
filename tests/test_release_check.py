@@ -759,3 +759,53 @@ def test_nothing_to_compare_fails(repo):
     (repo / "dist").mkdir()
     answer = index_answer(repo, [])
     assert digests(repo, answer).returncode == 1
+
+
+def test_hex_case_does_not_matter_for_digests(built):
+    repo, wheel, sdist = built
+    answer = index_answer(
+        repo,
+        [wheel, sdist],
+        {wheel.name: sha256(wheel).upper(), sdist.name: sha256(sdist).upper()},
+    )
+    done = digests(repo, answer)
+    assert done.returncode == 0, done.stderr
+
+
+def test_a_file_listed_without_a_digest_cannot_be_verified(built):
+    repo, wheel, sdist = built
+    urls = [
+        {"filename": wheel.name, "digests": {"sha256": sha256(wheel)}},
+        {"filename": sdist.name, "digests": {}},
+    ]
+    answer = repo / "answer.json"
+    answer.write_text(json.dumps({"urls": urls}), encoding="utf-8")
+    done = digests(repo, answer)
+    assert done.returncode == 1
+    assert "without a sha256" in done.stderr
+    assert "bump" not in done.stderr
+
+
+# ---------------------------------------------------------------------------
+# the Changelog workflow's use of the script
+# ---------------------------------------------------------------------------
+
+
+def test_a_label_that_starts_with_a_dash_is_a_value_not_an_option(repo):
+    base = git(repo, "rev-parse", "HEAD")
+    write(repo, "docs/index.md", "changed\n")
+    head = commit(repo, "docs")
+    done = run(repo, "changelog", "--base", base, "--head", head, "--label=-x")
+    assert done.returncode == 0, done.stderr
+
+
+def test_the_changelog_workflow_passes_labels_as_values_and_runs_isolated():
+    text = (ROOT / ".github/workflows/changelog.yml").read_text(encoding="utf-8")
+    assert '"--label=${name}"' in text
+    calls = [
+        line.strip()
+        for line in text.splitlines()
+        if "python3" in line and not line.lstrip().startswith("#")
+    ]
+    assert calls, "the workflow runs no python3"
+    assert all("python3 -I" in line for line in calls), calls

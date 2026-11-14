@@ -89,9 +89,14 @@ A broken release is yanked on PyPI and superseded by the next version.
 
 ## How the checks are protected
 
-The `Changelog` workflow runs the base branch's copy of `scripts/release_check.py` against a pull request, so a pull request cannot weaken the check that judges it.
-The pull request's own copy is exercised by its tests in `Continuous Integration`.
+The `Changelog` workflow runs the base branch's copy of `scripts/release_check.py` against a pull request, with `python3 -I` so a file in the checkout cannot shadow the standard library.
+That is a convenience and not a security boundary.
+Under `pull_request` GitHub runs the pull request's own copy of the workflow file, so a pull request that edits `changelog.yml` can change or skip the step, and one that edits the script is judged by the base copy only while the workflow is left alone.
+The pull request's own copy of the script is exercised by its tests in `Continuous Integration`, which the same pull request can also edit.
 The first pull request that introduces the script has no base copy, and is judged by its own.
+
+What enforces the rules is the repository: a ruleset on `main` that requires the `Changelog` and `Continuous Integration` checks and a review from the code owners of `.github/workflows/` and `scripts/release_check.py` (add those paths to a `CODEOWNERS` file and turn on "Require review from Code Owners").
+Without that review, the checks stop mistakes, not a determined change to the checks themselves.
 
 ## Recommended repository settings
 
@@ -99,5 +104,5 @@ These belong to the repository owner; nothing in the workflows changes them.
 
 - A tag ruleset on `v*` (pattern `v[0-9]*.[0-9]*.[0-9]*`) that limits creation to maintainers and blocks update and deletion.
 - Required reviewers on the `pypi` environment, so a tag push waits for a person before anything reaches PyPI.
-- A `main` ruleset that requires the `Continuous Integration` jobs and the `Changelog` check.
+- A `main` ruleset that requires the `Continuous Integration` jobs and the `Changelog` check, and requires a code-owner review of `.github/workflows/` and `scripts/release_check.py` (with those paths in `CODEOWNERS`).
 - Trusted publishers registered for `publish.yml` with the environments `testpypi` and `pypi`.

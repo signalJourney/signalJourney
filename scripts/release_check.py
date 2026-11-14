@@ -296,17 +296,27 @@ def digest_report(directory: Path, payload: object) -> Tuple[List[str], List[str
     listed = {}
     urls = payload.get("urls") if isinstance(payload, dict) else None
     for entry in urls if isinstance(urls, list) else []:
-        if isinstance(entry, dict) and isinstance(entry.get("digests"), dict):
-            listed[entry.get("filename")] = entry["digests"].get("sha256")
+        if isinstance(entry, dict):
+            digests = entry.get("digests")
+            listed[entry.get("filename")] = (
+                digests.get("sha256") if isinstance(digests, dict) else None
+            )
     missing: List[str] = []
     mismatched: List[str] = []
     for path in files:
         if path.name not in listed:
             missing.append(f"{path.name} is not listed by the index")
-        elif listed[path.name] != sha256_of(path):
+            continue
+        held = listed[path.name]
+        if not isinstance(held, str) or not held:
+            mismatched.append(
+                f"{path.name}: the index lists the file without a sha256, "
+                "so it cannot be verified"
+            )
+        elif held.lower() != sha256_of(path).lower():
             mismatched.append(
                 f"{path.name}: the index holds a file with another sha256 "
-                f"({listed[path.name]}) than the one built here ({sha256_of(path)})"
+                f"({held}) than the one built here ({sha256_of(path)})"
             )
     return missing, mismatched
 
