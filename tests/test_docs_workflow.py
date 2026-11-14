@@ -57,7 +57,9 @@ def test_the_workflow_has_all_three_triggers():
 
 def test_the_schedule_is_weekly():
     text = read(DOCS)
-    cron = re.search(r"cron: '([^']+)'", text).group(1).split()
+    found = re.search(r"cron: '([^']+)'", text)
+    assert found, "the workflow has no schedule"
+    cron = found.group(1).split()
     assert len(cron) == 5
     minute, hour, day_of_month, month, day_of_week = cron
     assert (day_of_month, month) == ("*", "*")
@@ -76,8 +78,9 @@ def test_workflow_level_permissions_are_read_only():
     text = read(DOCS)
     head = text.split("\njobs:\n")[0]
     assert re.search(r"^permissions:\n  contents: read\n", head, re.M)
-    block = re.search(r"^permissions:\n((?:  [^\n]*\n)+)", head, re.M).group(1)
-    assert "write" not in block
+    block = re.search(r"^permissions:\n((?:  [^\n]*\n)+)", head, re.M)
+    assert block, "the workflow states no permissions"
+    assert "write" not in block.group(1)
 
 
 def test_write_permissions_sit_only_on_the_jobs_that_need_them():
