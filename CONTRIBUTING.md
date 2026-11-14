@@ -53,7 +53,7 @@ To contribute code changes, you'll need a local development environment:
     
 5.  **Validation:** If you modify schema or examples, validate all example files:
     ```bash
-    signaljourney-validate validate schema/examples/
+    signaljourney-validate validate src/signaljourney_validator/schema/examples/
     ```
 6.  **Documentation:** If your changes affect the specification, validator behavior, or user-facing features, update the documentation in the `docs/` directory. You can preview the documentation locally:
     ```bash

@@ -14,10 +14,10 @@ Signal Journey defines a specification and provides tools for documenting the pr
 
 This repository contains:
 
-1.  **The Signal Journey Specification:** Formal definition of the `signalJourney.json` format ([`schema/signalJourney.schema.json`](schema/signalJourney.schema.json)).
+1.  **The Signal Journey Specification:** Formal definition of the `signalJourney.json` format ([`src/signaljourney_validator/schema/signalJourney.schema.json`](src/signaljourney_validator/schema/signalJourney.schema.json)).
 2.  **Python Validator (`signaljourney_validator`):** A library and CLI tool to validate `.json` files against the schema ([`src/signaljourney_validator`](src/signaljourney_validator)).
 3.  **Documentation:** Comprehensive guides, tutorials, and examples ([`docs/`](docs/), published at [signaljourney.github.io](https://signaljourney.github.io/)).
-4.  **Examples:** Illustrative `signalJourney.json` files ([`schema/examples/`](schema/examples/)).
+4.  **Examples:** Illustrative `signalJourney.json` files ([`src/signaljourney_validator/schema/examples/`](src/signaljourney_validator/schema/examples/)).
 5.  **MATLAB Tools:** Basic utilities for working with Signal Journey structs in MATLAB ([`scripts/matlab/`](scripts/matlab/)).
 
 ## Why Signal Journey?
@@ -61,8 +61,8 @@ The `signaljourney_validator` package provides a CLI tool for easy validation.
 
 *   **Introduction:** [docs/introduction.md](docs/introduction.md)
 *   **Full Specification:** [docs/specification/](docs/specification/)
-*   **Schema File:** [schema/signalJourney.schema.json](schema/signalJourney.schema.json)
-*   **Examples:** [schema/examples/](schema/examples/)
+*   **Schema File:** [src/signaljourney_validator/schema/signalJourney.schema.json](src/signaljourney_validator/schema/signalJourney.schema.json)
+*   **Examples:** [src/signaljourney_validator/schema/examples/](src/signaljourney_validator/schema/examples/)
 
 ### BIDS Integration
 

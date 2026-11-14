@@ -13,7 +13,7 @@ from signaljourney_validator.validator import Validator as SignalJourneyValidato
 
 # Define the root directory of the project
 PROJECT_ROOT = Path(__file__).parent.parent
-SCHEMA_DIR = PROJECT_ROOT / "schema"
+SCHEMA_DIR = PROJECT_ROOT / "src" / "signaljourney_validator" / "schema"
 DEFINITIONS_DIR = SCHEMA_DIR / "definitions"
 EXTENSIONS_DIR = SCHEMA_DIR / "extensions"
 EXAMPLES_DIR = PROJECT_ROOT / "tests" / "schemas" / "examples"

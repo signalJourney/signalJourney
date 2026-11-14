@@ -6,14 +6,12 @@ import jsonschema
 from jsonschema import Draft202012Validator
 
 from .errors import SignalJourneyValidationError, ValidationErrorDetail
-from .schema_registry import SchemaVersionRegistry
+from .schema_registry import DEFAULT_SCHEMA_DIR, SchemaVersionRegistry
 
 # Type alias for JSON dictionary
 JsonDict = Dict[str, Any]
 
-DEFAULT_SCHEMA_PATH = (
-    Path(__file__).parent.parent.parent / "schema" / "signalJourney.schema.json"
-)
+DEFAULT_SCHEMA_PATH = DEFAULT_SCHEMA_DIR / "signalJourney.schema.json"
 
 # --- Helper Function for Inlining Refs ---
 

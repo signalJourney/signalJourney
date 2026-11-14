@@ -6,13 +6,15 @@ load appropriate schema based on the schema_version field in signalJourney files
 """
 
 import json
+from importlib import resources
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
 JsonDict = Dict[str, Any]
 
-# Default paths
-DEFAULT_SCHEMA_DIR = Path(__file__).parent.parent.parent / "schema"
+# Default paths: the schema is package data, found through importlib.resources
+# so it resolves the same way from a checkout and from an installed wheel.
+DEFAULT_SCHEMA_DIR = Path(str(resources.files("signaljourney_validator") / "schema"))
 DEFAULT_VERSIONS_DIR = DEFAULT_SCHEMA_DIR / "versions"
 
 
