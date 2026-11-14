@@ -192,32 +192,21 @@ jobs:
   #     #   path: test-results/matlab-results.xml
   #     run: echo "MATLAB artifact upload would go here"
 
-  deploy-docs:
-    # Run only on pushes to the main branch
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: [lint-and-test, release-rules, validate-examples] # Tests and validation pass before docs deploy
+  # Builds the documentation site on every pull request and push, so a broken docs
+  # change is found before the merge. The deployment is docs.yml.
+  docs-build:
+    name: Docs build
     runs-on: ubuntu-24.04
+
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          fetch-depth: 0 # Fetch all history for git-revision-date-localized-plugin
-          persist-credentials: false
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      with:
+        fetch-depth: 0 # git-revision-date-localized-plugin reads the history
+        persist-credentials: false
 
-      - name: Set up Python
-        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
-        with:
-          python-version: '3.11' # Use a specific Python version for docs
+    - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+      with:
+        python-version: '3.11'
 
-      - name: Build docs site
-        run: uv run --with-requirements docs/requirements.txt mkdocs build # Build the site into the ./site directory
-
-      - name: Deploy to signalJourney.github.io
-        uses: peaceiris/actions-gh-pages@84c30a85c19949d7eee79c4ff27748b70285e453 # v4.1.0
-        with:
-          personal_token: ${{ secrets.GH_PAGES_TOKEN }} # Use the PAT secret for cross-repo access
-          external_repository: signalJourney/signalJourney.github.io # Deploy to the dedicated docs repo
-          publish_branch: main # Deploy to main branch of signalJourney.github.io
-          publish_dir: ./site # Directory containing built site
-          user_name: 'github-actions[bot]'
-          user_email: 'github-actions[bot]@users.noreply.github.com'
-          commit_message: 'Deploy documentation from signalJourney/signalJourney@${{ github.sha }}'
+    - name: Build the site, treating warnings as errors
+      run: uv run --with-requirements docs/requirements.txt mkdocs build --strict

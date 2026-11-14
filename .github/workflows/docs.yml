@@ -1,0 +1,260 @@
+name: Documentation
+
+# Deploys the documentation site (docs/, mkdocs.yml) to the pages repository, and
+# makes sure that a failed or expired deployment cannot go unnoticed again
+# (docs/RELEASING.md, "Documentation site").
+#
+# Triggers: every push to main, a weekly run, and a manual run. The weekly run is
+# what finds an expired token or a broken build in an idle repository, and it also
+# keeps this workflow from being disabled: GitHub disables scheduled workflows of a
+# public repository after 60 days without repository activity.
+#
+# Jobs:
+#   keepalive    re-enables this workflow through the API (the community keepalive
+#                pattern; GitHub does not document that this resets the timer)
+#   token-watch  reads the expiry date of the deploy token and keeps one issue open
+#                while it is less than 30 days away
+#   deploy       builds the site and pushes it to the pages repository
+#   alert        opens or updates one issue when a job above failed
+#   recovered    closes that issue when a later run succeeded
+
+on:
+  push:
+    branches: [ main ]
+  schedule:
+    - cron: '23 5 * * 1' # Mondays, 05:23 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# One deployment at a time, and a running one is never cancelled half way.
+concurrency:
+  group: docs-deploy
+  cancel-in-progress: false
+
+jobs:
+  keepalive:
+    name: Keep this workflow enabled
+    runs-on: ubuntu-24.04
+    permissions:
+      actions: write # the only job that may change workflow state
+    steps:
+      - name: Re-enable the workflow
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api --method PUT "/repos/${GITHUB_REPOSITORY}/actions/workflows/docs.yml/enable"
+
+  token-watch:
+    name: Watch the deploy token expiry
+    runs-on: ubuntu-24.04
+    permissions:
+      issues: write # opens, updates and closes the expiry issue
+    steps:
+      # The token goes into the environment only and is never printed; only the value
+      # of the expiry header is. A rejected token (401) also fails the deploy, which
+      # the alert job reports, so it only warns here.
+      - name: Read the expiry date of the token
+        id: expiry
+        env:
+          TOKEN: ${{ secrets.GH_PAGES_TOKEN }}
+        run: |
+          headers="$(mktemp)"
+          code="$(curl -s -I --max-time 30 --output "$headers" --write-out '%{http_code}' \
+            -H "Authorization: Bearer ${TOKEN}" \
+            https://api.github.com/repos/signalJourney/signalJourney.github.io || true)"
+          echo "HTTP status: ${code}"
+          if [ "$code" = "401" ]; then
+            echo "::warning::The deploy token was rejected (401); the deploy step will fail and the alert job reports it."
+            echo "state=unknown" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if [ "$code" != "200" ]; then
+            echo "::warning::The expiry of the deploy token could not be read (HTTP ${code})."
+            echo "state=unknown" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          value="$(tr -d '\r' < "$headers" | grep -i '^github-authentication-token-expiration:' | head -n 1 | cut -d: -f2- | sed 's/^ *//' || true)"
+          if [ -z "$value" ]; then
+            echo "The token has no expiry date (the response carries no expiration header)."
+            echo "state=ok" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "Token expiration header: ${value}"
+          if ! expires_at="$(date -u -d "$value" +%s)"; then
+            echo "::warning::The expiration header could not be parsed."
+            echo "state=unknown" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          days="$(( (expires_at - $(date -u +%s)) / 86400 ))"
+          echo "Days left: ${days}"
+          echo "expires=$(date -u -d "@${expires_at}" +%F)" >> "$GITHUB_OUTPUT"
+          if [ "$days" -lt 30 ]; then
+            echo "state=soon" >> "$GITHUB_OUTPUT"
+          else
+            echo "state=ok" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Open, update or close the expiry issue
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          STATE: ${{ steps.expiry.outputs.state }}
+          EXPIRES: ${{ steps.expiry.outputs.expires }}
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const state = process.env.STATE;
+            if (state !== 'soon' && state !== 'ok') return; // unknown: change nothing
+            const label = 'docs-deploy';
+            try {
+              await github.rest.issues.getLabel({ owner, repo, name: label });
+            } catch (error) {
+              if (error.status !== 404) throw error;
+              await github.rest.issues.createLabel({
+                owner, repo, name: label, color: 'b60205',
+                description: 'Documentation site deployment',
+              });
+            }
+            const prefix = 'Docs deploy token expires on ';
+            const { data: open } = await github.rest.issues.listForRepo({
+              owner, repo, state: 'open', labels: label, per_page: 100,
+            });
+            const mine = open.filter((i) => !i.pull_request && i.title.startsWith(prefix));
+            if (state === 'ok') {
+              for (const issue of mine) {
+                await github.rest.issues.createComment({
+                  owner, repo, issue_number: issue.number,
+                  body: 'The token now has an expiry date that is more than 30 days away, or none. Closing.',
+                });
+                await github.rest.issues.update({
+                  owner, repo, issue_number: issue.number,
+                  state: 'closed', state_reason: 'completed',
+                });
+              }
+              return;
+            }
+            const title = prefix + process.env.EXPIRES;
+            const body = [
+              `The token stored as the repository secret \`GH_PAGES_TOKEN\` expires on ${process.env.EXPIRES}, less than 30 days from now.`,
+              'When it expires, every docs deploy fails and the public site goes stale.',
+              '',
+              'Rotation:',
+              '1. Create a new fine-grained personal token. Give it access to the pages repository only, with the Contents permission set to read and write, and an expiry date as far away as you accept.',
+              '2. Replace the repository secret `GH_PAGES_TOKEN` with the new token.',
+              '3. Run the `Documentation` workflow by hand to check that the deploy works.',
+              '',
+              'This issue closes by itself when a run sees the new expiry date. Details: `docs/RELEASING.md`, section "Documentation site".',
+            ].join('\n');
+            if (mine.length === 0) {
+              await github.rest.issues.create({ owner, repo, title, body, labels: [label] });
+            } else if (mine[0].title !== title || mine[0].body !== body) {
+              await github.rest.issues.update({
+                owner, repo, issue_number: mine[0].number, title, body,
+              });
+            }
+
+  deploy:
+    name: Build and deploy the site
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # Fetch all history for git-revision-date-localized-plugin
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          python-version: '3.11' # Use a specific Python version for docs
+
+      - name: Build docs site
+        run: uv run --with-requirements docs/requirements.txt mkdocs build # Build the site into the ./site directory
+
+      - name: Deploy to signalJourney.github.io
+        uses: peaceiris/actions-gh-pages@84c30a85c19949d7eee79c4ff27748b70285e453 # v4.1.0
+        with:
+          personal_token: ${{ secrets.GH_PAGES_TOKEN }} # Use the PAT secret for cross-repo access
+          external_repository: signalJourney/signalJourney.github.io # Deploy to the dedicated docs repo
+          publish_branch: main # Deploy to main branch of signalJourney.github.io
+          publish_dir: ./site # Directory containing built site
+          user_name: 'github-actions[bot]'
+          user_email: 'github-actions[bot]@users.noreply.github.com'
+          commit_message: 'Deploy documentation from signalJourney/signalJourney@${{ github.sha }}'
+
+  alert:
+    name: Report a failing docs run
+    needs: [keepalive, token-watch, deploy]
+    if: failure()
+    runs-on: ubuntu-24.04
+    permissions:
+      issues: write # opens or updates the one failure issue
+    steps:
+      - name: Open the failure issue, or comment on the open one
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          RESULTS: ${{ toJSON(needs) }}
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const label = 'docs-deploy';
+            const title = 'Docs deploy is failing';
+            try {
+              await github.rest.issues.getLabel({ owner, repo, name: label });
+            } catch (error) {
+              if (error.status !== 404) throw error;
+              await github.rest.issues.createLabel({
+                owner, repo, name: label, color: 'b60205',
+                description: 'Documentation site deployment',
+              });
+            }
+            const results = JSON.parse(process.env.RESULTS);
+            const failed = Object.keys(results).filter((job) => results[job].result === 'failure');
+            const run = `${process.env.GITHUB_SERVER_URL}/${owner}/${repo}/actions/runs/${process.env.GITHUB_RUN_ID}`;
+            const body = [
+              `The \`Documentation\` workflow failed in: ${failed.join(', ') || 'an unknown job'}.`,
+              `Run: ${run}`,
+              '',
+              'The most likely cause of a deploy failure is an expired or revoked `GH_PAGES_TOKEN`.',
+              'The steps to rotate it are in `docs/RELEASING.md`, section "Documentation site".',
+              'This issue closes by itself when a later run succeeds.',
+            ].join('\n');
+            const { data: open } = await github.rest.issues.listForRepo({
+              owner, repo, state: 'open', labels: label, per_page: 100,
+            });
+            const existing = open.find((i) => !i.pull_request && i.title === title);
+            if (existing) {
+              await github.rest.issues.createComment({
+                owner, repo, issue_number: existing.number, body,
+              });
+            } else {
+              await github.rest.issues.create({ owner, repo, title, body, labels: [label] });
+            }
+
+  recovered:
+    name: Close the failure issue
+    needs: [keepalive, token-watch, deploy]
+    if: success()
+    runs-on: ubuntu-24.04
+    permissions:
+      issues: write # closes the failure issue
+    steps:
+      - name: Close the failure issue when a run succeeds
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const run = `${process.env.GITHUB_SERVER_URL}/${owner}/${repo}/actions/runs/${process.env.GITHUB_RUN_ID}`;
+            const { data: open } = await github.rest.issues.listForRepo({
+              owner, repo, state: 'open', labels: 'docs-deploy', per_page: 100,
+            });
+            for (const issue of open) {
+              if (issue.pull_request || issue.title !== 'Docs deploy is failing') continue;
+              await github.rest.issues.createComment({
+                owner, repo, issue_number: issue.number, body: `recovered: the docs deploy succeeded in ${run}`,
+              });
+              await github.rest.issues.update({
+                owner, repo, issue_number: issue.number, state: 'closed', state_reason: 'completed',
+              });
+            }

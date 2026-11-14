@@ -81,6 +81,7 @@ A release is a pull request that moves the `## [Unreleased]` entries under `## [
 Tags are exactly `vX.Y.Z` and are never moved or reused.
 The tag push runs `.github/workflows/publish.yml`: it publishes to TestPyPI, installs from there in a fresh environment, publishes to PyPI, and creates a GitHub release titled exactly with the tag.
 `scripts/release_check.py` holds every rule, and [docs/RELEASING.md](docs/RELEASING.md) has the steps and what to do when a run stops half way.
+The documentation site deploys from `main` through `.github/workflows/docs.yml`; [docs/RELEASING.md](docs/RELEASING.md#documentation-site) describes the token and the alerts.
 The PyPI project is named `signalJourney` (normalized `signaljourney`); the import package `signaljourney_validator` and the command `signaljourney-validate` keep their names.
 
 ## Reporting Bugs
