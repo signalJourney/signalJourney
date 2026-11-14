@@ -94,12 +94,16 @@ def _check_local_refs(root: JsonDict) -> None:
     """Raise SchemaResolutionError for a ``#/...`` $ref that points nowhere.
 
     External file refs are inlined (or refused) by ``inline_refs``; what is
-    left after inlining are pointers into the schema itself, and a pointer that
-    does not resolve would otherwise only fail while validating a document.
+    left after inlining are pointers into a schema document.
+    A pointer is resolved against the nearest enclosing ``$id`` (the sub-schema
+    that declares one is its own document, as jsonschema treats it), or against
+    ``root`` when no ``$id`` encloses it.
+    A pointer that does not resolve would otherwise only fail while validating
+    a document.
     """
 
-    def resolve(pointer: str) -> bool:
-        node: Any = root
+    def resolve(document: Any, pointer: str) -> bool:
+        node: Any = document
         for token in pointer.split("/")[1:]:
             token = unquote(token).replace("~1", "/").replace("~0", "~")
             if isinstance(node, dict) and token in node:
@@ -110,24 +114,26 @@ def _check_local_refs(root: JsonDict) -> None:
                 return False
         return True
 
-    def walk(node: Any) -> None:
+    def walk(node: Any, document: Any) -> None:
         if isinstance(node, dict):
+            if isinstance(node.get("$id"), str):
+                document = node  # this sub-schema is its own document
             ref = node.get("$ref")
             if (
                 isinstance(ref, str)
                 and (ref == "#" or ref.startswith("#/"))
-                and not resolve(ref[1:])
+                and not resolve(document, ref[1:])
             ):
                 raise SchemaResolutionError(
                     f"$ref '{ref}' does not resolve within the schema"
                 )
             for value in node.values():
-                walk(value)
+                walk(value, document)
         elif isinstance(node, list):
             for item in node:
-                walk(item)
+                walk(item, document)
 
-    walk(root)
+    walk(root, root)
 
 
 def resolve_schema_refs(
