@@ -71,6 +71,14 @@ To contribute code changes, you'll need a local development environment:
         - Security scanning
         - Documentation building
 
+## Releasing to PyPI
+
+Releases are published by `.github/workflows/publish.yml` when a tag `v<version>` is pushed.
+The tag name must equal the `version` in `pyproject.toml` and `__version__` in `src/signaljourney_validator/__init__.py`, and the tagged commit must be on `main`; the workflow fails otherwise.
+Set both versions in a pull request, merge it, then push a new tag with that name.
+A tag name that is already taken (for example `v0.1.0`) cannot be reused, so pick a version whose tag does not exist yet.
+Publishing uses PyPI trusted publishing in the GitHub environment `pypi`; no token is stored in the repository.
+
 ## Reporting Bugs
 
 *   Use the [GitHub Issues](https://github.com/signalJourney/signalJourney/issues) page.

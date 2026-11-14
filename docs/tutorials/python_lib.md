@@ -4,7 +4,7 @@ The `signaljourney-validator` Python library provides programmatic ways to valid
 
 **Prerequisites:**
 
-*   Python 3.8+ installed.
+*   Python 3.9+ installed.
 *   The `signaljourney-validator` library installed (`pip install signaljourney-validator`).
 *   A signalJourney JSON file to validate (e.g., one created manually or an example file).
 
