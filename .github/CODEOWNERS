@@ -1,0 +1,6 @@
+# The release workflows and the script that holds the release rules (docs/RELEASING.md,
+# "How the checks are protected"). A change to them needs a code owner's review once the
+# main ruleset requires it. Owners must have write access to this repository.
+/.github/workflows/ @neuromechanist
+/.github/CODEOWNERS @neuromechanist
+/scripts/release_check.py @neuromechanist

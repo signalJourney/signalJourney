@@ -20,10 +20,15 @@ Everything after the tag push is automatic, and `scripts/release_check.py` is th
   A pull request that touches `src/`, `pyproject.toml` or `MANIFEST.in` must change `CHANGELOG.md` inside `## [Unreleased]`, or carry the label `no-changelog`.
   The `Changelog` workflow checks this (moving a file out of `src/` counts as a change), and it also requires the Keep a Changelog headings (`Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Security`) and an untouched `0.1.0` section, which predates these rules and is frozen.
 
+## Version policy
+
+Minor versions are reserved for huge breaking changes.
+Every other release is a patch bump.
+
 ## Making a release
 
 1. In a pull request into `main`, move the contents of `## [Unreleased]` under a new heading `## [X.Y.Z] - YYYY-MM-DD` (today's date), leave `## [Unreleased]` in place and empty above it, and set `__version__ = "X.Y.Z"`.
-   Choose the number by [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+   Choose the number by the [version policy](#version-policy).
 2. Check it locally:
    ```bash
    uv run python scripts/release_check.py static
