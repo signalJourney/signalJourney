@@ -53,7 +53,7 @@ To contribute code changes, you'll need a local development environment:
     
 5.  **Validation:** If you modify schema or examples, validate all example files:
     ```bash
-    signaljourney-validate validate schema/examples/
+    signaljourney-validate validate src/signaljourney_validator/schema/examples/
     ```
 6.  **Documentation:** If your changes affect the specification, validator behavior, or user-facing features, update the documentation in the `docs/` directory. You can preview the documentation locally:
     ```bash
@@ -70,6 +70,15 @@ To contribute code changes, you'll need a local development environment:
         - Example validation
         - Security scanning
         - Documentation building
+
+## Releasing to PyPI
+
+Releases are published by `.github/workflows/publish.yml` when a tag `v<version>` is pushed.
+The tag name must equal the `version` in `pyproject.toml` and `__version__` in `src/signaljourney_validator/__init__.py`, and the tagged commit must be on `main`; the workflow fails otherwise.
+Set both versions in a pull request, merge it, then push a new tag with that name.
+A tag name that is already taken (for example `v0.1.0`) cannot be reused, so pick a version whose tag does not exist yet.
+Publishing uses PyPI trusted publishing in the GitHub environment `pypi`; no token is stored in the repository.
+The PyPI project is named `signalJourney` (normalized `signaljourney`); the import package `signaljourney_validator` and the command `signaljourney-validate` keep their names.
 
 ## Reporting Bugs
 

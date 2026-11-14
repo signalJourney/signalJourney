@@ -4,11 +4,15 @@ This guide provides comprehensive details on using the `signaljourney-validate` 
 
 ## Installation
 
-The CLI tool is installed as part of the `signaljourney-validator` Python package:
+The CLI tool is installed as part of the `signalJourney` Python package:
 
 ```bash
-pip install signaljourney-validator
+pip install signalJourney
+# or
+uv add signalJourney
 ```
+
+The distribution is named `signalJourney` (PyPI normalizes it to `signaljourney`), but you still `import signaljourney_validator` and run `signaljourney-validate`.
 
 This makes the `signaljourney-validate` command available in your terminal.
 
@@ -100,7 +104,7 @@ signaljourney-validate [OPTIONS] PATH
     signaljourney-validate --bids --bids-root /path/to/bids_dataset path/to/bids_dataset/derivatives/...
     ```
 *   `-h, --help`: Show the help message and exit.
-*   `--version`: Show the version of the `signaljourney-validator` package and exit.
+*   `--version`: Show the version of the `signalJourney` package and exit.
 
 ## Output Formats
 

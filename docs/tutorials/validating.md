@@ -9,7 +9,7 @@ There are two main ways to validate:
 
 **Prerequisites:**
 
-*   The `signaljourney-validator` package installed (`pip install signaljourney-validator`).
+*   The `signalJourney` package installed (`pip install signalJourney`).
 *   signalJourney JSON files to validate.
 
 ## 1. Using the Command-Line Interface (CLI)

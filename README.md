@@ -4,7 +4,7 @@
 [![Docs](https://img.shields.io/badge/docs-mkdocs-green)](https://signaljourney.github.io/)
 [![Tests](https://github.com/signalJourney/signalJourney/actions/workflows/ci.yml/badge.svg)](https://github.com/signalJourney/signalJourney/actions/workflows/ci.yml)
 [![Code style: ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
-<!-- [![PyPI version](https://badge.fury.io/py/signaljourney-validator.svg)](https://badge.fury.io/py/signaljourney-validator) TODO: Activate once published -->
+<!-- [![PyPI version](https://badge.fury.io/py/signaljourney.svg)](https://badge.fury.io/py/signaljourney) TODO: Activate once published -->
 
 **Track biosignal processing with detailed, reproducible, machine-readable and human-readable steps.**
 
@@ -14,10 +14,10 @@ Signal Journey defines a specification and provides tools for documenting the pr
 
 This repository contains:
 
-1.  **The Signal Journey Specification:** Formal definition of the `signalJourney.json` format ([`schema/signalJourney.schema.json`](schema/signalJourney.schema.json)).
+1.  **The Signal Journey Specification:** Formal definition of the `signalJourney.json` format ([`src/signaljourney_validator/schema/signalJourney.schema.json`](src/signaljourney_validator/schema/signalJourney.schema.json)).
 2.  **Python Validator (`signaljourney_validator`):** A library and CLI tool to validate `.json` files against the schema ([`src/signaljourney_validator`](src/signaljourney_validator)).
 3.  **Documentation:** Comprehensive guides, tutorials, and examples ([`docs/`](docs/), published at [signaljourney.github.io](https://signaljourney.github.io/)).
-4.  **Examples:** Illustrative `signalJourney.json` files ([`schema/examples/`](schema/examples/)).
+4.  **Examples:** Illustrative `signalJourney.json` files ([`src/signaljourney_validator/schema/examples/`](src/signaljourney_validator/schema/examples/)).
 5.  **MATLAB Tools:** Basic utilities for working with Signal Journey structs in MATLAB ([`scripts/matlab/`](scripts/matlab/)).
 
 ## Why Signal Journey?
@@ -47,9 +47,13 @@ The `signaljourney_validator` package provides a CLI tool for easy validation.
 
 1.  **Installation:**
     ```bash
-    pip install signaljourney_validator
+    pip install signalJourney
+    # or
+    uv add signalJourney
     ```
-    *(Note: Package not yet published to PyPI yet)*
+    The distribution is named `signalJourney` (PyPI normalizes it to `signaljourney`), but the import package is still `signaljourney_validator` and the command is still `signaljourney-validate`; renaming the import package would break existing code, so it is a separate decision.
+    *(Note: the first PyPI release is pending; until then install from a Git URL. Releases are published to PyPI from version tags.)*
+    The schema is packaged with the validator, so an installed copy validates without a repository checkout.
 
 2.  **Validation:**
     ```bash
@@ -61,8 +65,8 @@ The `signaljourney_validator` package provides a CLI tool for easy validation.
 
 *   **Introduction:** [docs/introduction.md](docs/introduction.md)
 *   **Full Specification:** [docs/specification/](docs/specification/)
-*   **Schema File:** [schema/signalJourney.schema.json](schema/signalJourney.schema.json)
-*   **Examples:** [schema/examples/](schema/examples/)
+*   **Schema File:** [src/signaljourney_validator/schema/signalJourney.schema.json](src/signaljourney_validator/schema/signalJourney.schema.json)
+*   **Examples:** [src/signaljourney_validator/schema/examples/](src/signaljourney_validator/schema/examples/)
 
 ### BIDS Integration
 

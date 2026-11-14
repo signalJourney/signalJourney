@@ -4,7 +4,7 @@ This directory contains automated tests for the `signalJourney` project, ensurin
 
 ## Structure
 
-- `schemas/`: Contains tests for validating data against the official JSON schemas defined in `schema/`.
+- `schemas/`: Contains tests for validating data against the official JSON schemas defined in `src/signaljourney_validator/schema/`.
     - `examples/`: Sample JSON files (valid and invalid) used as test fixtures.
     - `test_schema_validation.py`: Pytest tests using `jsonschema` to validate examples.
 - `validator/`: Contains unit tests for the Python validator library located in `src/signaljourney_validator`.

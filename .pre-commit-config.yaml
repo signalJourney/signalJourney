@@ -34,7 +34,7 @@ repos:
         name: Validate signalJourney examples
         entry: python -m signaljourney_validator.validate_examples_hook
         language: system
-        files: '^schema/examples/.*\.json$'
+        files: '^src/signaljourney_validator/schema/examples/.*\.json$'
         pass_filenames: true
       - id: validate-schema-consistency
         name: Validate schema consistency

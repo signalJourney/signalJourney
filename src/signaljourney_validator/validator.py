@@ -1,19 +1,25 @@
 import json
+import logging
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
+from urllib.parse import unquote
 
 import jsonschema
 from jsonschema import Draft202012Validator
 
-from .errors import SignalJourneyValidationError, ValidationErrorDetail
-from .schema_registry import SchemaVersionRegistry
+from .errors import (
+    SchemaResolutionError,
+    SignalJourneyValidationError,
+    ValidationErrorDetail,
+)
+from .schema_registry import DEFAULT_SCHEMA_DIR, SchemaVersionRegistry
+
+logger = logging.getLogger("signaljourney_validator")
 
 # Type alias for JSON dictionary
 JsonDict = Dict[str, Any]
 
-DEFAULT_SCHEMA_PATH = (
-    Path(__file__).parent.parent.parent / "schema" / "signalJourney.schema.json"
-)
+DEFAULT_SCHEMA_PATH = DEFAULT_SCHEMA_DIR / "signalJourney.schema.json"
 
 # --- Helper Function for Inlining Refs ---
 
@@ -45,37 +51,31 @@ def inline_refs(
                 return loaded_schemas_cache[cache_key].copy()
 
             # If not cached, load the file
-            if ref_path.exists() and ref_path.is_file():
-                try:
-                    # print(
-                    #     f"[Inline] Loading $ref: {ref_path_str} "
-                    #     f"(from {base_path}) -> {ref_path}"
-                    # )
-                    with open(ref_path, "r", encoding="utf-8") as f:
-                        ref_content = json.load(f)
-                    # Store in cache BEFORE recursion to handle circular refs
-                    loaded_schemas_cache[cache_key] = ref_content
-                    # Recursively resolve refs *within* the loaded content
-                    # Use the directory of the *referenced* file as the new base path
-                    resolved_content = inline_refs(
-                        ref_content, ref_path.parent, loaded_schemas_cache
-                    )
-                    # Update cache with the fully resolved content
-                    loaded_schemas_cache[cache_key] = resolved_content
-                    # Return a copy of the resolved content
-                    return resolved_content.copy()
-                except Exception as e:
-                    print(
-                        f"Warning: Failed to load or parse $ref: {ref_path_str} "
-                        f"from {ref_path}. Error: {e}"
-                    )
-                    return schema  # Keep original $ref on error
-            else:
-                print(
-                    f"Warning: $ref path does not exist or is not a file: "
+            if not (ref_path.exists() and ref_path.is_file()):
+                raise SchemaResolutionError(
+                    f"$ref path does not exist or is not a file: "
                     f"{ref_path_str} -> {ref_path}"
                 )
-                return schema  # Keep original $ref if file not found
+            try:
+                with open(ref_path, "r", encoding="utf-8") as f:
+                    ref_content = json.load(f)
+            except (OSError, ValueError) as e:
+                raise SchemaResolutionError(
+                    f"Failed to load or parse $ref: {ref_path_str} "
+                    f"from {ref_path}. Error: {e}"
+                ) from e
+            logger.debug("Loading $ref %s -> %s", ref_path_str, ref_path)
+            # Store in cache BEFORE recursion to handle circular refs
+            loaded_schemas_cache[cache_key] = ref_content
+            # Recursively resolve refs *within* the loaded content
+            # Use the directory of the *referenced* file as the new base path
+            resolved_content = inline_refs(
+                ref_content, ref_path.parent, loaded_schemas_cache
+            )
+            # Update cache with the fully resolved content
+            loaded_schemas_cache[cache_key] = resolved_content
+            # Return a copy of the resolved content
+            return resolved_content.copy()
         else:
             # Recursively process other keys in the dictionary
             new_schema = {}
@@ -88,6 +88,65 @@ def inline_refs(
     else:
         # Return non-dict/list items as is
         return schema
+
+
+def _check_local_refs(root: JsonDict) -> None:
+    """Raise SchemaResolutionError for a ``#/...`` $ref that points nowhere.
+
+    External file refs are inlined (or refused) by ``inline_refs``; what is
+    left after inlining are pointers into a schema document.
+    A pointer is resolved against the nearest enclosing ``$id`` (the sub-schema
+    that declares one is its own document, as jsonschema treats it), or against
+    ``root`` when no ``$id`` encloses it.
+    A pointer that does not resolve would otherwise only fail while validating
+    a document.
+    """
+
+    def resolve(document: Any, pointer: str) -> bool:
+        node: Any = document
+        for token in pointer.split("/")[1:]:
+            token = unquote(token).replace("~1", "/").replace("~0", "~")
+            if isinstance(node, dict) and token in node:
+                node = node[token]
+            elif isinstance(node, list) and token.isdigit() and int(token) < len(node):
+                node = node[int(token)]
+            else:
+                return False
+        return True
+
+    def walk(node: Any, document: Any) -> None:
+        if isinstance(node, dict):
+            if isinstance(node.get("$id"), str):
+                document = node  # this sub-schema is its own document
+            ref = node.get("$ref")
+            if (
+                isinstance(ref, str)
+                and (ref == "#" or ref.startswith("#/"))
+                and not resolve(document, ref[1:])
+            ):
+                raise SchemaResolutionError(
+                    f"$ref '{ref}' does not resolve within the schema"
+                )
+            for value in node.values():
+                walk(value, document)
+        elif isinstance(node, list):
+            for item in node:
+                walk(item, document)
+
+    walk(root, root)
+
+
+def resolve_schema_refs(
+    schema: JsonDict, base_path: Path, loaded_schemas_cache: Dict[str, Dict]
+) -> JsonDict:
+    """Inline every external $ref of ``schema`` and check the local ones.
+
+    Raises:
+        SchemaResolutionError: If any $ref cannot be resolved.
+    """
+    resolved = inline_refs(schema, base_path, loaded_schemas_cache)
+    _check_local_refs(resolved)
+    return resolved
 
 
 class Validator:
@@ -117,8 +176,18 @@ class Validator:
                     automatically inlined during initialization.
             schema_version: Specific schema version to use (e.g., "0.1.0").
                            If None, will auto-detect from data during validation.
-            schema_dir: Custom schema directory path. If None, uses default.
+            schema_dir: Custom schema directory path. If None, uses the schema
+                        packaged with the library. A directory that does not
+                        exist, or a schema file in it that cannot be read or
+                        parsed, raises SchemaResolutionError. The one fallback:
+                        a directory that exists but holds no schema version
+                        (no ``versions/`` entry) uses the packaged schema and
+                        logs a warning.
         """
+        if schema_dir is not None and not Path(schema_dir).is_dir():
+            raise SchemaResolutionError(
+                f"schema_dir does not exist or is not a directory: {schema_dir}"
+            )
         self._registry = SchemaVersionRegistry(schema_dir)
         self._schema_version = schema_version
 
@@ -137,27 +206,34 @@ class Validator:
                     f"Available versions: {self._registry.get_supported_versions()}"
                 )
             schema_path = self._registry.get_schema_path(schema_version)
-            initial_schema = self._registry.load_schema(schema_version)
+            initial_schema = self._load_registry_schema(schema_version)
             base_resolve_path = schema_path.parent
         else:
             # Use latest version as default
-            try:
-                latest_version = self._registry.get_latest_version()
-                self._schema_version = latest_version
-                schema_path = self._registry.get_schema_path(latest_version)
-                initial_schema = self._registry.load_schema(latest_version)
-                base_resolve_path = schema_path.parent
-            except Exception:
-                # Fallback to legacy schema path if registry fails
+            latest_version = self._registry.get_latest_version()
+            if latest_version is None:
+                # The one documented fallback: the directory exists but holds
+                # no schema version, so the packaged schema is used.
+                logger.warning(
+                    "No schema version found in %s; using the packaged schema",
+                    self._registry.schema_dir,
+                )
                 schema_path = DEFAULT_SCHEMA_PATH
                 initial_schema = self._load_schema_dict(None, schema_path)
                 base_resolve_path = schema_path.parent
+            else:
+                self._schema_version = latest_version
+                schema_path = self._registry.get_schema_path(latest_version)
+                initial_schema = self._load_registry_schema(latest_version)
+                base_resolve_path = schema_path.parent
 
-        # Inline external $refs
-        print("\n--- Inlining schema refs within Validator ---")
+        # Inline external $refs; an unresolved one raises SchemaResolutionError.
+        logger.debug("Inlining schema refs within Validator")
         loaded_cache = {}
-        self._schema = inline_refs(initial_schema, base_resolve_path, loaded_cache)
-        print("--- Inlining complete --- \n")
+        self._schema = resolve_schema_refs(
+            initial_schema, base_resolve_path, loaded_cache
+        )
+        logger.debug("Inlining complete")
 
         # Initialize the validator with the resolved schema.
         try:
@@ -168,6 +244,15 @@ class Validator:
             )
         except jsonschema.SchemaError as e:
             raise SignalJourneyValidationError(f"Invalid schema provided: {e}") from e
+
+    def _load_registry_schema(self, version: str) -> JsonDict:
+        """Load a registered schema version; an unreadable file is an error."""
+        try:
+            return self._registry.load_schema(version)
+        except OSError as e:
+            raise SchemaResolutionError(
+                f"Cannot load schema version '{version}': {e}"
+            ) from e
 
     def _get_schema_path(
         self, schema_input: Optional[Union[Path, str, JsonDict]]
@@ -218,11 +303,13 @@ class Validator:
             )
 
         schema_path = self._registry.get_schema_path(version)
-        schema_dict = self._registry.load_schema(version)
+        schema_dict = self._load_registry_schema(version)
 
         # Inline external $refs
         loaded_cache = {}
-        resolved_schema = inline_refs(schema_dict, schema_path.parent, loaded_cache)
+        resolved_schema = resolve_schema_refs(
+            schema_dict, schema_path.parent, loaded_cache
+        )
 
         # Create and return validator
         Draft202012Validator.check_schema(resolved_schema)
@@ -387,7 +474,7 @@ class Validator:
                     schema_errors.append(detail)
         except jsonschema.RefResolutionError as e:
             # This shouldn't happen if schema is fully resolved, but handle defensively
-            print(f"DEBUG: Unexpected RefResolutionError: {e}")
+            logger.debug("Unexpected RefResolutionError: %s", e)
             failed_ref = getattr(e, "ref", "[unknown ref]")
             raise SignalJourneyValidationError(
                 f"Schema validation failed: Unexpectedly could not resolve "
@@ -398,9 +485,10 @@ class Validator:
             raise SignalJourneyValidationError(f"Invalid schema: {e}") from e
         except Exception as e:
             # Capture the actual exception type for better debugging
-            print(
-                f"DEBUG: Unexpected validation error type: "
-                f"{type(e).__name__}, Error: {e}"
+            logger.debug(
+                "Unexpected validation error type: %s, Error: %s",
+                type(e).__name__,
+                e,
             )
             # Reraise or wrap depending on desired behavior
             raise SignalJourneyValidationError(
@@ -431,9 +519,10 @@ class Validator:
     ) -> List[ValidationErrorDetail]:
         """Placeholder for BIDS context validation logic."""
         errors: List[ValidationErrorDetail] = []
-        print(
-            f"[INFO] BIDS context validation requested for {file_path} "
-            f"within {bids_root} (Not implemented)"
+        logger.info(
+            "BIDS context validation requested for %s within %s (Not implemented)",
+            file_path,
+            bids_root,
         )
 
         # TODO: Implement BIDS checks using file_path and bids_root
@@ -464,108 +553,3 @@ class Validator:
     def get_latest_version(self) -> Optional[str]:
         """Get the latest available schema version."""
         return self._registry.get_latest_version()
-
-
-# Example usage when run directly
-if __name__ == "__main__":
-    # Assumes schema and example files are in the correct relative paths
-    schema_file = (
-        Path(__file__).parent.parent.parent / "schema" / "signalJourney.schema.json"
-    )
-    # Use an invalid example for testing errors
-    invalid_example_dict = {
-        "sj_version": "0.1",  # Invalid pattern
-        "description": "Invalid example for direct run",
-        "pipelineInfo": {"projectName": "Test"},
-        # Missing processingSteps
-    }
-    valid_example_file = (
-        Path(__file__).parent.parent.parent
-        / "schema"
-        / "examples"
-        / "simple_pipeline.json"
-    )
-    # Example BIDS context (adjust path as needed for your system)
-    example_bids_root = (
-        Path(__file__).parent.parent.parent / "tests" / "data" / "bids_dataset"
-    )  # Assuming tests/data exists
-
-    if schema_file.exists():
-        print(f"Using schema: {schema_file}\n")
-        try:
-            validator = Validator(schema=schema_file)
-
-            # --- Test valid example (no BIDS) ---
-            print(f"Validating valid example (no BIDS): {valid_example_file}")
-            validation_result_valid = validator.validate(
-                valid_example_file, raise_exceptions=False
-            )
-            if (
-                isinstance(validation_result_valid, list)
-                and not validation_result_valid
-            ):
-                print("VALID example validation successful (returned empty list).\n")
-            else:
-                print(
-                    f"VALID example validation FAILED (unexpected result): "
-                    f"{validation_result_valid}\n"
-                )
-
-            # --- Test invalid example (no BIDS) ---
-            print("Validating invalid example (no BIDS)...")
-            validation_result_invalid = validator.validate(
-                invalid_example_dict, raise_exceptions=False
-            )
-            if (
-                isinstance(validation_result_invalid, list)
-                and validation_result_invalid
-            ):
-                print(
-                    f"INVALID example validation failed as expected. "
-                    f"Found {len(validation_result_invalid)} errors:"
-                )
-                for err in validation_result_invalid:
-                    print(f"- {err}")
-                print("\n")
-            else:
-                print(
-                    f"INVALID example validation FAILED (unexpected result): "
-                    f"{validation_result_invalid}\n"
-                )
-
-            # --- Test valid example (with BIDS context) ---
-            print(
-                f"Validating valid example (with BIDS context at {example_bids_root}): "
-                f"{valid_example_file}"
-            )
-            # Note: This will just print the INFO message currently
-            validation_result_bids = validator.validate(
-                valid_example_file,
-                raise_exceptions=False,
-                bids_context=example_bids_root,
-            )
-            if isinstance(validation_result_bids, list) and not validation_result_bids:
-                print(
-                    "VALID example BIDS context validation successful "
-                    "(returned empty list - placeholder).\n"
-                )
-            elif isinstance(validation_result_bids, list) and validation_result_bids:
-                print(
-                    f"VALID example BIDS context validation FAILED "
-                    f"(placeholder errors): {validation_result_bids}\n"
-                )
-            else:
-                print(
-                    f"VALID example BIDS context validation FAILED "
-                    f"(unexpected result): {validation_result_bids}\n"
-                )
-
-        except FileNotFoundError as e:
-            print(f"Error finding file: {e}\n")
-        except SignalJourneyValidationError as e:
-            print(f"Validation Error: {e}\nDetails: {e.errors}\n")
-        except Exception as e:
-            print(f"An unexpected error occurred: {e}\n")
-
-    else:
-        print(f"Default schema file not found: {schema_file}")

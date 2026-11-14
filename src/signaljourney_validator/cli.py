@@ -13,18 +13,9 @@ from signaljourney_validator.validator import (
 
 JsonDict = Dict[str, Any]
 
-# Determine project structure relative to this file
-CLI_ROOT = Path(__file__).parent
-PROJECT_ROOT = CLI_ROOT.parent.parent
-SCHEMA_DIR = PROJECT_ROOT / "schema"
-DEFINITIONS_DIR = SCHEMA_DIR / "definitions"
-EXTENSIONS_DIR = SCHEMA_DIR / "extensions"
-
 
 @click.group(context_settings=dict(help_option_names=["-h", "--help"]))
-@click.version_option(
-    package_name="signaljourney-validator", prog_name="signaljourney-validate"
-)
+@click.version_option(package_name="signalJourney", prog_name="signaljourney-validate")
 def cli():
     """
     Signal Journey Validator CLI.

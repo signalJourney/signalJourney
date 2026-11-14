@@ -1,17 +1,21 @@
 # User Guide: Python Validator Library
 
-This guide provides comprehensive details on using the `signaljourney-validator` Python library for validating signalJourney JSON files against the official schema.
+This guide provides comprehensive details on using the `signalJourney` Python library for validating signalJourney JSON files against the official schema.
 
 ## Installation
 
 ```bash
-pip install signaljourney-validator
+pip install signalJourney
+# or
+uv add signalJourney
 ```
+
+The distribution is named `signalJourney` (PyPI normalizes it to `signaljourney`), but you still `import signaljourney_validator` and run `signaljourney-validate`.
 
 To include optional suggestion features based on fuzzy string matching (which requires `python-Levenshtein` for optimal performance), install the `suggestions` extra:
 
 ```bash
-pip install signaljourney-validator[suggestions]
+pip install "signalJourney[suggestions]"
 ```
 
 ## Core Components

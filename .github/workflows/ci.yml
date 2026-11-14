@@ -72,7 +72,7 @@ jobs:
         echo "🔍 Validating all signalJourney example files..."
         
         # Find all example JSON files
-        find schema/examples/ -name "*.json" -type f | while read -r file; do
+        find src/signaljourney_validator/schema/examples/ -name "*.json" -type f | while read -r file; do
           echo "Validating: $file"
           if signaljourney-validate validate "$file"; then
             echo "✅ $file passed validation"
@@ -89,7 +89,7 @@ jobs:
         echo "🔍 Checking schema file consistency..."
         
         # Validate all schema files are valid JSON
-        find schema/ -name "*.schema.json" -type f | while read -r file; do
+        find src/signaljourney_validator/schema/ -name "*.schema.json" -type f | while read -r file; do
           echo "Checking JSON validity: $file"
           if python -m json.tool "$file" > /dev/null; then
             echo "✅ $file is valid JSON"
