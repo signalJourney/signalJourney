@@ -71,13 +71,15 @@ To contribute code changes, you'll need a local development environment:
         - Security scanning
         - Documentation building
 
-## Releasing to PyPI
+## Releasing
 
-Releases are published by `.github/workflows/publish.yml` when a tag `v<version>` is pushed.
-The tag name must equal the `version` in `pyproject.toml` and `__version__` in `src/signaljourney_validator/__init__.py`, and the tagged commit must be on `main`; the workflow fails otherwise.
-Set both versions in a pull request, merge it, then push a new tag with that name.
-A tag name that is already taken (for example `v0.1.0`) cannot be reused, so pick a version whose tag does not exist yet.
-Publishing uses PyPI trusted publishing in the GitHub environment `pypi`; no token is stored in the repository.
+Every pull request that changes `src/`, `pyproject.toml` or `MANIFEST.in` adds a line to `CHANGELOG.md` under `## [Unreleased]`, or carries the label `no-changelog`; the `Changelog` check enforces it.
+The version has one source, `__version__` in `src/signaljourney_validator/__init__.py`, and never changes in an ordinary pull request.
+
+A release is a pull request that moves the `## [Unreleased]` entries under `## [X.Y.Z] - YYYY-MM-DD` and sets `__version__ = "X.Y.Z"`, followed by pushing the tag `vX.Y.Z` on the merge commit.
+Tags are exactly `vX.Y.Z` and are never moved or reused.
+The tag push runs `.github/workflows/publish.yml`: it publishes to TestPyPI, installs from there in a fresh environment, publishes to PyPI, and creates a GitHub release titled exactly with the tag.
+`scripts/release_check.py` holds every rule, and [docs/RELEASING.md](docs/RELEASING.md) has the steps and what to do when a run stops half way.
 The PyPI project is named `signalJourney` (normalized `signaljourney`); the import package `signaljourney_validator` and the command `signaljourney-validate` keep their names.
 
 ## Reporting Bugs
