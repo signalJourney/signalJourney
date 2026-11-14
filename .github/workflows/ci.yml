@@ -7,150 +7,171 @@ on:
     branches: [ main, develop ]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
+# Runners are pinned to ubuntu-24.04: ubuntu-latest moved to a release that has no
+# Python 3.9 build. Python comes from astral-sh/setup-uv and packages are installed
+# with uv, never pip. Tools that CI runs without installing them into the project
+# (ruff, bandit, pip-audit) are pinned to an exact version.
+
 jobs:
   lint-and-test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     strategy:
       matrix:
         # Test on relevant Python versions
-        python-version: ['3.9', '3.10', '3.11', '3.12'] 
+        python-version: ['3.9', '3.10', '3.11', '3.12']
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      with:
+        persist-credentials: false
 
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v5
+      uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
       with:
         python-version: ${{ matrix.python-version }}
 
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install ruff pytest pytest-cov
-        # Install package with test dependencies
-        pip install -e '.[test]'
-
     - name: Lint with Ruff
       run: |
-        ruff check .
-        ruff format --check .
+        uvx ruff@0.17.5 check src tests scripts
+        uvx ruff@0.17.5 format --check src tests scripts
 
     - name: Test with pytest
       run: |
-        pytest tests/ -v --cov=src --cov-report=xml --cov-report=term-missing
+        uv run --extra test pytest tests/ -v --cov=src --cov-report=xml --cov-report=term-missing
 
     - name: Upload coverage reports to Codecov
       if: matrix.python-version == '3.11'
-      uses: codecov/codecov-action@v4.0.1
+      uses: codecov/codecov-action@e0b68c6749509c5f83f984dd99a76a1c1a231044 # v4.0.1
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         file: ./coverage.xml
         flags: unittests
         name: codecov-umbrella
 
+  release-rules:
+    name: Release Rules
+    runs-on: ubuntu-24.04
+
+    steps:
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      with:
+        persist-credentials: false
+
+    - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+      with:
+        python-version: '3.9' # the oldest Python the project supports
+
+    - name: Check the version, changelog and packaging rules
+      run: uv run --no-project python scripts/release_check.py static
+
+    - name: Test the release checks
+      run: uv run --with pytest --with pytest-cov pytest tests/test_release_check.py -q
+
   validate-examples:
     name: Validate Examples
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: lint-and-test
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      with:
+        persist-credentials: false
 
     - name: Set up Python 3.11
-      uses: actions/setup-python@v5
+      uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
       with:
         python-version: "3.11"
 
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -e .
-
     - name: Validate all example files
       run: |
-        echo "🔍 Validating all signalJourney example files..."
-        
+        echo "Validating all signalJourney example files..."
+
         # Find all example JSON files
         find src/signaljourney_validator/schema/examples/ -name "*.json" -type f | while read -r file; do
           echo "Validating: $file"
-          if signaljourney-validate validate "$file"; then
-            echo "✅ $file passed validation"
+          if uv run signaljourney-validate validate "$file"; then
+            echo "$file passed validation"
           else
-            echo "❌ $file failed validation"
+            echo "$file failed validation"
             exit 1
           fi
         done
-        
-        echo "✅ All example files are valid!"
+
+        echo "All example files are valid."
 
     - name: Validate schema consistency
       run: |
-        echo "🔍 Checking schema file consistency..."
-        
+        echo "Checking schema file consistency..."
+
         # Validate all schema files are valid JSON
         find src/signaljourney_validator/schema/ -name "*.schema.json" -type f | while read -r file; do
           echo "Checking JSON validity: $file"
-          if python -m json.tool "$file" > /dev/null; then
-            echo "✅ $file is valid JSON"
+          if uv run python -m json.tool "$file" > /dev/null; then
+            echo "$file is valid JSON"
           else
-            echo "❌ $file contains invalid JSON"
+            echo "$file contains invalid JSON"
             exit 1
           fi
         done
-        
-        echo "✅ All schema files are valid JSON!"
+
+        echo "All schema files are valid JSON."
 
   security-scan:
     name: Security Scan
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     if: github.event_name == 'pull_request'
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      with:
+        persist-credentials: false
 
     - name: Set up Python 3.11
-      uses: actions/setup-python@v5
+      uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
       with:
         python-version: "3.11"
 
-    - name: Install security tools
-      run: |
-        python -m pip install --upgrade pip
-        pip install bandit safety
-
     - name: Run bandit security linter
       run: |
-        bandit -r src/ -f json -o bandit-report.json || true
-        bandit -r src/ -ll
+        uvx bandit@1.9.4 -r src/ -f json -o bandit-report.json || true
+        uvx bandit@1.9.4 -r src/ -ll
 
+    # safety check is deprecated and its replacement needs an account, so the
+    # dependencies are audited with pip-audit, which reads the public PyPI advisory
+    # database without one. The requirements are resolved for the oldest supported
+    # Python, because that resolution pins the oldest releases users can install.
     - name: Check dependencies for known vulnerabilities
       run: |
-        safety check --json --output safety-report.json || true
-        safety check
+        uv pip compile pyproject.toml --python-version 3.9 --output-file audit-requirements.txt
+        uvx pip-audit@2.10.1 --requirement audit-requirements.txt --no-deps --disable-pip --format json --output pip-audit-report.json || true
+        uvx pip-audit@2.10.1 --requirement audit-requirements.txt --no-deps --disable-pip
 
     - name: Upload security reports
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
       if: always()
       with:
         name: security-reports
         path: |
           bandit-report.json
-          safety-report.json
+          pip-audit-report.json
 
   # Placeholder Job for MATLAB tests (requires self-hosted runner or MATLAB license setup)
   # matlab-tests:
   #   needs: lint-and-test # Optional: run after Python tests
-  #   runs-on: ubuntu-latest # Or a self-hosted runner with MATLAB
+  #   runs-on: ubuntu-24.04 # Or a self-hosted runner with MATLAB
   #   steps:
   #   - uses: actions/checkout@v4
   #   - name: Set up MATLAB
   #     # Option 1: Use official MATLAB actions (requires license config)
-  #     # uses: matlab-actions/setup-matlab@v1 
+  #     # uses: matlab-actions/setup-matlab@v1
   #     # Option 2: Manually setup MATLAB path on self-hosted runner
   #     run: echo "MATLAB setup steps would go here"
-  # 
+  #
   #   - name: Run MATLAB Tests
   #     run: |
   #       echo "Running MATLAB tests..."
@@ -158,44 +179,40 @@ jobs:
   #       # uses: matlab-actions/run-tests@v1
   #       # with:
   #       #   test-results-junit: test-results/matlab-results.xml
-  #       
+  #
   #       # Option 2: Manually running via batch command (adjust cd path)
   #       # matlab -batch "cd('$GITHUB_WORKSPACE/tests/matlab'); results = run_matlab_tests; exit(double(any([results.Failed])));"
   #       echo "(Skipping actual MATLAB test execution in this example CI)"
   #       exit 0 # Force success for now
-  # 
+  #
   #   - name: Upload MATLAB Test Results (JUnit XML)
   #     # uses: actions/upload-artifact@v3
   #     # with:
   #     #   name: matlab-test-results
   #     #   path: test-results/matlab-results.xml
-  #     run: echo "MATLAB artifact upload would go here" 
+  #     run: echo "MATLAB artifact upload would go here"
 
   deploy-docs:
     # Run only on pushes to the main branch
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: [lint-and-test, validate-examples] # Ensure tests and validation pass before deploying docs
-    runs-on: ubuntu-latest
+    needs: [lint-and-test, release-rules, validate-examples] # Tests and validation pass before docs deploy
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0 # Fetch all history for git-revision-date-localized-plugin
-      
+          persist-credentials: false
+
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
           python-version: '3.11' # Use a specific Python version for docs
 
-      - name: Install documentation dependencies
-        run: |
-          pip install -r docs/requirements.txt
-          pip install -e .
-
       - name: Build docs site
-        run: mkdocs build # Build the site into the ./site directory
+        run: uv run --with-requirements docs/requirements.txt mkdocs build # Build the site into the ./site directory
 
       - name: Deploy to signalJourney.github.io
-        uses: peaceiris/actions-gh-pages@v4
+        uses: peaceiris/actions-gh-pages@84c30a85c19949d7eee79c4ff27748b70285e453 # v4.1.0
         with:
           personal_token: ${{ secrets.GH_PAGES_TOKEN }} # Use the PAT secret for cross-repo access
           external_repository: signalJourney/signalJourney.github.io # Deploy to the dedicated docs repo
@@ -203,4 +220,4 @@ jobs:
           publish_dir: ./site # Directory containing built site
           user_name: 'github-actions[bot]'
           user_email: 'github-actions[bot]@users.noreply.github.com'
-          commit_message: 'Deploy documentation from signalJourney/signalJourney@${{ github.sha }}' 
+          commit_message: 'Deploy documentation from signalJourney/signalJourney@${{ github.sha }}'

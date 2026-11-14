@@ -1,7 +1,7 @@
 # Initial package marker
 import logging
 
-__version__ = "0.0.1"
+__version__ = "0.2.0"
 
 from .errors import SchemaResolutionError, ValidationErrorDetail
 from .validator import SignalJourneyValidationError, Validator

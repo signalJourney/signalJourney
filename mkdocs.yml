@@ -121,6 +121,7 @@ nav:
     - BIDS Integration: bids.md
     - Pipeline Research: pipeline_research.md
   - Contributing: contributing.md
+  - Releasing: RELEASING.md
   - FAQ: faq.md
   # - Home: index.md # Comment out or remove if introduction.md is the main page
 

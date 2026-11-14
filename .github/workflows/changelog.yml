@@ -1,0 +1,58 @@
+name: Changelog
+
+# A pull request that changes src/, pyproject.toml or MANIFEST.in must change
+# CHANGELOG.md inside "## [Unreleased]", unless it carries the label no-changelog.
+# The structure of CHANGELOG.md and the frozen 0.1.0 section are checked on every
+# pull request (scripts/release_check.py, docs/RELEASING.md).
+
+on:
+  pull_request:
+    branches: [ main ]
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+
+permissions:
+  contents: read
+
+jobs:
+  changelog:
+    name: Changelog
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # the merge base of the pull request is needed
+          persist-credentials: false
+
+      # This step runs the base branch's copy of the script. That is NOT a security
+      # boundary: under pull_request GitHub runs the pull request's own copy of this
+      # workflow file, so a pull request that edits this file (or the script, when no
+      # base copy exists) can change what judges it. The base copy only helps against
+      # an edit of the script alone. The enforcement is repository-side: a ruleset
+      # that requires code-owner review of .github/workflows/ and
+      # scripts/release_check.py (docs/RELEASING.md). The pull request's own copy of
+      # the script is tested in ci.yml. The first pull request that introduces the
+      # script has no base copy and is judged by its own.
+      - name: Check CHANGELOG.md against the pull request
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
+        run: |
+          checker="${RUNNER_TEMP}/release_check.py"
+          # ls-tree succeeds with no output when the path is absent and fails on any
+          # other problem, which then fails this step.
+          listing="$(git ls-tree --name-only "$BASE_SHA" -- scripts/release_check.py)"
+          if [ -n "$listing" ]; then
+            git show "${BASE_SHA}:scripts/release_check.py" > "$checker"
+            echo "using the base branch's scripts/release_check.py"
+          else
+            echo "the base branch has no scripts/release_check.py; using the pull request's own"
+            cp scripts/release_check.py "$checker"
+          fi
+          # python3 -I: the checkout is the working directory, and isolated mode keeps
+          # a file in it (json.py, say) from shadowing the standard library.
+          labels=()
+          while IFS= read -r name; do
+            if [ -n "$name" ]; then labels+=("--label=${name}"); fi
+          done < <(python3 -I -c 'import json, os; print("\n".join(json.loads(os.environ["LABELS"])))')
+          python3 -I "$checker" --root "$GITHUB_WORKSPACE" changelog --base "$BASE_SHA" --head "$HEAD_SHA" "${labels[@]}"
