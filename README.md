@@ -49,7 +49,8 @@ The `signaljourney_validator` package provides a CLI tool for easy validation.
     ```bash
     pip install signaljourney_validator
     ```
-    *(Note: Package not yet published to PyPI yet)*
+    *(Note: the first PyPI release is pending; until then install from a Git URL. Releases are published to PyPI from version tags.)*
+    The schema is packaged with the validator, so an installed copy validates without a repository checkout.
 
 2.  **Validation:**
     ```bash

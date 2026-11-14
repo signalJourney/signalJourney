@@ -20,6 +20,18 @@ To include optional suggestion features (using fuzzy matching):
 pip install signaljourney-validator[suggestions]
 ```
 
+## Packaged Schema, Errors and Logging
+
+The signalJourney schema (`schema/`, with its definitions, extensions, versioned copies and examples) is package data of `signaljourney_validator`.
+`Validator()` loads it through `importlib.resources`, so an installed wheel needs no repository checkout and no `schema_dir` argument.
+`schema_dir=` (and `--schema` on the command line) still override the packaged schema.
+
+An unresolved `$ref` (a missing or unreadable referenced file, or a `#/...` pointer that points nowhere) raises `SchemaResolutionError` when the `Validator` is constructed.
+`SchemaResolutionError` is a subclass of `SignalJourneyValidationError`.
+
+The library writes nothing to standard output.
+It logs on the logger `signaljourney_validator` (for example `logging.basicConfig(level=logging.DEBUG)` shows the reference inlining), and the command line prints its results as before.
+
 ## Basic Usage
 
 ```python
@@ -30,12 +42,12 @@ validator = Validator()
 
 # Validate a file
 try:
-    validator.validate('path/to/your_signalJourney.json')
+    validator.validate("path/to/your_signalJourney.json")
     print("Validation successful!")
 except SignalJourneyValidationError as e:
     print(f"Validation failed: {e}")
     for error_detail in e.errors:
-        print(f"- {error_detail}") # Includes suggestion if available
+        print(f"- {error_detail}")  # Includes suggestion if available
 except FileNotFoundError:
     print("File not found.")
 
@@ -55,14 +67,15 @@ except SignalJourneyValidationError as e:
         print(f"- {error_detail}")
 
 # Get errors without raising an exception
-validation_errors = validator.validate('path/to/invalid_signalJourney.json', raise_exceptions=False)
-if validation_errors: # Returns a list of ValidationErrorDetail objects
+validation_errors = validator.validate(
+    "path/to/invalid_signalJourney.json", raise_exceptions=False
+)
+if validation_errors:  # Returns a list of ValidationErrorDetail objects
     print(f"Found {len(validation_errors)} validation errors:")
     for error_detail in validation_errors:
         print(f"- {error_detail}")
 else:
     print("Validation successful (no errors found).")
-
 ```
 
 ## Features
