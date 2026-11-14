@@ -6,7 +6,9 @@ It uses the standard library only and runs on Python 3.9 or newer.
 
     release_check.py tag TAG [--dist DIR]
         TAG is exactly vX.Y.Z, equals v + __version__, and names the newest dated
-        CHANGELOG.md entry, whose body is not empty. With --dist, every wheel and
+        CHANGELOG.md entry, whose body is not empty. The changelog structure and the
+        pyproject.toml version rules hold, and ## [Unreleased] is empty, so nothing
+        unreleased ships under a tagged version's notes. With --dist, every wheel and
         source distribution in DIR is the distribution signalJourney at that version.
     release_check.py notes VERSION
         print the body of the CHANGELOG.md entry of VERSION (the release notes).
@@ -15,6 +17,11 @@ It uses the standard library only and runs on Python 3.9 or newer.
         ## [Unreleased] (judged from the merge base), unless the label no-changelog is
         given; the changelog's structure is always checked, and the 0.1.0 section must
         stay as it was at the merge base (compared without its trailing newlines).
+    release_check.py digests --dist DIR --json FILE
+        FILE is an index's JSON API answer for the version (PyPI or TestPyPI); every
+        wheel and sdist in DIR must be listed there with the same sha256. Exit 0 when
+        all match, 3 when a file is not listed yet (index delay: retry), 1 when a
+        digest differs or nothing can be compared (fail closed).
     release_check.py static
         the repository-wide rules: ## [Unreleased] is first, entries are in descending
         version order with real dates, __version__ equals the newest dated entry, and
@@ -33,6 +40,8 @@ from __future__ import annotations
 import argparse
 import datetime
 import email
+import hashlib
+import json
 import re
 import subprocess
 import sys
@@ -267,6 +276,41 @@ def dist_errors(directory: Path, version: str) -> List[str]:
     return errors
 
 
+def sha256_of(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1 << 20), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def digest_report(directory: Path, payload: object) -> Tuple[List[str], List[str]]:
+    """Compare the files of `directory` with an index's JSON answer.
+
+    Returns (missing, mismatched): files the index does not list (yet), and files
+    whose sha256 differs from the one the index holds.
+    """
+    files = sorted(directory.glob("*.whl")) + sorted(directory.glob("*.tar.gz"))
+    if not files:
+        raise Refusal([f"{directory} holds no wheel or sdist to compare"])
+    listed = {}
+    urls = payload.get("urls") if isinstance(payload, dict) else None
+    for entry in urls if isinstance(urls, list) else []:
+        if isinstance(entry, dict) and isinstance(entry.get("digests"), dict):
+            listed[entry.get("filename")] = entry["digests"].get("sha256")
+    missing: List[str] = []
+    mismatched: List[str] = []
+    for path in files:
+        if path.name not in listed:
+            missing.append(f"{path.name} is not listed by the index")
+        elif listed[path.name] != sha256_of(path):
+            mismatched.append(
+                f"{path.name}: the index holds a file with another sha256 "
+                f"({listed[path.name]}) than the one built here ({sha256_of(path)})"
+            )
+    return missing, mismatched
+
+
 def pyproject_errors(root: Path) -> List[str]:
     text = read_text(root, PYPROJECT)
     table = re.search(r"^\[project\]\n(.*?)(?=^\[|\Z)", text, re.DOTALL | re.MULTILINE)
@@ -307,6 +351,14 @@ def check_tag(root: Path, tag: str, dist: Optional[Path]) -> List[str]:
         errors.append(f"the tag is {tag} but __version__ is {module!r}")
     sections, parse_errors = read_changelog(root)
     errors.extend(parse_errors)
+    errors.extend(structure_errors(sections))
+    errors.extend(pyproject_errors(root))
+    unreleased = section_named(sections, "Unreleased")
+    if unreleased is not None and not is_empty(unreleased.body):
+        errors.append(
+            f"## [Unreleased] of {CHANGELOG} is not empty; move its entries under "
+            f"[{version}] before tagging"
+        )
     entries = dated(sections)
     if not entries:
         errors.append(f"{CHANGELOG} has no dated entry")
@@ -342,9 +394,9 @@ def check_changelog(
     merge_base = run_git(root, "merge-base", base, head).strip()
     changed = [
         path
-        for path in run_git(root, "diff", "--name-only", "-z", merge_base, head).split(
-            "\0"
-        )
+        for path in run_git(
+            root, "diff", "--name-only", "--no-renames", "-z", merge_base, head
+        ).split("\0")
         if path
     ]
     head_text = run_git(root, "show", f"{head}:{CHANGELOG}")
@@ -416,8 +468,38 @@ def build_parser() -> argparse.ArgumentParser:
     changelog.add_argument("--base", required=True)
     changelog.add_argument("--head", required=True)
     changelog.add_argument("--label", action="append", default=[])
+    digests = commands.add_parser(
+        "digests", help="compare built files with an index's JSON answer"
+    )
+    digests.add_argument("--dist", type=Path, required=True)
+    digests.add_argument("--json", type=Path, required=True, dest="json_file")
     commands.add_parser("static", help="check the repository-wide rules")
     return parser
+
+
+def run_digests(directory: Path, json_file: Path) -> int:
+    """Exit 0 all match, 3 not listed yet, 1 differs or cannot be compared."""
+    try:
+        payload = json.loads(json_file.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as error:
+        print(
+            f"error: cannot read the index answer {json_file}: {error}", file=sys.stderr
+        )
+        return 3
+    try:
+        missing, mismatched = digest_report(directory, payload)
+    except Refusal as refusal:
+        for message in refusal.args[0]:
+            print(f"error: {message}", file=sys.stderr)
+        return 1
+    for message in mismatched + missing:
+        print(f"error: {message}", file=sys.stderr)
+    if mismatched:
+        return 1
+    if missing:
+        return 3
+    print("ok: digests")
+    return 0
 
 
 def main(argv: Optional[Sequence[str]] = None) -> int:
@@ -426,6 +508,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         if args.command == "notes":
             sys.stdout.write(release_notes(args.root, args.version))
             return 0
+        if args.command == "digests":
+            return run_digests(args.dist, args.json_file)
         if args.command == "tag":
             errors = check_tag(args.root, args.tag, args.dist)
         elif args.command == "changelog":

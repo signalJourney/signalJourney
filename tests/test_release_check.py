@@ -5,12 +5,17 @@ that holds copies of the real CHANGELOG.md, pyproject.toml and package
 `__init__.py`, so the rules are proven against the files they guard.
 """
 
+import hashlib
+import io
+import json
 import re
 import shutil
 import subprocess
 import sys
+import tarfile
 import zipfile
 from pathlib import Path
+from typing import Union
 
 import pytest
 
@@ -49,11 +54,11 @@ def run(repo: Path, *args: str) -> subprocess.CompletedProcess:
     )
 
 
-def read(repo: Path, name: str) -> str:
+def read(repo: Path, name: Union[str, Path]) -> str:
     return (repo / name).read_text(encoding="utf-8")
 
 
-def write(repo: Path, name: str, text: str) -> None:
+def write(repo: Path, name: Union[str, Path], text: str) -> None:
     path = repo / name
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(text, encoding="utf-8")
@@ -66,6 +71,9 @@ def repo(tmp_path) -> Path:
     (root / INIT).parent.mkdir(parents=True)
     for name in ("CHANGELOG.md", "pyproject.toml", str(INIT)):
         shutil.copy(ROOT / name, root / name)
+    # Whatever is unreleased on the real branch, the copy is as it is at tag time.
+    text = read(root, "CHANGELOG.md")
+    write(root, "CHANGELOG.md", replace_entry_body(text, "Unreleased", "\n"))
     write(root, "docs/index.md", "docs\n")
     git(root, "init", "-q", "-b", "main")
     git(root, "config", "user.email", "test@example.invalid")
@@ -215,19 +223,30 @@ def test_a_real_build_carries_the_module_version(repo, tmp_path):
 # ---------------------------------------------------------------------------
 
 
+MARKER = "- A marker line that only this test writes."
+
+
+def with_marker_entry(repo: Path) -> None:
+    text = read(repo, "CHANGELOG.md")
+    body = f"\n### Added\n{MARKER}\n\n"
+    write(repo, "CHANGELOG.md", replace_entry_body(text, VERSION, body))
+
+
 def test_notes_print_the_entry_and_only_the_entry(repo):
+    with_marker_entry(repo)
     done = run(repo, "notes", VERSION)
     assert done.returncode == 0, done.stderr
-    assert "SchemaResolutionError" in done.stdout
+    assert MARKER in done.stdout
     assert "## [" not in done.stdout
     assert "Initial release" not in done.stdout
 
 
 def test_notes_work_for_an_older_entry(repo):
+    with_marker_entry(repo)
     done = run(repo, "notes", "0.1.0")
     assert done.returncode == 0, done.stderr
     assert "Initial release" in done.stdout
-    assert "SchemaResolutionError" not in done.stdout
+    assert MARKER not in done.stdout
 
 
 def test_notes_for_a_missing_entry_fail(repo):
@@ -480,3 +499,263 @@ def test_static_refuses_an_impossible_date(repo):
     done = run(repo, "static")
     assert done.returncode == 1
     assert "date" in done.stderr
+
+
+# ---------------------------------------------------------------------------
+# the tag command also holds the structure rules
+# ---------------------------------------------------------------------------
+
+
+def test_a_tag_with_unreleased_entries_is_refused(repo):
+    edit_unreleased(repo)
+    done = run(repo, "tag", TAG)
+    assert done.returncode == 1
+    assert "Unreleased" in done.stderr and "not empty" in done.stderr
+
+
+def test_an_unreleased_section_of_bare_headings_is_empty_at_tag_time(repo):
+    text = read(repo, "CHANGELOG.md")
+    write(
+        repo, "CHANGELOG.md", replace_entry_body(text, "Unreleased", "\n### Added\n\n")
+    )
+    done = run(repo, "tag", TAG)
+    assert done.returncode == 0, done.stderr
+
+
+def test_a_tag_runs_the_changelog_order_check(repo):
+    text = read(repo, "CHANGELOG.md")
+    start, end = entry_span(text, VERSION)
+    write(repo, "CHANGELOG.md", text[:end] + text[start:end] + text[end:])
+    done = run(repo, "tag", TAG)
+    assert done.returncode == 1
+    assert "descending" in done.stderr
+
+
+def test_a_tag_runs_the_single_unreleased_check(repo):
+    text = read(repo, "CHANGELOG.md")
+    write(repo, "CHANGELOG.md", text.replace("## [Unreleased]\n", "", 1))
+    done = run(repo, "tag", TAG)
+    assert done.returncode == 1
+    assert "Unreleased" in done.stderr
+
+
+def test_a_tag_runs_the_pyproject_check(repo):
+    text = read(repo, "pyproject.toml")
+    marker = 'name = "signalJourney"\n'
+    write(
+        repo, "pyproject.toml", text.replace(marker, marker + 'version = "0.0.1"\n', 1)
+    )
+    done = run(repo, "tag", TAG)
+    assert done.returncode == 1
+    assert "pyproject.toml" in done.stderr
+
+
+# ---------------------------------------------------------------------------
+# every distribution file is checked
+# ---------------------------------------------------------------------------
+
+
+def make_sdist(directory: Path, version: str, pkg_infos: int = 1) -> Path:
+    directory.mkdir(exist_ok=True)
+    path = directory / f"signaljourney-{version}.tar.gz"
+    with tarfile.open(path, "w:gz") as archive:
+        for index in range(pkg_infos):
+            head = "Metadata-Version: 2.4\nName: signalJourney\n"
+            data = f"{head}Version: {version}\n".encode()
+            info = tarfile.TarInfo(f"signaljourney-{version}{'x' * index}/PKG-INFO")
+            info.size = len(data)
+            archive.addfile(info, io.BytesIO(data))
+    return path
+
+
+def test_a_good_wheel_and_sdist_pass(repo):
+    make_wheel(repo / "dist", VERSION)
+    make_sdist(repo / "dist", VERSION)
+    done = run(repo, "tag", TAG, "--dist", str(repo / "dist"))
+    assert done.returncode == 0, done.stderr
+
+
+def test_an_sdist_of_another_version_is_refused(repo):
+    make_wheel(repo / "dist", VERSION)
+    make_sdist(repo / "dist", "9.9.9")
+    done = run(repo, "tag", TAG, "--dist", str(repo / "dist"))
+    assert done.returncode == 1
+    assert "sdist" in done.stderr
+
+
+def test_an_sdist_with_two_pkg_info_files_is_refused(repo):
+    make_wheel(repo / "dist", VERSION)
+    make_sdist(repo / "dist", VERSION, pkg_infos=2)
+    done = run(repo, "tag", TAG, "--dist", str(repo / "dist"))
+    assert done.returncode == 1
+    assert "PKG-INFO" in done.stderr
+
+
+def test_a_wheel_with_two_metadata_files_is_refused(repo):
+    wheel = make_wheel(repo / "dist", VERSION)
+    with zipfile.ZipFile(wheel, "a") as archive:
+        archive.writestr(
+            "other-1.0.dist-info/METADATA",
+            f"Name: signalJourney\nVersion: {VERSION}\n\n",
+        )
+    done = run(repo, "tag", TAG, "--dist", str(repo / "dist"))
+    assert done.returncode == 1
+    assert "METADATA" in done.stderr
+
+
+def test_every_wheel_is_checked_not_only_the_first(repo):
+    make_wheel(repo / "dist", VERSION)
+    make_wheel(repo / "dist", "9.9.9")
+    done = run(repo, "tag", TAG, "--dist", str(repo / "dist"))
+    assert done.returncode == 1
+    assert "9.9.9" in done.stderr
+
+
+# ---------------------------------------------------------------------------
+# pyproject.toml and CHANGELOG.md details
+# ---------------------------------------------------------------------------
+
+
+def test_static_refuses_a_project_that_is_not_dynamic(repo):
+    text = read(repo, "pyproject.toml")
+    kept = [
+        line
+        for line in text.splitlines(keepends=True)
+        if not line.startswith("dynamic")
+    ]
+    write(repo, "pyproject.toml", "".join(kept))
+    done = run(repo, "static")
+    assert done.returncode == 1
+    assert "dynamic" in done.stderr
+
+
+def test_static_refuses_a_missing_dynamic_version_table(repo):
+    text = read(repo, "pyproject.toml")
+    table = (
+        "[tool.setuptools.dynamic]\n"
+        'version = { attr = "signaljourney_validator.__version__" }\n'
+    )
+    assert table in text
+    write(repo, "pyproject.toml", text.replace(table, ""))
+    done = run(repo, "static")
+    assert done.returncode == 1
+    assert "tool.setuptools.dynamic" in done.stderr
+
+
+def test_static_refuses_a_duplicated_version(repo):
+    text = read(repo, "CHANGELOG.md")
+    start, end = entry_span(text, VERSION)
+    write(repo, "CHANGELOG.md", text[:end] + text[start:end] + text[end:])
+    done = run(repo, "static")
+    assert done.returncode == 1
+    assert "descending" in done.stderr
+
+
+def test_a_fenced_block_is_not_parsed_as_sections_or_headings(repo):
+    text = read(repo, "CHANGELOG.md")
+    block = "\n### Added\n- Quote:\n```\n## not a section\n### Misc\n```\n"
+    write(repo, "CHANGELOG.md", replace_entry_body(text, "Unreleased", block + "\n"))
+    done = run(repo, "static")
+    assert done.returncode == 0, done.stderr
+
+
+# ---------------------------------------------------------------------------
+# a move out of src/ is a change of src/
+# ---------------------------------------------------------------------------
+
+
+def test_moving_a_file_out_of_src_needs_a_changelog_entry(repo):
+    write(repo, "src/signaljourney_validator/module.py", "x = 1\n" * 20)
+    base = commit(repo, "add a module")
+    git(repo, "mv", "src/signaljourney_validator/module.py", "docs/module.py")
+    head = commit(repo, "move it out of src")
+    done = changelog_check(repo, base, head)
+    assert done.returncode == 1
+    assert "src/signaljourney_validator/module.py" in done.stderr
+
+
+# ---------------------------------------------------------------------------
+# digests: TestPyPI must hold the bytes that PyPI will receive
+# ---------------------------------------------------------------------------
+
+
+def sha256(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def index_answer(repo: Path, files, changes=None) -> Path:
+    """What an index's JSON API says about `files`; `changes` alters a sha256."""
+    changes = changes or {}
+    urls = [
+        {"filename": f.name, "digests": {"sha256": changes.get(f.name, sha256(f))}}
+        for f in files
+    ]
+    answer = repo / "answer.json"
+    answer.write_text(json.dumps({"urls": urls}), encoding="utf-8")
+    return answer
+
+
+@pytest.fixture
+def built(repo):
+    wheel = make_wheel(repo / "dist", VERSION)
+    sdist = make_sdist(repo / "dist", VERSION)
+    return repo, wheel, sdist
+
+
+def digests(repo: Path, answer: Path):
+    return run(repo, "digests", "--dist", str(repo / "dist"), "--json", str(answer))
+
+
+def test_identical_digests_pass(built):
+    repo, wheel, sdist = built
+    done = digests(repo, index_answer(repo, [wheel, sdist]))
+    assert done.returncode == 0, done.stderr
+
+
+def test_a_file_with_another_digest_fails_closed(built):
+    repo, wheel, sdist = built
+    answer = index_answer(repo, [wheel, sdist], {sdist.name: "0" * 64})
+    done = digests(repo, answer)
+    assert done.returncode == 1
+    assert sdist.name in done.stderr and "sha256" in done.stderr
+
+
+def test_a_file_the_index_does_not_list_yet_asks_for_a_retry(built):
+    repo, wheel, sdist = built
+    done = digests(repo, index_answer(repo, [wheel]))
+    assert done.returncode == 3
+    assert sdist.name in done.stderr
+
+
+def test_a_mismatch_wins_over_a_missing_file(built):
+    repo, wheel, sdist = built
+    done = digests(repo, index_answer(repo, [wheel], {wheel.name: "0" * 64}))
+    assert done.returncode == 1
+
+
+def test_an_unreadable_index_answer_asks_for_a_retry(built):
+    repo, _, _ = built
+    answer = repo / "answer.json"
+    answer.write_text("<html>not json</html>", encoding="utf-8")
+    assert digests(repo, answer).returncode == 3
+
+
+def test_an_answer_without_files_asks_for_a_retry(built):
+    repo, _, _ = built
+    answer = repo / "answer.json"
+    answer.write_text(json.dumps({"info": {}}), encoding="utf-8")
+    assert digests(repo, answer).returncode == 3
+
+
+def test_extra_files_on_the_index_are_ignored(built):
+    repo, wheel, sdist = built
+    other = repo / "signaljourney-0.0.9.tar.gz"
+    other.write_bytes(b"x")
+    done = digests(repo, index_answer(repo, [wheel, sdist, other]))
+    assert done.returncode == 0, done.stderr
+
+
+def test_nothing_to_compare_fails(repo):
+    (repo / "dist").mkdir()
+    answer = index_answer(repo, [])
+    assert digests(repo, answer).returncode == 1
