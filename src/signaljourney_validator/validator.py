@@ -1,11 +1,16 @@
 import json
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
+from urllib.parse import unquote
 
 import jsonschema
 from jsonschema import Draft202012Validator
 
-from .errors import SignalJourneyValidationError, ValidationErrorDetail
+from .errors import (
+    SchemaResolutionError,
+    SignalJourneyValidationError,
+    ValidationErrorDetail,
+)
 from .schema_registry import DEFAULT_SCHEMA_DIR, SchemaVersionRegistry
 
 # Type alias for JSON dictionary
@@ -43,37 +48,30 @@ def inline_refs(
                 return loaded_schemas_cache[cache_key].copy()
 
             # If not cached, load the file
-            if ref_path.exists() and ref_path.is_file():
-                try:
-                    # print(
-                    #     f"[Inline] Loading $ref: {ref_path_str} "
-                    #     f"(from {base_path}) -> {ref_path}"
-                    # )
-                    with open(ref_path, "r", encoding="utf-8") as f:
-                        ref_content = json.load(f)
-                    # Store in cache BEFORE recursion to handle circular refs
-                    loaded_schemas_cache[cache_key] = ref_content
-                    # Recursively resolve refs *within* the loaded content
-                    # Use the directory of the *referenced* file as the new base path
-                    resolved_content = inline_refs(
-                        ref_content, ref_path.parent, loaded_schemas_cache
-                    )
-                    # Update cache with the fully resolved content
-                    loaded_schemas_cache[cache_key] = resolved_content
-                    # Return a copy of the resolved content
-                    return resolved_content.copy()
-                except Exception as e:
-                    print(
-                        f"Warning: Failed to load or parse $ref: {ref_path_str} "
-                        f"from {ref_path}. Error: {e}"
-                    )
-                    return schema  # Keep original $ref on error
-            else:
-                print(
-                    f"Warning: $ref path does not exist or is not a file: "
+            if not (ref_path.exists() and ref_path.is_file()):
+                raise SchemaResolutionError(
+                    f"$ref path does not exist or is not a file: "
                     f"{ref_path_str} -> {ref_path}"
                 )
-                return schema  # Keep original $ref if file not found
+            try:
+                with open(ref_path, "r", encoding="utf-8") as f:
+                    ref_content = json.load(f)
+            except (OSError, ValueError) as e:
+                raise SchemaResolutionError(
+                    f"Failed to load or parse $ref: {ref_path_str} "
+                    f"from {ref_path}. Error: {e}"
+                ) from e
+            # Store in cache BEFORE recursion to handle circular refs
+            loaded_schemas_cache[cache_key] = ref_content
+            # Recursively resolve refs *within* the loaded content
+            # Use the directory of the *referenced* file as the new base path
+            resolved_content = inline_refs(
+                ref_content, ref_path.parent, loaded_schemas_cache
+            )
+            # Update cache with the fully resolved content
+            loaded_schemas_cache[cache_key] = resolved_content
+            # Return a copy of the resolved content
+            return resolved_content.copy()
         else:
             # Recursively process other keys in the dictionary
             new_schema = {}
@@ -86,6 +84,59 @@ def inline_refs(
     else:
         # Return non-dict/list items as is
         return schema
+
+
+def _check_local_refs(root: JsonDict) -> None:
+    """Raise SchemaResolutionError for a ``#/...`` $ref that points nowhere.
+
+    External file refs are inlined (or refused) by ``inline_refs``; what is
+    left after inlining are pointers into the schema itself, and a pointer that
+    does not resolve would otherwise only fail while validating a document.
+    """
+
+    def resolve(pointer: str) -> bool:
+        node: Any = root
+        for token in pointer.split("/")[1:]:
+            token = unquote(token).replace("~1", "/").replace("~0", "~")
+            if isinstance(node, dict) and token in node:
+                node = node[token]
+            elif isinstance(node, list) and token.isdigit() and int(token) < len(node):
+                node = node[int(token)]
+            else:
+                return False
+        return True
+
+    def walk(node: Any) -> None:
+        if isinstance(node, dict):
+            ref = node.get("$ref")
+            if (
+                isinstance(ref, str)
+                and (ref == "#" or ref.startswith("#/"))
+                and not resolve(ref[1:])
+            ):
+                raise SchemaResolutionError(
+                    f"$ref '{ref}' does not resolve within the schema"
+                )
+            for value in node.values():
+                walk(value)
+        elif isinstance(node, list):
+            for item in node:
+                walk(item)
+
+    walk(root)
+
+
+def resolve_schema_refs(
+    schema: JsonDict, base_path: Path, loaded_schemas_cache: Dict[str, Dict]
+) -> JsonDict:
+    """Inline every external $ref of ``schema`` and check the local ones.
+
+    Raises:
+        SchemaResolutionError: If any $ref cannot be resolved.
+    """
+    resolved = inline_refs(schema, base_path, loaded_schemas_cache)
+    _check_local_refs(resolved)
+    return resolved
 
 
 class Validator:
@@ -154,7 +205,9 @@ class Validator:
         # Inline external $refs
         print("\n--- Inlining schema refs within Validator ---")
         loaded_cache = {}
-        self._schema = inline_refs(initial_schema, base_resolve_path, loaded_cache)
+        self._schema = resolve_schema_refs(
+            initial_schema, base_resolve_path, loaded_cache
+        )
         print("--- Inlining complete --- \n")
 
         # Initialize the validator with the resolved schema.
@@ -220,7 +273,9 @@ class Validator:
 
         # Inline external $refs
         loaded_cache = {}
-        resolved_schema = inline_refs(schema_dict, schema_path.parent, loaded_cache)
+        resolved_schema = resolve_schema_refs(
+            schema_dict, schema_path.parent, loaded_cache
+        )
 
         # Create and return validator
         Draft202012Validator.check_schema(resolved_schema)

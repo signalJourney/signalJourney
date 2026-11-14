@@ -191,3 +191,11 @@ class SignalJourneyValidationError(Exception):
     ):
         super().__init__(message)
         self.errors = errors or []
+
+
+class SchemaResolutionError(SignalJourneyValidationError):
+    """Raised when a schema ``$ref`` cannot be resolved.
+
+    It is raised when a ``Validator`` is constructed, so a schema with a
+    dangling, missing or unreadable reference never validates anything.
+    """
