@@ -44,7 +44,7 @@ jobs:
 
     - name: Upload coverage reports to Codecov
       if: matrix.python-version == '3.11'
-      uses: codecov/codecov-action@v4.0.1
+      uses: codecov/codecov-action@e0b68c6749509c5f83f984dd99a76a1c1a231044 # v4.0.1
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         file: ./coverage.xml
@@ -65,7 +65,7 @@ jobs:
         python-version: '3.9' # the oldest Python the project supports
 
     - name: Check the version, changelog and packaging rules
-      run: uv run python scripts/release_check.py static
+      run: uv run --no-project python scripts/release_check.py static
 
     - name: Test the release checks
       run: uv run --with pytest --with pytest-cov pytest tests/test_release_check.py -q
@@ -212,7 +212,7 @@ jobs:
         run: uv run --with-requirements docs/requirements.txt mkdocs build # Build the site into the ./site directory
 
       - name: Deploy to signalJourney.github.io
-        uses: peaceiris/actions-gh-pages@v4
+        uses: peaceiris/actions-gh-pages@84c30a85c19949d7eee79c4ff27748b70285e453 # v4.1.0
         with:
           personal_token: ${{ secrets.GH_PAGES_TOKEN }} # Use the PAT secret for cross-repo access
           external_repository: signalJourney/signalJourney.github.io # Deploy to the dedicated docs repo
