@@ -14,6 +14,8 @@ JsonDict = Dict[str, Any]
 
 # Default paths: the schema is package data, found through importlib.resources
 # so it resolves the same way from a checkout and from an installed wheel.
+# The Path conversion assumes a real filesystem install (a wheel installed
+# into site-packages); the library cannot be run from inside a zip archive.
 DEFAULT_SCHEMA_DIR = Path(str(resources.files("signaljourney_validator") / "schema"))
 DEFAULT_VERSIONS_DIR = DEFAULT_SCHEMA_DIR / "versions"
 

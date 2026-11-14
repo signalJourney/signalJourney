@@ -24,7 +24,13 @@ pip install signaljourney-validator[suggestions]
 
 The signalJourney schema (`schema/`, with its definitions, extensions, versioned copies and examples) is package data of `signaljourney_validator`.
 `Validator()` loads it through `importlib.resources`, so an installed wheel needs no repository checkout and no `schema_dir` argument.
-`schema_dir=` (and `--schema` on the command line) still override the packaged schema.
+The library expects a regular filesystem install (a wheel installed into `site-packages`); running it from inside a zip archive is not supported.
+
+`schema_dir=` (and `--schema` on the command line) override the packaged schema, and a wrong `schema_dir` is an error, not a silent switch to the packaged schema:
+
+- a `schema_dir` that does not exist, or is not a directory, raises `SchemaResolutionError`;
+- a schema file in it that cannot be read or parsed raises `SchemaResolutionError`;
+- the one fallback is a `schema_dir` that exists but holds no schema version (no `versions/` entry): the packaged schema is used and a warning is logged on the logger `signaljourney_validator`.
 
 An unresolved `$ref` (a missing or unreadable referenced file, or a `#/...` pointer that points nowhere) raises `SchemaResolutionError` when the `Validator` is constructed.
 `SchemaResolutionError` is a subclass of `SignalJourneyValidationError`.

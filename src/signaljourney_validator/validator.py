@@ -170,8 +170,18 @@ class Validator:
                     automatically inlined during initialization.
             schema_version: Specific schema version to use (e.g., "0.1.0").
                            If None, will auto-detect from data during validation.
-            schema_dir: Custom schema directory path. If None, uses default.
+            schema_dir: Custom schema directory path. If None, uses the schema
+                        packaged with the library. A directory that does not
+                        exist, or a schema file in it that cannot be read or
+                        parsed, raises SchemaResolutionError. The one fallback:
+                        a directory that exists but holds no schema version
+                        (no ``versions/`` entry) uses the packaged schema and
+                        logs a warning.
         """
+        if schema_dir is not None and not Path(schema_dir).is_dir():
+            raise SchemaResolutionError(
+                f"schema_dir does not exist or is not a directory: {schema_dir}"
+            )
         self._registry = SchemaVersionRegistry(schema_dir)
         self._schema_version = schema_version
 
@@ -190,20 +200,25 @@ class Validator:
                     f"Available versions: {self._registry.get_supported_versions()}"
                 )
             schema_path = self._registry.get_schema_path(schema_version)
-            initial_schema = self._registry.load_schema(schema_version)
+            initial_schema = self._load_registry_schema(schema_version)
             base_resolve_path = schema_path.parent
         else:
             # Use latest version as default
-            try:
-                latest_version = self._registry.get_latest_version()
-                self._schema_version = latest_version
-                schema_path = self._registry.get_schema_path(latest_version)
-                initial_schema = self._registry.load_schema(latest_version)
-                base_resolve_path = schema_path.parent
-            except Exception:
-                # Fallback to legacy schema path if registry fails
+            latest_version = self._registry.get_latest_version()
+            if latest_version is None:
+                # The one documented fallback: the directory exists but holds
+                # no schema version, so the packaged schema is used.
+                logger.warning(
+                    "No schema version found in %s; using the packaged schema",
+                    self._registry.schema_dir,
+                )
                 schema_path = DEFAULT_SCHEMA_PATH
                 initial_schema = self._load_schema_dict(None, schema_path)
+                base_resolve_path = schema_path.parent
+            else:
+                self._schema_version = latest_version
+                schema_path = self._registry.get_schema_path(latest_version)
+                initial_schema = self._load_registry_schema(latest_version)
                 base_resolve_path = schema_path.parent
 
         # Inline external $refs; an unresolved one raises SchemaResolutionError.
@@ -223,6 +238,15 @@ class Validator:
             )
         except jsonschema.SchemaError as e:
             raise SignalJourneyValidationError(f"Invalid schema provided: {e}") from e
+
+    def _load_registry_schema(self, version: str) -> JsonDict:
+        """Load a registered schema version; an unreadable file is an error."""
+        try:
+            return self._registry.load_schema(version)
+        except OSError as e:
+            raise SchemaResolutionError(
+                f"Cannot load schema version '{version}': {e}"
+            ) from e
 
     def _get_schema_path(
         self, schema_input: Optional[Union[Path, str, JsonDict]]
@@ -273,7 +297,7 @@ class Validator:
             )
 
         schema_path = self._registry.get_schema_path(version)
-        schema_dict = self._registry.load_schema(version)
+        schema_dict = self._load_registry_schema(version)
 
         # Inline external $refs
         loaded_cache = {}
