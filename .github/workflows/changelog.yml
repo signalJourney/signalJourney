@@ -23,14 +23,25 @@ jobs:
           fetch-depth: 0 # the merge base of the pull request is needed
           persist-credentials: false
 
+      # The base branch's copy of the script judges the pull request, so a pull
+      # request cannot weaken the check that applies to it. The pull request's own
+      # copy is tested in ci.yml. The first pull request that introduces the script
+      # has no base copy and is judged by its own.
       - name: Check CHANGELOG.md against the pull request
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
         run: |
+          checker="${RUNNER_TEMP}/release_check.py"
+          if git show "${BASE_SHA}:scripts/release_check.py" > "$checker" 2> /dev/null; then
+            echo "using the base branch's scripts/release_check.py"
+          else
+            echo "the base branch has no scripts/release_check.py; using the pull request's own"
+            cp scripts/release_check.py "$checker"
+          fi
           labels=()
           while IFS= read -r name; do
             if [ -n "$name" ]; then labels+=(--label "$name"); fi
           done < <(python3 -c 'import json, os; print("\n".join(json.loads(os.environ["LABELS"])))')
-          python3 scripts/release_check.py changelog --base "$BASE_SHA" --head "$HEAD_SHA" "${labels[@]}"
+          python3 "$checker" --root "$GITHUB_WORKSPACE" changelog --base "$BASE_SHA" --head "$HEAD_SHA" "${labels[@]}"
