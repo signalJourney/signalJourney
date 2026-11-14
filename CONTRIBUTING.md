@@ -75,6 +75,7 @@ To contribute code changes, you'll need a local development environment:
 
 Every pull request that changes `src/`, `pyproject.toml` or `MANIFEST.in` adds a line to `CHANGELOG.md` under `## [Unreleased]`, or carries the label `no-changelog`; the `Changelog` check enforces it.
 The version has one source, `__version__` in `src/signaljourney_validator/__init__.py`, and never changes in an ordinary pull request.
+The [version policy](docs/RELEASING.md#version-policy): minor versions are reserved for huge breaking changes, and every other release is a patch bump.
 
 A release is a pull request that moves the `## [Unreleased]` entries under `## [X.Y.Z] - YYYY-MM-DD` and sets `__version__ = "X.Y.Z"`, followed by pushing the tag `vX.Y.Z` on the merge commit.
 Tags are exactly `vX.Y.Z` and are never moved or reused.
