@@ -36,10 +36,6 @@ def test_import_package_and_command_keep_their_names():
     assert signaljourney_validator.__name__ == "signaljourney_validator"
 
 
-def test_package_version_matches_pyproject():
-    assert signaljourney_validator.__version__ == project_field("version")
-
-
 def build_wheel(out_dir: Path, work: Path) -> Path:
     shutil.copytree(
         ROOT / "src",
@@ -73,3 +69,15 @@ def test_built_wheel_metadata_name_normalizes_to_signaljourney(tmp_path):
     name = re.search(r"^Name: (.+)$", text, re.M).group(1)
     assert normalize(name) == "signaljourney"
     assert wheel.name.startswith("signaljourney-")
+
+
+def test_built_wheel_version_is_the_module_version(tmp_path):
+    """pyproject.toml states no version: the wheel takes __version__."""
+    work = tmp_path / "work"
+    work.mkdir()
+    wheel = build_wheel(tmp_path / "dist", work)
+    with zipfile.ZipFile(wheel) as zf:
+        metadata = next(n for n in zf.namelist() if n.endswith(".dist-info/METADATA"))
+        text = zf.read(metadata).decode("utf-8")
+    version = re.search(r"^Version: (.+)$", text, re.M).group(1)
+    assert version == signaljourney_validator.__version__
