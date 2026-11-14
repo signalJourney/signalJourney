@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "signalJourney"
-version = "0.0.1"
+dynamic = ["version"] # the one source is __version__ in signaljourney_validator
 authors = [
 { name="Seyed Yahya Shirazi", email="shirazi@ieee.org" }
 ]
@@ -72,6 +72,9 @@ signaljourney-validate = "signaljourney_validator.cli:cli"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
+
+[tool.setuptools.dynamic]
+version = { attr = "signaljourney_validator.__version__" }
 
 [tool.setuptools.packages.find]
 where = ["src"]
